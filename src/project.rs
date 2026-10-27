@@ -42,7 +42,8 @@ pub fn materialize(task: &Task, stage: Stage, koda_repo: &Path, dest: &Path) -> 
     Ok(())
 }
 
-fn archive(repo: &Path, rev: &str, dest: &Path) -> Result<()> {
+/// Unpack `rev` of `repo` into `dest` with `git archive` (no history).
+pub(crate) fn archive(repo: &Path, rev: &str, dest: &Path) -> Result<()> {
     let mut archive = Command::new("git")
         .arg("-C")
         .arg(repo)

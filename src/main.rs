@@ -4,10 +4,12 @@
 //! It reads koda only through `koda -p … --output-format stream-json`, so
 //! any two koda builds can be compared without linking koda's crates.
 
+mod build;
 mod check;
 mod keys;
 mod proc;
 mod project;
+mod report;
 mod run;
 mod task;
 mod util;
@@ -56,6 +58,12 @@ enum Cmd {
         #[arg(long)]
         keep_work: bool,
     },
+    /// Summarize a results directory: passes, pass^k, tokens, time, and the
+    /// tasks where variants disagree. Also written there as report.md.
+    Report {
+        /// A results directory, or a run name (its latest results).
+        what: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -101,6 +109,12 @@ fn real_main() -> Result<ExitCode> {
             };
             let out = run::run(&run_file, &opts)?;
             println!("results: {}", out.display());
+            report::report(&out)?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Cmd::Report { what } => {
+            let dir = report::locate(&cli.root, &what)?;
+            report::report(&dir)?;
             Ok(ExitCode::SUCCESS)
         }
     }

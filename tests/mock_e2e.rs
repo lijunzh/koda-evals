@@ -118,4 +118,28 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     assert_eq!(gave_up["pass"], false, "{gave_up:#}");
     assert_eq!(gave_up["failure"], "did not compile", "{gave_up:#}");
     assert_eq!(gave_up["diff"]["files"], 0, "{gave_up:#}");
+
+    // The run printed its report, and `report <run name>` finds the same
+    // results again.
+    assert!(
+        stdout.contains("| koda | fixes | 1/1 | 100% | 1/1 |"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("| koda | gives-up | 0/1 | 0% | 0/1 |"),
+        "{stdout}"
+    );
+    assert!(dir.join("report.md").is_file());
+    let again = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
+        .arg("--root")
+        .arg(root)
+        .args(["report", "e2e"])
+        .output()
+        .unwrap();
+    let again_out = String::from_utf8_lossy(&again.stdout);
+    assert!(again.status.success(), "{again_out}");
+    assert!(
+        again_out.contains("| kata-largest | 1/1 | 0/1 |"),
+        "{again_out}"
+    );
 }

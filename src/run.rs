@@ -19,7 +19,7 @@ use serde_json::{Value, json};
 
 use crate::project::{self, Stage};
 use crate::task::{self, Task};
-use crate::{check, keys, proc, util};
+use crate::{build, check, keys, proc, util};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -40,12 +40,26 @@ fn one() -> u32 {
     1
 }
 
+/// A koda to measure: either a prebuilt binary or a git ref in the koda
+/// checkout, which is built once per commit (see `build.rs`).
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Variant {
     pub name: String,
-    /// Path to a built `koda` binary. (Building from a git ref is v2.)
-    pub bin: String,
+    /// Path to a built `koda` binary.
+    pub bin: Option<String>,
+    /// A branch, tag or commit in the koda checkout.
+    #[serde(rename = "ref")]
+    pub git_ref: Option<String>,
+}
+
+/// A variant with its binary in hand.
+struct Built {
+    name: String,
+    bin: PathBuf,
+    version: String,
+    git_ref: Option<String>,
+    sha: Option<String>,
 }
 
 /// API keys never go in a run file: koda reads them from the environment
@@ -86,7 +100,15 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
 
     let mut variants = Vec::new();
     for variant in &run.variants {
-        let bin = util::expand(&variant.bin);
+        let (bin, sha) = match (&variant.bin, &variant.git_ref) {
+            (Some(bin), None) => (util::expand(bin), None),
+            (None, Some(git_ref)) => {
+                let built = build::ensure(&opts.koda_repo, git_ref)
+                    .with_context(|| format!("variant {:?}", variant.name))?;
+                (built.bin, Some(built.sha))
+            }
+            _ => bail!("variant {:?} needs exactly one of bin or ref", variant.name),
+        };
         let version = command_line(Command::new(&bin).arg("--version")).with_context(|| {
             format!(
                 "variant {:?}: run {} --version",
@@ -94,7 +116,13 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                 bin.display()
             )
         })?;
-        variants.push((variant, bin, version));
+        variants.push(Built {
+            name: variant.name.clone(),
+            bin,
+            version,
+            git_ref: variant.git_ref.clone(),
+            sha,
+        });
     }
 
     // Keys the runs inherit from koda's keystore. Names only ever reach
@@ -130,8 +158,9 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         "started": stamp,
         "keys_from_keystore": key_names,
         "tasks": tasks.iter().map(|t| t.id()).collect::<Vec<_>>(),
-        "variants": variants.iter().map(|(v, bin, version)| json!({
-            "name": v.name, "bin": bin, "version": version,
+        "variants": variants.iter().map(|v| json!({
+            "name": v.name, "bin": v.bin, "version": v.version,
+            "ref": v.git_ref, "sha": v.sha,
         })).collect::<Vec<_>>(),
         // Task projects have no toolchain pin of their own, so they build
         // with rustup's default.
@@ -149,7 +178,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
     let mut tally: BTreeMap<(String, String), (u32, u32)> = BTreeMap::new();
 
     for task in &tasks {
-        for (variant, bin, _) in &variants {
+        for variant in &variants {
             for model in &run.models {
                 for repeat in 1..=run.repeats {
                     n += 1;
@@ -161,7 +190,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                     let job = RunOne {
                         task,
                         variant: &variant.name,
-                        bin,
+                        bin: &variant.bin,
                         model,
                         repeat,
                         art: &art,

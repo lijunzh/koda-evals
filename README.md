@@ -14,11 +14,12 @@ two koda builds can be compared.
 ```bash
 cargo run -- list                    # tasks and their tags
 cargo run -- verify [TASK...]        # fail-first check (all tasks by default)
-cargo run -- run runs/<name>.toml    # run a run file
+cargo run -- run runs/<name>.toml    # run a run file, then print its report
+cargo run -- report <name|dir>       # the report again: a run name (latest) or a results dir
 ```
 
-History tasks are unpacked from a koda checkout: `--koda-repo` (or
-`KODA_REPO`), default `~/repo/koda`.
+History tasks and `ref` variants come from a koda checkout: `--koda-repo`
+(or `KODA_REPO`), default `~/repo/koda`.
 
 ## Tasks
 
@@ -47,11 +48,20 @@ and the repeats:
 ```toml
 name = "local-smoke"
 tags = ["kata"]
-repeats = 1
+repeats = 3
 
 [[variants]]
 name = "main"
-bin = "~/repo/koda/target/release/koda"
+ref = "main"                        # a branch, tag or commit in the koda checkout
+
+[[variants]]
+name = "auto-check"
+ref = "exp/auto-cargo-check"
+
+# or a prebuilt binary:
+# [[variants]]
+# name = "local-build"
+# bin = "~/repo/koda/target/release/koda"
 
 [[models]]
 name = "local"
@@ -59,6 +69,11 @@ provider = "lm-studio"
 base_url = "http://localhost:1234/v1"
 model = "<model id>"
 ```
+
+A `ref` variant is resolved to its commit, unpacked with `git archive`,
+built in release mode and cached at `~/.cache/koda-eval/bin/<sha>/koda`; the
+same commit is never built twice. All refs share one
+`~/.cache/koda-eval/koda-target`, so dependencies compile once.
 
 **API keys never go in a run file.** Each run gets an empty koda config
 directory, so its koda has no keystore of its own. The harness hands keys to
@@ -89,8 +104,18 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
   agent's `run_summary` (tokens, LLM calls, tool calls), event counts and
   diff size.
 - Per run: `transcript.ndjson`, `stderr.log`, `diff.patch` and `check.log`.
-- `meta.json`: the run file, each koda binary's `--version` and `rustc
-  --version`.
+- `meta.json`: the run file, each koda binary's `--version`, ref and commit,
+  and `rustc --version`.
+- `report.md`: the report below.
+
+## The report
+
+Printed after every run, and again by `report`. For each variant × model:
+passes as *k of N*, the pass rate per attempt, **pass^r** (tasks that passed
+on every one of the r repeats), mean non-cached tokens and mean wall time.
+Then the tasks where variants disagree, per model, and a per-task grid. Raw
+counts sit next to every percentage: with about ten tasks and three repeats,
+a gap of a few points is noise.
 
 ## Tests
 
@@ -112,8 +137,8 @@ failed" and no tokens.
 
 **v1:** tasks, `verify`, the runner, `results.jsonl` and four seed tasks.
 
-**Next (v2):**
-- variants built from git refs and cached by commit
-- `report`: passes as *k of N*, pass^3, mean tokens and time, and the tasks
-  where variants disagree
-- a suite of about 10 tasks, growing to 20–30
+**v2:** variants built from git refs and cached by commit; repeats; the
+report with pass^r and the disagreement table.
+
+**Next:** a suite of about 10 tasks, growing to 20–30, with multi-file tasks
+that can tell sub-agent designs apart.
