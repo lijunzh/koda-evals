@@ -114,10 +114,10 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         );
     }
     for (name, value) in &inherited {
-        if keys::looks_wrong(value) {
+        if keys::looks_wrong(name, value) {
             eprintln!(
                 "warning: the keystore value for {name} doesn't look like an API key \
-                 (whitespace or too short); fix it with koda's /key command"
+                 (whitespace, too short, or the wrong prefix); fix it with koda's /key command"
             );
         }
     }

@@ -62,11 +62,20 @@ pub fn keys_for_child(keystore: &Path) -> Result<BTreeMap<String, String>> {
     Ok(keys)
 }
 
-/// A stored value that can't be an API key: whitespace inside it, or far
-/// too short. The classic case is a shell command pasted into koda's
-/// `/key` prompt. The caller reports the name, never the value.
-pub fn looks_wrong(value: &str) -> bool {
-    value.len() < 16 || value.chars().any(char::is_whitespace)
+/// A stored value that can't be the API key for `name`: whitespace inside
+/// it, far too short, or the wrong prefix for a provider whose keys have
+/// a fixed one. The classic cases are a shell command, or a `label: key`
+/// line, pasted into koda's `/key` prompt. The caller reports the name,
+/// never the value.
+pub fn looks_wrong(name: &str, value: &str) -> bool {
+    if value.len() < 16 || value.chars().any(char::is_whitespace) {
+        return true;
+    }
+    match name {
+        "ANTHROPIC_API_KEY" => !value.starts_with("sk-ant-"),
+        "OPENAI_API_KEY" => !value.starts_with("sk-"),
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -103,11 +112,15 @@ mod tests {
 
     #[test]
     fn flags_values_that_cannot_be_keys() {
+        let a = "ANTHROPIC_API_KEY";
         assert!(looks_wrong(
+            a,
             "echo 'export ANTHROPIC_API_KEY=x' >> ~/.zshenv"
         ));
-        assert!(looks_wrong("short"));
-        assert!(!looks_wrong("sk-ant-api03-0123456789abcdef"));
+        assert!(looks_wrong(a, "short"));
+        assert!(looks_wrong(a, "apikey:sk-ant-api03-0123456789abcdef"));
+        assert!(!looks_wrong(a, "sk-ant-api03-0123456789abcdef"));
+        assert!(!looks_wrong("GEMINI_API_KEY", "AIzaSy0123456789abcdef"));
     }
 
     #[test]
