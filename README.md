@@ -60,8 +60,16 @@ base_url = "http://localhost:1234/v1"
 model = "<model id>"
 ```
 
-**API keys never go in a run file.** koda reads them from the environment
-(`ANTHROPIC_API_KEY` and so on), and every run inherits it.
+**API keys never go in a run file.** Each run gets an empty koda config
+directory, so its koda has no keystore of its own. The harness hands keys to
+it as environment variables, from two sources:
+
+1. the harness's own environment (`ANTHROPIC_API_KEY` and so on), which wins;
+2. the `apikey:*` rows of your real koda keystore
+   (`~/.config/koda/db/koda.db`), so a key saved with koda's `/key` command
+   works without exporting it anywhere. `--keystore <path>` points elsewhere.
+
+The run log names the variables it passed, never their values.
 
 ## Each run
 

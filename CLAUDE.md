@@ -15,14 +15,18 @@ copy the notes into commits or public docs.
 
 - **koda is a black box here.** Talk to it only through the `koda` binary and
   its `stream-json` output. Never depend on koda's crates. A change to the
-  event JSON is a contract change between two repos.
+  event JSON is a contract change between two repos. The one exception is
+  `src/keys.rs`, which reads API keys from koda's keystore
+  (`<config dir>/db/koda.db`, table `kv_store`, rows `apikey:<ENV_NAME>`) so
+  isolated runs can authenticate; keep that the only place that looks inside.
 - **A task joins a suite only after `verify` says it is fair.** Its hidden
   tests fail where the agent starts and pass on the solution.
 - **Hidden tests must accept any correct answer.** Assert on behavior, not on
   one particular implementation, and keep the prompt or doc comment honest
   about what is expected. An unfair failure measures the task, not the agent.
-- **No API keys in run files or results.** koda reads keys from the
-  environment.
+- **No API keys in run files, results or logs.** Keys reach a run as
+  environment variables, from the harness's environment or koda's keystore.
+  Log variable names at most, never values.
 - **`results/` is not committed.** Conclusions go into the vault notes.
 - **Style:** edition 2024, the toolchain pinned in `rust-toolchain.toml`,
   `cargo clippy --all-targets -- -D warnings` clean, `cargo fmt`. Keep it small:

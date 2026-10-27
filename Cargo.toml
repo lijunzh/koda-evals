@@ -9,6 +9,9 @@ description = "Runs koda binaries on fixed coding tasks and records whether the 
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
+# Read-only access to koda's keystore (src/keys.rs). Bundled, so the
+# harness doesn't depend on the system SQLite.
+rusqlite = { version = "0.41", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.9"

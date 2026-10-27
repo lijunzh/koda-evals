@@ -5,6 +5,7 @@
 //! any two koda builds can be compared without linking koda's crates.
 
 mod check;
+mod keys;
 mod proc;
 mod project;
 mod run;
@@ -28,6 +29,11 @@ struct Cli {
     /// Koda checkout that history tasks are unpacked from.
     #[arg(long, global = true, env = "KODA_REPO", default_value = "~/repo/koda")]
     koda_repo: String,
+
+    /// Koda keystore to copy API keys from, for keys not already in the
+    /// environment. Default: ~/.config/koda/db/koda.db.
+    #[arg(long, global = true, value_name = "PATH")]
+    keystore: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Cmd,
@@ -90,6 +96,7 @@ fn real_main() -> Result<ExitCode> {
             let opts = run::Options {
                 root: cli.root,
                 koda_repo,
+                keystore: cli.keystore.unwrap_or_else(keys::default_keystore),
                 keep_work,
             };
             let out = run::run(&run_file, &opts)?;

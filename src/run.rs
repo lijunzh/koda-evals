@@ -19,7 +19,7 @@ use serde_json::{Value, json};
 
 use crate::project::{self, Stage};
 use crate::task::{self, Task};
-use crate::{check, proc, util};
+use crate::{check, keys, proc, util};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -65,6 +65,8 @@ pub struct Model {
 pub struct Options {
     pub root: PathBuf,
     pub koda_repo: PathBuf,
+    /// Koda keystore to copy API keys from (see `keys.rs`).
+    pub keystore: PathBuf,
     pub keep_work: bool,
 }
 
@@ -95,12 +97,30 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         variants.push((variant, bin, version));
     }
 
+    // Keys the runs inherit from koda's keystore. Names only ever reach
+    // the log and meta.json; the values go straight into the child's
+    // environment.
+    let inherited = keys::keys_for_child(&opts.keystore)?;
+    let key_names: Vec<&String> = inherited.keys().collect();
+    if !key_names.is_empty() {
+        eprintln!(
+            "keys from koda keystore {}: {}",
+            opts.keystore.display(),
+            key_names
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+
     let stamp = util::utc_stamp();
     let out = opts.root.join("results").join(&run.name).join(&stamp);
     std::fs::create_dir_all(&out)?;
     let meta = json!({
         "run": run.name,
         "started": stamp,
+        "keys_from_keystore": key_names,
         "tasks": tasks.iter().map(|t| t.id()).collect::<Vec<_>>(),
         "variants": variants.iter().map(|(v, bin, version)| json!({
             "name": v.name, "bin": bin, "version": version,
@@ -139,6 +159,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                         art: &art,
                         work: &work,
                         koda_repo: &opts.koda_repo,
+                        keys: &inherited,
                     };
                     let mut row = match job.run() {
                         Ok(row) => row,
@@ -209,6 +230,8 @@ struct RunOne<'a> {
     art: &'a Path,
     work: &'a Path,
     koda_repo: &'a Path,
+    /// API keys copied from koda's keystore, as `ENV_NAME -> value`.
+    keys: &'a BTreeMap<String, String>,
 }
 
 impl RunOne<'_> {
@@ -238,6 +261,7 @@ impl RunOne<'_> {
             .env_remove("KODA_MODEL")
             .env_remove("KODA_BASE_URL")
             .env_remove("KODA_MODE")
+            .envs(self.keys)
             .envs(&self.model.env)
             .stdin(Stdio::null())
             .stdout(File::create(&transcript)?)
