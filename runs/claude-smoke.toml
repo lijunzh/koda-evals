@@ -1,0 +1,15 @@
+# The katas against Claude through the Anthropic API. Export
+# ANTHROPIC_API_KEY first (koda reads it from the environment), then:
+#   cargo run -- run runs/claude-smoke.toml
+name = "claude-smoke"
+tags = ["kata"]
+repeats = 1
+
+[[variants]]
+name = "main"
+bin = "~/repo/koda/target/release/koda"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
