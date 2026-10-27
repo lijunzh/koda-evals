@@ -7,12 +7,9 @@ repeats = 1
 
 [[variants]]
 name = "main"
-bin = "~/repo/koda/target/release/koda"
+ref = "main"
 
 [[models]]
 name = "sonnet"
 provider = "anthropic"
 model = "claude-sonnet-5-5"
-# Explicit until koda's --provider implies the provider's URL: with a
-# fresh config, `--provider anthropic` alone still talks to localhost:1234.
-base_url = "https://api.anthropic.com"

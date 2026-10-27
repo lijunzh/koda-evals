@@ -8,11 +8,9 @@ repeats = 1
 
 [[variants]]
 name = "main"
-bin = "~/repo/koda/target/release/koda"
+ref = "main"
 
 [[models]]
 name = "sonnet"
 provider = "anthropic"
 model = "claude-sonnet-5-5"
-# Explicit until koda's --provider implies the provider's URL.
-base_url = "https://api.anthropic.com"
