@@ -1,0 +1,22 @@
+# One kata, two Anthropic model ids, verbose koda logs: for telling a bad
+# model id apart from a bad key or network.
+#   cargo run -- run runs/claude-debug.toml --keep-work
+name = "claude-debug"
+tasks = ["kata-largest"]
+repeats = 1
+
+[[variants]]
+name = "main"
+bin = "~/repo/koda/target/release/koda"
+
+[[models]]
+name = "sonnet-5-5"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
+env = { RUST_LOG = "debug", KODA_LOG = "debug" }
+
+[[models]]
+name = "sonnet-4-6"
+provider = "anthropic"
+model = "claude-sonnet-4-6"
+env = { RUST_LOG = "debug", KODA_LOG = "debug" }

@@ -113,6 +113,14 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                 .join(", ")
         );
     }
+    for (name, value) in &inherited {
+        if keys::looks_wrong(value) {
+            eprintln!(
+                "warning: the keystore value for {name} doesn't look like an API key \
+                 (whitespace or too short); fix it with koda's /key command"
+            );
+        }
+    }
 
     let stamp = util::utc_stamp();
     let out = opts.root.join("results").join(&run.name).join(&stamp);
@@ -274,6 +282,9 @@ impl RunOne<'_> {
         }
         let agent =
             proc::run_with_limit(&mut cmd, Duration::from_secs(task.spec.limits.wall_secs))?;
+        // koda's own log says why a turn failed ("LLM inference failed" on
+        // stderr doesn't). Keep it with the run's other evidence.
+        keep_koda_log(&config, self.art);
 
         let (summary, events) = read_transcript(&transcript)?;
         let diff = project::capture_diff(&project, &self.art.join("diff.patch"))?;
@@ -299,6 +310,29 @@ impl RunOne<'_> {
             "diff": diff,
             "check": check,
         }))
+    }
+}
+
+/// Copy koda's log file(s) from the run's config dir into `art/koda.log`.
+/// Best effort: a missing log is not an error.
+fn keep_koda_log(config: &Path, art: &Path) {
+    let logs = config.join("koda").join("logs");
+    let Ok(entries) = std::fs::read_dir(&logs) else {
+        return;
+    };
+    let mut out = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.starts_with("koda-")
+            && name.ends_with(".log")
+            && let Ok(bytes) = std::fs::read(entry.path())
+        {
+            out.extend_from_slice(&bytes);
+        }
+    }
+    if !out.is_empty() {
+        let _ = std::fs::write(art.join("koda.log"), out);
     }
 }
 

@@ -62,6 +62,13 @@ pub fn keys_for_child(keystore: &Path) -> Result<BTreeMap<String, String>> {
     Ok(keys)
 }
 
+/// A stored value that can't be an API key: whitespace inside it, or far
+/// too short. The classic case is a shell command pasted into koda's
+/// `/key` prompt. The caller reports the name, never the value.
+pub fn looks_wrong(value: &str) -> bool {
+    value.len() < 16 || value.chars().any(char::is_whitespace)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,6 +99,15 @@ mod tests {
         let keys = read_keystore(&path).unwrap();
         assert_eq!(keys.len(), 1);
         assert_eq!(keys["ANTHROPIC_API_KEY"], "sk-test");
+    }
+
+    #[test]
+    fn flags_values_that_cannot_be_keys() {
+        assert!(looks_wrong(
+            "echo 'export ANTHROPIC_API_KEY=x' >> ~/.zshenv"
+        ));
+        assert!(looks_wrong("short"));
+        assert!(!looks_wrong("sk-ant-api03-0123456789abcdef"));
     }
 
     #[test]
