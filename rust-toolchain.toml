@@ -1,0 +1,7 @@
+# Same pin as koda's rust-toolchain.toml. Task projects build with their
+# own toolchain resolution (rustup's default, since old koda commits have
+# no pin); the harness records `rustc --version` in each run's meta.json.
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

@@ -1,0 +1,21 @@
+id = "strip-quotes-lone-quote"
+# From #65 (reported 2026-03-05), fixed in #69.
+prompt = """koda crashes when a prompt contains a lone quote character:
+
+thread 'main' panicked at koda-cli/src/input.rs:428:11:
+begin <= end (1 <= 0) when slicing `"`
+
+Find and fix the cause."""
+tags = ["rust", "koda-history", "panic"]
+
+[repo]
+koda_base = "cfcc02b^"
+koda_fix = "cfcc02b"
+
+[check]
+hidden = [{ file = "koda-cli/src/input.rs", test = "hidden/lone_quote.rs" }]
+command = "cargo test -p koda-cli --bin koda eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 900

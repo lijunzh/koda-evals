@@ -1,0 +1,15 @@
+id = "kata-largest"
+prompt = """This crate doesn't compile. Fix it without changing what `largest` is documented to do."""
+tags = ["rust", "kata", "compile-error"]
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/largest.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[limits]
+wall_secs = 300

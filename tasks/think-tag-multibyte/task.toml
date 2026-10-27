@@ -1,0 +1,21 @@
+id = "think-tag-multibyte"
+# From #30 (reported 2026-03-04), fixed in #32.
+prompt = """koda panicked while streaming a reply that contained an emoji:
+
+thread 'tokio-runtime-worker' panicked at koda-core/src/providers/think_tag_filter.rs:98:47:
+byte index 3 is not a char boundary; it is inside '🐻' (bytes 1..5) of ` 🐻** is`
+
+Find and fix the cause."""
+tags = ["rust", "koda-history", "panic", "utf8"]
+
+[repo]
+koda_base = "77b857f^"
+koda_fix = "77b857f"
+
+[check]
+hidden = [{ file = "koda-core/src/providers/think_tag_filter.rs", test = "hidden/multibyte.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 900

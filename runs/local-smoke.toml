@@ -1,0 +1,16 @@
+# The katas against one local model. Set `bin` to a koda build and `model`
+# to the model your local server is running, then:
+#   cargo run -- run runs/local-smoke.toml
+name = "local-smoke"
+tags = ["kata"]
+repeats = 1
+
+[[variants]]
+name = "main"
+bin = "~/repo/koda/target/release/koda"
+
+[[models]]
+name = "local"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "<model id>"

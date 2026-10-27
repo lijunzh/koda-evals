@@ -1,0 +1,15 @@
+id = "kata-preview-utf8"
+prompt = """`preview` in src/lib.rs panics on some non-English text. Fix it so it never panics, keeping its documented behavior."""
+tags = ["rust", "kata", "panic", "utf8"]
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/preview.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[limits]
+wall_secs = 300
