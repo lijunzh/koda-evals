@@ -1,0 +1,18 @@
+# The two koda-history tasks against Claude through the Anthropic API.
+# Each unpacks an old koda commit and builds it cold the first time;
+# ~/.cache/koda-eval/target/<task> is reused after that.
+#   cargo run -- run runs/claude-history.toml
+name = "claude-history"
+tags = ["koda-history"]
+repeats = 1
+
+[[variants]]
+name = "main"
+bin = "~/repo/koda/target/release/koda"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
+# Explicit until koda's --provider implies the provider's URL.
+base_url = "https://api.anthropic.com"
