@@ -293,13 +293,29 @@ impl RunOne<'_> {
             Err(e) => check::not_run(&format!("hidden tests not added: {e:#}")),
         };
 
+        // When koda itself failed (no model call, a provider error, a
+        // crash), say so instead of blaming the untouched code.
+        let agent_failed = agent.timed_out
+            || agent.exit != Some(0)
+            || summary
+                .as_ref()
+                .and_then(|s| s["turn_end"]["kind"].as_str())
+                == Some("error");
+        let failure = if check.passed() {
+            None
+        } else if agent_failed && !agent.timed_out {
+            Some("agent failed")
+        } else {
+            Some(check.failure_kind())
+        };
+
         Ok(json!({
             "task": task.id(),
             "variant": self.variant,
             "model": self.model.name,
             "repeat": self.repeat,
             "pass": check.passed(),
-            "failure": (!check.passed()).then(|| check.failure_kind()),
+            "failure": failure,
             "agent": {
                 "exit": agent.exit,
                 "timed_out": agent.timed_out,

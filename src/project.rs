@@ -118,11 +118,15 @@ pub struct DiffStat {
 /// count it.
 pub fn capture_diff(dir: &Path, patch: &Path) -> Result<DiffStat> {
     git(dir, &["add", "-A"])?;
-    std::fs::write(patch, git(dir, &["diff", "--cached", "--binary"])?)?;
-    Ok(parse_numstat(&git(
-        dir,
-        &["diff", "--cached", "--numstat"],
-    )?))
+    // A fixture without a Cargo.lock gets one from the agent's first
+    // `cargo` call; that's cargo's footprint, not the agent's.
+    let scope = ["--", ".", ":!Cargo.lock"];
+    let mut show = vec!["diff", "--cached", "--binary"];
+    show.extend(scope);
+    std::fs::write(patch, git(dir, &show)?)?;
+    let mut stat = vec!["diff", "--cached", "--numstat"];
+    stat.extend(scope);
+    Ok(parse_numstat(&git(dir, &stat)?))
 }
 
 fn parse_numstat(text: &str) -> DiffStat {

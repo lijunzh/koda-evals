@@ -96,10 +96,17 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
 
 ```bash
 cargo test
-# End to end through a real koda driven by its mock provider:
-cargo build -p koda-cli --features koda-core/test-support   # in ~/repo/koda
-KODA_EVAL_TEST_BIN=~/repo/koda/target/debug/koda cargo test --test mock_e2e
+# End to end through a real koda driven by its mock provider. The mock
+# exists only under koda's test-support feature; build into a separate
+# target dir so other koda builds don't replace it.
+cargo build -p koda-cli --features koda-core/test-support \
+  --manifest-path ~/repo/koda/Cargo.toml --target-dir ~/.cache/koda-eval/koda-test-support
+KODA_EVAL_TEST_BIN=~/.cache/koda-eval/koda-test-support/debug/koda cargo test --test mock_e2e
 ```
+
+A koda built without that feature treats `--provider mock` as unknown and
+falls back to its default local server, so every run fails with "agent
+failed" and no tokens.
 
 ## Status
 
