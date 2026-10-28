@@ -1,0 +1,26 @@
+# Baseline run: every task three times against Recursive's Flint in LM Studio
+# on the current `main`, for a pass^3 number to compare branches against.
+# The 2026-10-28 screen (runs/local-flint-screen.toml) passed 5 of 10, with
+# three runs ending in LM Studio 500s once the context passed the 64K the
+# model was loaded with: Koda read the model's 262K maximum instead of the
+# loaded size and never compacted. So load Flint with a 128K context for
+# this run:
+#   lms unload --all && lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+#   cargo run --release -- run runs/local-flint-baseline.toml
+#   lms unload --all
+#
+# Local, so it costs nothing but time: about 8 minutes a run, roughly 4
+# hours for 30. Run it with nothing else using LM Studio or the CPU, since
+# wall time is part of the report, and with only this model loaded.
+name = "local-flint-baseline"
+repeats = 3
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
