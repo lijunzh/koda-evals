@@ -1,0 +1,29 @@
+# Screening run: every task once against Recursive's Flint in LM Studio on
+# the current `main`, as a candidate for the routine local runs. Flint is a
+# 40B mixture-of-experts with about 2.5B active parameters, so it should be
+# several times faster than the dense Qwen models; 3 of the 18 Coder-Next
+# misses were 20-minute timeouts. Its vendor-reported scores sit below
+# Qwen3.8-27B's (Terminal-Bench 2.1: 54.9 against 73.0), which is fine
+# here: the screen wants a model that completes nearly every run and lands
+# between the Coder-Next baseline (12 of 30) and Sonnet (11 of 11), so Koda
+# changes show up as a different number.
+#
+# One thing to read in the transcripts: Flint's model card says to pass
+# `reasoning_content` back in the conversation history. If Koda's
+# OpenAI-compatible path drops it, that is a Koda finding, not noise.
+#
+# Local, so it costs nothing but time; run it with nothing else using LM
+# Studio or the CPU, since wall time is part of the report.
+#   cargo run --release -- run runs/local-flint-screen.toml
+name = "local-flint-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
