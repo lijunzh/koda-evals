@@ -1,0 +1,25 @@
+# Screening run: every task once against Qwen3.8-27B in LM Studio on the
+# current `main`, as a candidate to replace Qwen3-Coder-Next (80B) for the
+# routine local runs. The question is the same as for haiku-screen.toml:
+# does it complete nearly every run and land between the Coder-Next
+# baseline (12 of 30) and Sonnet (11 of 11)? A 27B model should also be
+# faster: 3 of the 18 Coder-Next misses were 20-minute timeouts, and runs
+# averaged 5m23s.
+#
+# The MLX 4-bit build is chosen for speed on Apple Silicon. LM Studio also
+# has the GGUF Q4_K_M as `qwen/qwen3.8-27b`; swap the model id to compare.
+# Local, so it costs nothing but time; run it with nothing else using LM
+# Studio or the CPU, since wall time is part of the report.
+#   cargo run --release -- run runs/local-qwen38-screen.toml
+name = "local-qwen38-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "qwen3.8-27b"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "mlx-community/qwen3.8-27b"

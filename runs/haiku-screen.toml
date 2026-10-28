@@ -1,0 +1,24 @@
+# Screening run: every task once against Claude Haiku 5.5 on the current
+# `main`, to see whether Haiku can be the paid workhorse. We want it in the
+# middle: nearly every run completes, roughly half to three quarters pass,
+# and the failures are wrong fixes rather than timeouts or crashes. Sonnet
+# 5.5 passed 11 of 11 on v0.4.0, so it can't separate Koda variants on pass
+# rate; local Qwen3-Coder-Next passed 12 of 30 with half the misses being
+# infrastructure.
+#
+# Paid, but cheap: Haiku 5.5 is $0.10/$0.50 per MTok up to a 100K-token
+# prompt and $0.50/$2.50 beyond, against Sonnet's $2/$10. Expect well under
+# $5 for the ten runs; the report's token column gives the real figure.
+# Draws on the Anthropic API key in the koda keystore or ANTHROPIC_API_KEY.
+#   cargo run --release -- run runs/haiku-screen.toml
+name = "haiku-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
