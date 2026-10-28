@@ -1,0 +1,21 @@
+id = "composer-wrap-width-zero"
+# Fixed in Koda PR #1416 (2026-10-27), after the model's training cutoff.
+prompt = """koda crashes when it runs in a pseudo-terminal that reports no size (0 columns) and I type a newline in the prompt box:
+
+thread 'main' panicked at koda-cli/src/composer/wrapping.rs:60:43:
+start byte index 18446744069255970337 is out of bounds for string of length 1
+
+Find and fix the cause. The prompt box should keep working at any width, including 0."""
+tags = ["rust", "koda-history", "panic", "tui"]
+
+[repo]
+koda_base = "52653dd^"
+koda_fix = "52653dd"
+
+[check]
+hidden = [{ file = "koda-cli/src/composer/textarea.rs", test = "hidden/zero_width.rs" }]
+command = "cargo test -p koda-cli --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 1200

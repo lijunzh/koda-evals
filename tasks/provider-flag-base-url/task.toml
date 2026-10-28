@@ -1,0 +1,18 @@
+id = "provider-flag-base-url"
+# Fixed in Koda PR #1406 (2026-10-27), after the model's training cutoff.
+prompt = """On a fresh install, `koda -p "hi" --provider anthropic` never reaches Anthropic: it prints "Network glitch … Retrying" a few times and then "LLM inference failed". With ANTHROPIC_API_KEY set and the same command plus `--base-url https://api.anthropic.com` it works.
+
+Find and fix the cause. A custom endpoint someone configured for the same provider should keep working."""
+tags = ["rust", "koda-history", "logic", "investigation"]
+
+[repo]
+koda_base = "b4791ad^"
+koda_fix = "b4791ad"
+
+[check]
+hidden = [{ file = "koda-core/src/config.rs", test = "hidden/provider_url.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 1200

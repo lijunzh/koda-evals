@@ -112,7 +112,14 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
 
 Printed after every run, and again by `report`. For each variant × model:
 passes as *k of N*, the pass rate per attempt, **pass^r** (tasks that passed
-on every one of the r repeats), mean non-cached tokens and mean wall time.
+on every one of the r repeats), mean non-cached tokens, mean wall time, and
+two numbers for comparing ways of delegating:
+
+- **main context:** the mean tokens the top-level agent spent itself
+  (koda's `usage_by_agent.main`). The rest of the tokens went to children.
+- **delegated:** runs that called `InvokeAgent` or `SpawnAgent` at least
+  once, as *k of N*.
+
 Then the tasks where variants disagree, per model, and a per-task grid. Raw
 counts sit next to every percentage: with about ten tasks and three repeats,
 a gap of a few points is noise.

@@ -1,0 +1,22 @@
+id = "kata-utf8-sweep"
+# Five independent fixes in five files: shaped so delegation could help.
+prompt = """Several functions in this crate panic on non-English input, like the name "Élodie" or a string with emoji. Find and fix every one of them, keeping each function's documented behavior."""
+tags = ["rust", "kata", "panic", "utf8", "multi-file", "delegation"]
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [
+    { file = "src/truncate.rs", test = "hidden/truncate.rs" },
+    { file = "src/initials.rs", test = "hidden/initials.rs" },
+    { file = "src/mask.rs", test = "hidden/mask.rs" },
+    { file = "src/tail.rs", test = "hidden/tail.rs" },
+    { file = "src/columns.rs", test = "hidden/columns.rs" },
+]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[limits]
+wall_secs = 900

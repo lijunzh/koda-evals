@@ -2,9 +2,10 @@
 //!
 //! For each variant × model: passes as *k of N*, the pass rate per
 //! attempt, pass^r (tasks that passed on every repeat), mean non-cached
-//! tokens and mean wall time. Then the tasks where variants disagree, and
-//! a per-task grid. Raw counts sit next to every percentage: with about
-//! ten tasks and three repeats, a few points is noise.
+//! tokens, the share of those spent in the main context, how many runs
+//! delegated, and mean wall time. Then the tasks where variants disagree,
+//! and a per-task grid. Raw counts sit next to every percentage: with
+//! about ten tasks and three repeats, a few points is noise.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -22,7 +23,25 @@ struct Row {
     /// `None` when the harness itself failed, so the row counts for nothing.
     pass: Option<bool>,
     tokens: Option<u64>,
+    /// Tokens the top-level agent spent itself (koda's
+    /// `usage_by_agent.main`); `tokens` minus this is what children spent.
+    main_tokens: Option<u64>,
+    /// Calls to a delegation tool, top level only.
+    delegations: u64,
     wall_ms: Option<u64>,
+}
+
+/// Tools that hand work to a child agent or session.
+const DELEGATION_TOOLS: &[&str] = &["InvokeAgent", "SpawnAgent"];
+
+fn non_cached_tokens(usage: &Value) -> Option<u64> {
+    match (
+        usage["prompt_tokens"].as_u64(),
+        usage["completion_tokens"].as_u64(),
+    ) {
+        (Some(p), Some(c)) => Some(p + c),
+        _ => None,
+    }
 }
 
 fn parse_rows(text: &str) -> Result<Vec<Row>> {
@@ -33,20 +52,23 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
         }
         let v: Value =
             serde_json::from_str(line).with_context(|| format!("results.jsonl line {}", i + 1))?;
-        let usage = &v["summary"]["usage"];
-        let tokens = match (
-            usage["prompt_tokens"].as_u64(),
-            usage["completion_tokens"].as_u64(),
-        ) {
-            (Some(p), Some(c)) => Some(p + c),
-            _ => None,
-        };
+        let summary = &v["summary"];
+        let tokens = non_cached_tokens(&summary["usage"]);
+        // Builds older than per-agent usage report none; with no children
+        // the whole run is the main context.
+        let main_tokens = non_cached_tokens(&summary["usage_by_agent"]["main"]).or(tokens);
+        let delegations = DELEGATION_TOOLS
+            .iter()
+            .filter_map(|t| summary["tool_calls"][*t].as_u64())
+            .sum();
         rows.push(Row {
             task: v["task"].as_str().unwrap_or("?").to_string(),
             variant: v["variant"].as_str().unwrap_or("?").to_string(),
             model: v["model"].as_str().unwrap_or("?").to_string(),
             pass: v["pass"].as_bool(),
             tokens,
+            main_tokens,
+            delegations,
             wall_ms: v["agent"]["wall_ms"].as_u64(),
         });
     }
@@ -74,6 +96,9 @@ struct CellStats {
     tasks_all_passed: u32,
     tasks: u32,
     mean_tokens: Option<u64>,
+    mean_main_tokens: Option<u64>,
+    /// Runs that called a delegation tool at least once.
+    delegated: u32,
     mean_wall_ms: Option<u64>,
 }
 
@@ -85,11 +110,13 @@ fn cell_stats(rows: &[Row], variant: &str, model: &str) -> CellStats {
     let mut s = CellStats::default();
     let mut by_task: BTreeMap<&str, Vec<bool>> = BTreeMap::new();
     let (mut tok_sum, mut tok_n, mut wall_sum, mut wall_n) = (0u64, 0u64, 0u64, 0u64);
+    let (mut main_sum, mut main_n) = (0u64, 0u64);
     for r in &mine {
         match r.pass {
             Some(p) => {
                 s.ran += 1;
                 s.passed += u32::from(p);
+                s.delegated += u32::from(r.delegations > 0);
                 by_task.entry(&r.task).or_default().push(p);
             }
             None => s.harness_errors += 1,
@@ -97,6 +124,10 @@ fn cell_stats(rows: &[Row], variant: &str, model: &str) -> CellStats {
         if let Some(t) = r.tokens {
             tok_sum += t;
             tok_n += 1;
+        }
+        if let Some(t) = r.main_tokens {
+            main_sum += t;
+            main_n += 1;
         }
         if let Some(w) = r.wall_ms {
             wall_sum += w;
@@ -106,6 +137,7 @@ fn cell_stats(rows: &[Row], variant: &str, model: &str) -> CellStats {
     s.tasks = by_task.len() as u32;
     s.tasks_all_passed = by_task.values().filter(|v| v.iter().all(|&p| p)).count() as u32;
     s.mean_tokens = (tok_n > 0).then(|| tok_sum / tok_n);
+    s.mean_main_tokens = (main_n > 0).then(|| main_sum / main_n);
     s.mean_wall_ms = (wall_n > 0).then(|| wall_sum / wall_n);
     s
 }
@@ -182,9 +214,9 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
     let cells = cells(rows);
     let _ = writeln!(
         out,
-        "| variant | model | passed | pass rate | pass^{repeats} (tasks) | mean tokens | mean time |"
+        "| variant | model | passed | pass rate | pass^{repeats} (tasks) | mean tokens | main context | delegated | mean time |"
     );
-    let _ = writeln!(out, "|---|---|---|---|---|---|---|");
+    let _ = writeln!(out, "|---|---|---|---|---|---|---|---|---|");
     for (variant, model) in &cells {
         let s = cell_stats(rows, variant, model);
         let rate = if s.ran > 0 {
@@ -199,18 +231,22 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         };
         let _ = writeln!(
             out,
-            "| {variant} | {model} | {}/{}{errs} | {rate} | {}/{} | {} | {} |",
+            "| {variant} | {model} | {}/{}{errs} | {rate} | {}/{} | {} | {} | {}/{} | {} |",
             s.passed,
             s.ran,
             s.tasks_all_passed,
             s.tasks,
             fmt_num(s.mean_tokens),
+            fmt_num(s.mean_main_tokens),
+            s.delegated,
+            s.ran,
             fmt_secs(s.mean_wall_ms)
         );
     }
     let _ = writeln!(
         out,
-        "\nTokens are prompt + completion, cache reads excluded. pass^{repeats} counts tasks that passed on every repeat."
+        "\nTokens are prompt + completion, cache reads excluded. Main context is the part the top-level agent spent itself, the rest went to children. Delegated counts runs that called {} at least once. pass^{repeats} counts tasks that passed on every repeat.",
+        DELEGATION_TOOLS.join(" or ")
     );
 
     // Disagreements: per model, tasks where the variants' pass counts differ.
@@ -342,6 +378,8 @@ mod tests {
             model: "m".into(),
             pass,
             tokens: Some(tokens),
+            main_tokens: Some(tokens),
+            delegations: 0,
             wall_ms: Some(60_000),
         }
     }
@@ -397,6 +435,25 @@ mod tests {
         assert_eq!(rows[0].tokens, Some(15));
         assert_eq!(rows[1].pass, None);
         assert_eq!(rows[1].tokens, None);
+        // No per-agent usage: the whole run counts as main context.
+        assert_eq!(rows[0].main_tokens, Some(15));
+        assert_eq!(rows[0].delegations, 0);
+    }
+
+    #[test]
+    fn splits_main_context_from_children_and_counts_delegation() {
+        let text = r#"{"task":"a","variant":"v","model":"m","pass":true,"summary":{"usage":{"prompt_tokens":900,"completion_tokens":100},"usage_by_agent":{"main":{"prompt_tokens":250,"completion_tokens":50},"explore":{"prompt_tokens":650,"completion_tokens":50}},"tool_calls":{"Read":3,"InvokeAgent":2}}}
+{"task":"a","variant":"v","model":"m","pass":false,"summary":{"usage":{"prompt_tokens":100,"completion_tokens":0},"tool_calls":{"Read":1}}}
+"#;
+        let rows = parse_rows(text).unwrap();
+        assert_eq!(rows[0].tokens, Some(1000));
+        assert_eq!(rows[0].main_tokens, Some(300));
+        assert_eq!(rows[0].delegations, 2);
+        let s = cell_stats(&rows, "v", "m");
+        assert_eq!(s.delegated, 1);
+        assert_eq!(s.mean_main_tokens, Some(200));
+        let md = render(&rows, &Value::Null, "x");
+        assert!(md.contains("| v | m | 1/2 | 50% | 0/1 | 550 | 200 | 1/2 |"), "{md}");
     }
 
     #[test]

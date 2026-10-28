@@ -1,0 +1,16 @@
+# The v0.4.0 baseline: every task, three repeats, against Qwen3-Coder-Next
+# in LM Studio. Local, so it costs nothing but time; run it with nothing
+# else using LM Studio or the CPU, since wall time is part of the report.
+#   cargo run --release -- run runs/local-qwen-baseline.toml
+name = "local-qwen-baseline"
+repeats = 3
+
+[[variants]]
+name = "v0.4.0"
+ref = "v0.4.0"
+
+[[models]]
+name = "qwen3-coder-next"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "qwen/qwen3-coder-next"

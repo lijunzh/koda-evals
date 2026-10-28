@@ -6,7 +6,7 @@ thread 'main' panicked at koda-cli/src/input.rs:428:11:
 begin <= end (1 <= 0) when slicing `"`
 
 Find and fix the cause."""
-tags = ["rust", "koda-history", "panic"]
+tags = ["rust", "koda-history", "panic", "pre-cutoff"]
 
 [repo]
 koda_base = "cfcc02b^"
