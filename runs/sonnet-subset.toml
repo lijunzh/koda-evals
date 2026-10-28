@@ -1,0 +1,16 @@
+# Sonnet 5.5 on the five tasks whose local-Qwen failures were unexplained,
+# one repeat each, to tell model misses from Koda bugs at a fraction of the
+# full baseline's cost (sonnet-baseline.toml cost about $1.75 a run).
+#   cargo run --release -- run runs/sonnet-subset.toml
+name = "sonnet-subset"
+tasks = ["kata-api-migration", "provider-flag-base-url", "vim-normal-mode-bugs", "think-tag-multibyte", "kata-preview-utf8"]
+repeats = 1
+
+[[variants]]
+name = "v0.4.0"
+ref = "v0.4.0"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"

@@ -1,0 +1,16 @@
+# The v0.4.0 baseline against Claude Sonnet 5.5, to separate model misses
+# from Koda bugs in the local Qwen baseline (same tasks, same Koda, same
+# repeats). Paid: draws on the Anthropic API key in the koda keystore or
+# ANTHROPIC_API_KEY.
+#   cargo run --release -- run runs/sonnet-baseline.toml
+name = "sonnet-baseline"
+repeats = 3
+
+[[variants]]
+name = "v0.4.0"
+ref = "v0.4.0"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
