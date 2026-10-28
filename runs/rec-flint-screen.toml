@@ -1,0 +1,28 @@
+# Screening run: every task once against Flint served by Recursive's `rec`
+# engine instead of LM Studio, on the same `main` as the LM Studio screen
+# (runs/local-flint-screen.toml) so the two differ only in the engine.
+# `rec` claims 1.4–2.6x llama.cpp's decode throughput for Flint on M4/M5
+# and exposes an OpenAI-compatible API on port 11500 behind a local bearer
+# token; it documents nothing about tool-call parsing, reasoning_content or
+# overflow, which is what this screen reads from the transcripts.
+#
+# Koda classifies an unknown local port as LM Studio, whose probe `rec`
+# won't answer, so the context window is Koda's guess until an overflow
+# error corrects it. The token comes from `rec auth token` and must be in
+# the environment as KODA_API_KEY when the harness starts; it is not
+# written here. Only one Flint in memory at a time: unload LM Studio first.
+#   rec serve &   # wait for "flint is ready"
+#   KODA_API_KEY=$(rec auth token) cargo run --release -- run runs/rec-flint-screen.toml
+#   rec stop
+name = "rec-flint-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flint-rec"
+provider = "lm-studio"
+base_url = "http://127.0.0.1:11500/v1"
+model = "flint"
