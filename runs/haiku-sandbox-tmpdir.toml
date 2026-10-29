@@ -1,0 +1,29 @@
+# A/B for Koda PR "sandbox must allow the temp dir native builds need"
+# (branch fix/sandbox-macos-tmpdir): the task where the bug surfaced, three
+# times each on `main` and on the branch, with Haiku 5.5. On 2026-10-28
+# Haiku's `cargo test` through the Cargo tool died in aws-lc-sys's build
+# script with "clang: unable to make temporary file: Operation not
+# permitted" because the seatbelt profile didn't allow $TMPDIR.
+#
+# Read the report's per-task grid and the transcripts' Cargo results, not
+# just the pass count: the task also exercises the Edit stale-check bug, so
+# a pass needs both to go right, and Haiku doesn't always use the Cargo
+# tool. The branch must be present in the koda checkout (it is a worktree
+# branch of ~/repo/koda). About $1 and ten minutes at --jobs 3.
+#   cargo run --release -- run runs/haiku-sandbox-tmpdir.toml --jobs 3
+name = "haiku-sandbox-tmpdir"
+tasks = ["bash-classifier-escapes"]
+repeats = 3
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[variants]]
+name = "tmpdir"
+ref = "fix/sandbox-macos-tmpdir"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
