@@ -3,9 +3,9 @@
 # The 2026-10-28 screen (runs/local-flint-screen.toml) passed 5 of 10, with
 # three runs ending in LM Studio 500s once the context passed the 64K the
 # model was loaded with: Koda read the model's 262K maximum instead of the
-# loaded size and never compacted. So load Flint with a 128K context for
+# loaded size and never compacted. So load Flint with its full 262K context for
 # this run:
-#   lms unload --all && lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+#   lms unload --all && lms load recursivesi/flint --identifier recursivesi/flint -c 262144 -y
 #   cargo run --release -- run runs/local-flint-baseline.toml
 #   lms unload --all
 #
