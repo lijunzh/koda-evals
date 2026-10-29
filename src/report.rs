@@ -205,10 +205,16 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         .copied()
         .max()
         .unwrap_or(1);
+    let jobs = meta["jobs"].as_u64().unwrap_or(1);
     let _ = writeln!(
         out,
-        "# {run} · {started} · {} task(s) · {repeats} repeat(s)\n",
-        tasks.len()
+        "# {run} · {started} · {} task(s) · {repeats} repeat(s){}\n",
+        tasks.len(),
+        if jobs > 1 {
+            format!(" · {jobs} runs at a time (wall times contended)")
+        } else {
+            String::new()
+        }
     );
 
     let cells = cells(rows);

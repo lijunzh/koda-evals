@@ -57,6 +57,12 @@ enum Cmd {
         /// Keep each run's scratch project under ~/.cache/koda-eval/work.
         #[arg(long)]
         keep_work: bool,
+        /// Runs to execute at once. Leave at 1 for a local model, which
+        /// serves one request at a time; 3 or 4 suits an API model, bounded
+        /// by the cargo builds of the hidden tests, not by the API. Wall
+        /// times in the report are contended when this is above 1.
+        #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u16).range(1..))]
+        jobs: u16,
     },
     /// Summarize a results directory: passes, pass^k, tokens, time, and the
     /// tasks where variants disagree. Also written there as report.md.
@@ -100,12 +106,14 @@ fn real_main() -> Result<ExitCode> {
         Cmd::Run {
             run_file,
             keep_work,
+            jobs,
         } => {
             let opts = run::Options {
                 root: cli.root,
                 koda_repo,
                 keystore: cli.keystore.unwrap_or_else(keys::default_keystore),
                 keep_work,
+                jobs: usize::from(jobs),
             };
             let out = run::run(&run_file, &opts)?;
             println!("results: {}", out.display());

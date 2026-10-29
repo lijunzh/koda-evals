@@ -1,10 +1,12 @@
 //! Run files (`runs/<name>.toml`) and the runner.
 //!
-//! A run is every task × variant × model × repeat, one at a time (a local
-//! model serves one request at a time). Each one gets a fresh project and a
-//! fresh koda config directory, runs `koda -p … --output-format
-//! stream-json` under a wall-clock limit, and then the task's hidden tests
-//! decide pass or fail.
+//! A run is every task × variant × model × repeat, one at a time by default
+//! (a local model serves one request at a time) or `--jobs N` at once for an
+//! API model. Each one gets a fresh project and a fresh koda config
+//! directory, runs `koda -p … --output-format stream-json` under a
+//! wall-clock limit, and then the task's hidden tests decide pass or fail.
+//! Runs share nothing but the per-task cargo target directory, which cargo
+//! locks itself, so parallel runs are safe; their wall times are contended.
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -82,6 +84,8 @@ pub struct Options {
     /// Koda keystore to copy API keys from (see `keys.rs`).
     pub keystore: PathBuf,
     pub keep_work: bool,
+    /// Runs executed at once; 1 is sequential.
+    pub jobs: usize,
 }
 
 /// Execute `run_path`; returns the results directory.
@@ -165,6 +169,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         // Task projects have no toolchain pin of their own, so they build
         // with rustup's default.
         "rustc": command_line(Command::new("rustc").arg("--version").current_dir(util::home())).ok(),
+        "jobs": opts.jobs,
         "run_file": text,
     });
     std::fs::write(out.join("meta.json"), serde_json::to_string_pretty(&meta)?)?;
@@ -173,64 +178,143 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         .join("work")
         .join(format!("{}-{stamp}", run.name));
     let mut results = File::create(out.join("results.jsonl"))?;
-    let total = tasks.len() * variants.len() * run.models.len() * run.repeats as usize;
-    let mut n = 0;
-    let mut tally: BTreeMap<(String, String), (u32, u32)> = BTreeMap::new();
 
+    // Every run, in the order a sequential pass would take them.
+    let mut jobs = Vec::new();
     for task in &tasks {
         for variant in &variants {
             for model in &run.models {
                 for repeat in 1..=run.repeats {
-                    n += 1;
                     let slot = format!("{}.{}.r{repeat}", variant.name, model.name);
-                    eprint!("[{n}/{total}] {} {slot} ... ", task.id());
                     let art = out.join(task.id()).join(&slot);
                     std::fs::create_dir_all(&art)?;
                     let work = work_root.join(format!("{}.{slot}", task.id()));
-                    let job = RunOne {
+                    jobs.push(Job {
+                        n: jobs.len() + 1,
                         task,
-                        variant: &variant.name,
-                        bin: &variant.bin,
+                        variant,
                         model,
                         repeat,
-                        art: &art,
-                        work: &work,
-                        koda_repo: &opts.koda_repo,
-                        keys: &inherited,
-                    };
-                    let mut row = match job.run() {
-                        Ok(row) => row,
-                        // The harness failed, not the agent: keep the row,
-                        // but leave it out of the pass counts.
-                        Err(e) => json!({
-                            "task": task.id(), "variant": variant.name,
-                            "model": model.name, "repeat": repeat,
-                            "pass": null, "harness_error": format!("{e:#}"),
-                        }),
-                    };
-                    row["artifacts"] = json!(art.strip_prefix(&out).unwrap_or(&art));
-                    writeln!(results, "{row}")?;
-                    results.flush()?;
-                    eprintln!("{}", describe(&row));
-                    if let Some(pass) = row["pass"].as_bool() {
-                        let entry = tally
-                            .entry((variant.name.clone(), model.name.clone()))
-                            .or_default();
-                        entry.0 += u32::from(pass);
-                        entry.1 += 1;
-                    }
-                    if !opts.keep_work {
-                        let _ = std::fs::remove_dir_all(&work);
-                    }
+                        slot,
+                        art,
+                        work,
+                    });
                 }
             }
         }
+    }
+    let total = jobs.len();
+    let mut tally: BTreeMap<(String, String), (u32, u32)> = BTreeMap::new();
+
+    let mut finish = |job: &Job, mut row: Value| -> Result<()> {
+        row["artifacts"] = json!(job.art.strip_prefix(&out).unwrap_or(&job.art));
+        writeln!(results, "{row}")?;
+        results.flush()?;
+        if let Some(pass) = row["pass"].as_bool() {
+            let entry = tally
+                .entry((job.variant.name.clone(), job.model.name.clone()))
+                .or_default();
+            entry.0 += u32::from(pass);
+            entry.1 += 1;
+        }
+        if !opts.keep_work {
+            let _ = std::fs::remove_dir_all(&job.work);
+        }
+        Ok(())
+    };
+
+    if opts.jobs <= 1 {
+        for job in &jobs {
+            eprint!("[{}/{total}] {} {} ... ", job.n, job.task.id(), job.slot);
+            let row = job.execute(opts, &inherited);
+            eprintln!("{}", describe(&row));
+            finish(job, row)?;
+        }
+    } else {
+        // A pool of `jobs` workers pulling from one queue; the main thread
+        // records rows as they complete, so results.jsonl is in completion
+        // order. Rows carry their own task/variant/model/repeat, and the
+        // report never assumes an order.
+        let workers = opts.jobs.min(total);
+        eprintln!("running {total} runs, {workers} at a time");
+        let next = std::sync::atomic::AtomicUsize::new(0);
+        let (tx, rx) = std::sync::mpsc::channel::<(usize, Value)>();
+        std::thread::scope(|scope| -> Result<()> {
+            for _ in 0..workers {
+                let tx = tx.clone();
+                let (jobs, next, inherited) = (&jobs, &next, &inherited);
+                scope.spawn(move || {
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        let Some(job) = jobs.get(i) else { break };
+                        eprintln!("[{}/{total}] {} {} ... started", job.n, job.task.id(), job.slot);
+                        let row = job.execute(opts, inherited);
+                        if tx.send((i, row)).is_err() {
+                            break;
+                        }
+                    }
+                });
+            }
+            drop(tx);
+            for (i, row) in rx {
+                let job = &jobs[i];
+                eprintln!(
+                    "[{}/{total}] {} {} ... {}",
+                    job.n,
+                    job.task.id(),
+                    job.slot,
+                    describe(&row)
+                );
+                finish(job, row)?;
+            }
+            Ok(())
+        })?;
     }
 
     for ((variant, model), (passed, ran)) in &tally {
         println!("{variant} / {model}: {passed} of {ran} passed");
     }
     Ok(out)
+}
+
+/// One task × variant × model × repeat, with its directories decided.
+struct Job<'a> {
+    /// 1-based position in the sequential order, for the progress lines.
+    n: usize,
+    task: &'a Task,
+    variant: &'a Built,
+    model: &'a Model,
+    repeat: u32,
+    slot: String,
+    art: PathBuf,
+    work: PathBuf,
+}
+
+impl Job<'_> {
+    /// Run it and return its results row. A harness failure (not the
+    /// agent's) becomes a row with `pass: null`, so it stays out of the
+    /// pass counts but is not lost.
+    fn execute(&self, opts: &Options, keys: &BTreeMap<String, String>) -> Value {
+        let one = RunOne {
+            task: self.task,
+            variant: &self.variant.name,
+            bin: &self.variant.bin,
+            model: self.model,
+            repeat: self.repeat,
+            art: &self.art,
+            work: &self.work,
+            koda_repo: &opts.koda_repo,
+            keys,
+        };
+        match one.run() {
+            Ok(row) => row,
+            Err(e) => json!({
+                "task": self.task.id(), "variant": self.variant.name,
+                "model": self.model.name, "repeat": self.repeat,
+                "pass": null, "harness_error": format!("{e:#}"),
+            }),
+        }
+    }
 }
 
 fn validate(run: &RunFile) -> Result<()> {
