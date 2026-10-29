@@ -1,0 +1,25 @@
+# Control run: the same ten tasks, the same Flint in LM Studio at the same
+# 65,536-token context as runs/local-flint-screen.toml, but driven by Codex
+# CLI through bin/codex-as-koda instead of koda. Koda scored 5 of 10 there,
+# with failures that look like harness conventions (a 20-line Bash tail,
+# dropped reasoning, the loop guard) rather than the model. If Codex clears
+# those tasks the cause is koda's; if it fails the same way, it's Flint's.
+#
+# Codex talks to LM Studio over the Responses API, so the server owns the
+# chat template, tool-call parsing and reasoning. The transcript has no
+# koda run_summary, so the report carries pass/fail and wall time only.
+#   lms unload --all && lms load recursivesi/flint --identifier recursivesi/flint -c 65536 -y
+#   cargo run --release -- run runs/codex-flint-screen.toml
+#   lms unload --all
+name = "codex-flint-screen"
+repeats = 1
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
