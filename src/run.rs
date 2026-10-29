@@ -34,6 +34,11 @@ pub struct RunFile {
     pub tags: Vec<String>,
     #[serde(default = "one")]
     pub repeats: u32,
+    /// Wall-clock limit per run in seconds, overriding every task's
+    /// `[limits] wall_secs`. For "worker conditions": a background model
+    /// that nobody is waiting on gets longer than an interactive one.
+    #[serde(default)]
+    pub wall_secs: Option<u64>,
     pub variants: Vec<Variant>,
     pub models: Vec<Model>,
 }
@@ -198,6 +203,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                         slot,
                         art,
                         work,
+                        wall_secs: run.wall_secs,
                     });
                 }
             }
@@ -247,7 +253,12 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                     loop {
                         let i = next.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                         let Some(job) = jobs.get(i) else { break };
-                        eprintln!("[{}/{total}] {} {} ... started", job.n, job.task.id(), job.slot);
+                        eprintln!(
+                            "[{}/{total}] {} {} ... started",
+                            job.n,
+                            job.task.id(),
+                            job.slot
+                        );
                         let row = job.execute(opts, inherited);
                         if tx.send((i, row)).is_err() {
                             break;
@@ -288,6 +299,8 @@ struct Job<'a> {
     slot: String,
     art: PathBuf,
     work: PathBuf,
+    /// The run file's wall-clock override, if any.
+    wall_secs: Option<u64>,
 }
 
 impl Job<'_> {
@@ -305,6 +318,7 @@ impl Job<'_> {
             work: &self.work,
             koda_repo: &opts.koda_repo,
             keys,
+            wall_secs: self.wall_secs,
         };
         match one.run() {
             Ok(row) => row,
@@ -353,6 +367,8 @@ struct RunOne<'a> {
     koda_repo: &'a Path,
     /// API keys copied from koda's keystore, as `ENV_NAME -> value`.
     keys: &'a BTreeMap<String, String>,
+    /// The run file's wall-clock override; `None` keeps the task's own limit.
+    wall_secs: Option<u64>,
 }
 
 impl RunOne<'_> {
@@ -393,8 +409,8 @@ impl RunOne<'_> {
         if let Some(url) = &self.model.base_url {
             cmd.args(["--base-url", url]);
         }
-        let agent =
-            proc::run_with_limit(&mut cmd, Duration::from_secs(task.spec.limits.wall_secs))?;
+        let wall_secs = self.wall_secs.unwrap_or(task.spec.limits.wall_secs);
+        let agent = proc::run_with_limit(&mut cmd, Duration::from_secs(wall_secs))?;
         // koda's own log says why a turn failed ("LLM inference failed" on
         // stderr doesn't). Keep it with the run's other evidence.
         keep_koda_log(&config, self.art);
@@ -561,6 +577,35 @@ base_url = "http://localhost:1234/v1"
         assert_eq!(run.repeats, 1);
         assert!(run.models[0].env.is_empty());
         validate(&run).unwrap();
+    }
+
+    #[test]
+    fn run_file_wall_secs_defaults_to_none_and_parses() {
+        let run: RunFile = toml::from_str(
+            r#"
+name = "x"
+[[variants]]
+name = "main"
+[[models]]
+name = "m"
+provider = "anthropic"
+"#,
+        )
+        .unwrap();
+        assert_eq!(run.wall_secs, None);
+        let run: RunFile = toml::from_str(
+            r#"
+name = "x"
+wall_secs = 3600
+[[variants]]
+name = "main"
+[[models]]
+name = "m"
+provider = "anthropic"
+"#,
+        )
+        .unwrap();
+        assert_eq!(run.wall_secs, Some(3600));
     }
 
     #[test]
