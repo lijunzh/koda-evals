@@ -1,0 +1,21 @@
+# Does fixed `main` pass the task that exposed the Edit stale-check (#1435)
+# and sandbox temp-dir (#1434) bugs? Three Haiku 5.5 runs of
+# bash-classifier-escapes on `main` after both merged (2026-10-29); the
+# 2026-10-28 screen on 8f455a7 (before those fixes) failed it 0 of 1, with
+# 13 Edit rejections and a clang temp-file denial in the Cargo tool.
+# Read the transcripts for Edit rejections and Cargo results, not just the
+# pass count: Haiku doesn't always use the Cargo tool. About $0.50 and
+# five minutes at --jobs 3.
+#   cargo run --release -- run runs/haiku-bash-classifier-main.toml --jobs 3
+name = "haiku-bash-classifier-main"
+tasks = ["bash-classifier-escapes"]
+repeats = 3
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
