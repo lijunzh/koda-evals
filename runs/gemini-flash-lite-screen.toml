@@ -1,0 +1,21 @@
+# Screening run: every task once against Gemini Flash-Lite through the Gemini
+# API, as the cheapest paid candidate next to Haiku 5.5 (runs/haiku-screen.toml).
+# Same question: does it finish nearly every run and land in the middle of the
+# pass range, so Koda changes move the number? Compare against the Haiku and
+# Flint screens on the same `main`.
+#
+# `gemini-flash-lite-latest` is Koda's `gemini-flash-lite` alias target; the
+# price per token is in Google's pricing page, and the report's token column
+# gives the spend. Draws on GEMINI_API_KEY from the koda keystore.
+#   cargo run --release -- run runs/gemini-flash-lite-screen.toml
+name = "gemini-flash-lite-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flash-lite"
+provider = "gemini"
+model = "gemini-flash-lite-latest"

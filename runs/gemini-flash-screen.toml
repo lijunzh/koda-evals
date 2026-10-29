@@ -1,0 +1,19 @@
+# Screening run: every task once against Gemini Flash through the Gemini API,
+# the stronger and dearer sibling of runs/gemini-flash-lite-screen.toml. Run it
+# only if Flash-Lite lands too low to be useful; Flash's list price is close
+# to Sonnet's, so it is not a routine-run candidate on cost.
+#
+# `gemini-flash-latest` is Koda's default Gemini model. Draws on
+# GEMINI_API_KEY from the koda keystore.
+#   cargo run --release -- run runs/gemini-flash-screen.toml
+name = "gemini-flash-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
