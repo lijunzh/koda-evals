@@ -1,0 +1,21 @@
+# Verification run for the compaction fix (#1437): the four tasks whose
+# 2026-10-28 reruns hit pre-flight compaction on Flint, once each, on the
+# current `main` via LM Studio at the explicit 65,536-token context. What to
+# read in koda.log: "Compacted N messages" with a real summary instead of
+# "LLM returned an empty summary", no "circuit breaker tripped", and no
+# request sent past the window.
+#   lms load recursivesi/flint --identifier recursivesi/flint -c 65536 -y
+#   cargo run --release -- run runs/flint-compact-check.toml
+name = "flint-compact-check"
+tasks = ["bash-classifier-escapes", "composer-wrap-width-zero", "provider-flag-base-url", "vim-normal-mode-bugs"]
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
