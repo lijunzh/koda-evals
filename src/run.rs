@@ -383,10 +383,11 @@ impl RunOne<'_> {
         let target = util::cache_dir().join("target").join(task.id());
 
         let transcript_path = self.art.join("transcript.ndjson");
+        let trust = task.spec.run.trust.as_str();
         let mut cmd = Command::new(self.bin);
         cmd.arg("-p")
             .arg(&task.spec.prompt)
-            .args(["--output-format", "stream-json", "--mode", "auto"])
+            .args(["--output-format", "stream-json", "--mode", trust])
             .args(["--provider", &self.model.provider])
             .arg("--project-root")
             .arg(&project)

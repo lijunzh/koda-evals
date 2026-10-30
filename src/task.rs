@@ -40,6 +40,8 @@ pub struct TaskFile {
     pub check: CheckSpec,
     #[serde(default)]
     pub limits: Limits,
+    #[serde(default)]
+    pub run: RunSettings,
 }
 
 #[derive(Debug, Deserialize)]
@@ -293,6 +295,35 @@ impl std::fmt::Display for Predicate {
     }
 }
 
+/// Per-task run settings, `[run]`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunSettings {
+    /// Koda trust mode: `auto` (default) or `safe`.
+    #[serde(default = "default_trust")]
+    pub trust: String,
+    /// Directory of agent JSON configs, relative to the task, copied to
+    /// `<project>/agents/` in the start commit (koda reads project agents
+    /// from there; its user agents live under `$HOME`, which the run
+    /// doesn't own).
+    pub agents_dir: Option<String>,
+}
+
+impl Default for RunSettings {
+    fn default() -> Self {
+        Self {
+            trust: default_trust(),
+            agents_dir: None,
+        }
+    }
+}
+
+fn default_trust() -> String {
+    "auto".into()
+}
+
+const TRUST_MODES: [&str; 2] = ["auto", "safe"];
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct HiddenTest {
@@ -436,6 +467,31 @@ impl Task {
             }
         }
 
+        if !TRUST_MODES.contains(&spec.run.trust.as_str()) {
+            bail!(
+                "{}: run.trust {:?} must be one of {}",
+                path.display(),
+                spec.run.trust,
+                TRUST_MODES.join(", ")
+            );
+        }
+        if let Some(agents) = &spec.run.agents_dir {
+            let agents = dir.join(agents);
+            let has_json = std::fs::read_dir(&agents)
+                .map(|d| {
+                    d.flatten()
+                        .any(|e| e.path().extension().is_some_and(|x| x == "json"))
+                })
+                .unwrap_or(false);
+            if !has_json {
+                bail!(
+                    "{}: run.agents_dir {} holds no agent .json",
+                    path.display(),
+                    agents.display()
+                );
+            }
+        }
+
         Ok(Task {
             spec,
             dir: dir.to_path_buf(),
@@ -463,6 +519,11 @@ impl Task {
     /// The canned transcript the predicates must fail.
     pub fn canned_fail(&self) -> PathBuf {
         self.dir.join(CANNED_FAIL)
+    }
+
+    /// The agents directory to copy into the project, if any.
+    pub fn agents_dir(&self) -> Option<PathBuf> {
+        self.spec.run.agents_dir.as_ref().map(|d| self.dir.join(d))
     }
 }
 
@@ -716,6 +777,8 @@ max = 0
                 "approvals max=0",
             ]
         );
+        assert_eq!(task.spec.run.trust, "auto");
+        assert_eq!(task.agents_dir(), None);
     }
 
     #[test]
@@ -754,6 +817,31 @@ max = 0
             assert!(format!("{err:#}").contains(msg), "{check}: {err:#}");
             std::fs::remove_dir_all(&dir).unwrap();
         }
+    }
+
+    #[test]
+    fn run_settings_parse_and_validate() {
+        let tmp = tempfile::tempdir().unwrap();
+        let hidden =
+            "hidden = [{ file = \"src/lib.rs\", test = \"hidden/t.rs\" }]\ncommand = \"true\"";
+        let dir = with_check(
+            tmp.path(),
+            hidden,
+            "[run]\ntrust = \"safe\"\nagents_dir = \"agents\"",
+        );
+        let err = Task::load(&dir).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("holds no agent .json"),
+            "{err:#}"
+        );
+        write(&dir, "agents/worker.json", "{}");
+        let task = Task::load(&dir).unwrap();
+        assert_eq!(task.spec.run.trust, "safe");
+        assert_eq!(task.agents_dir(), Some(dir.join("agents")));
+
+        let dir = with_check(tmp.path(), hidden, "[run]\ntrust = \"plan\"");
+        let err = Task::load(&dir).unwrap_err();
+        assert!(format!("{err:#}").contains("run.trust"), "{err:#}");
     }
 
     #[test]

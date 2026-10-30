@@ -36,6 +36,16 @@ pub fn materialize(task: &Task, stage: Stage, koda_repo: &Path, dest: &Path) -> 
             copy_dir(solution, dest)?;
         }
     }
+    // Worker agent configs go in `<project>/agents/`, koda's project-level
+    // agents directory, and into the start commit so they stay out of the
+    // diff. (Koda's user-level agents live under `$HOME/.config/koda`,
+    // not under the run's `XDG_CONFIG_HOME`, so the fresh config directory
+    // can't carry them.)
+    if let Some(agents) = task.agents_dir() {
+        let to = dest.join("agents");
+        std::fs::create_dir_all(&to)?;
+        copy_dir(&agents, &to).with_context(|| format!("copy agents from {}", agents.display()))?;
+    }
     git(dest, &["init", "-q", "-b", "main"])?;
     git(dest, &["add", "-A"])?;
     git(dest, &["commit", "-q", "--no-verify", "-m", "task start"])?;
@@ -266,5 +276,43 @@ command = "true"
         let lib = std::fs::read_to_string(start.join("src/lib.rs")).unwrap();
         assert!(lib.contains("mod eval_hidden"));
         assert!(lib.contains("fn two()"));
+    }
+
+    #[test]
+    fn agents_dir_is_committed_with_the_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task_dir = tmp.path().join("k");
+        for (rel, text) in [
+            ("fixture/src/lib.rs", "pub fn f() {}\n"),
+            ("solution/src/lib.rs", "pub fn f() {}\n"),
+            ("hidden/t.rs", ""),
+            ("agents/worker.json", "{\"system_prompt\":\"do the work\"}"),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(
+            task_dir.join("task.toml"),
+            r#"id = "k"
+prompt = "p"
+[repo]
+fixture = "fixture"
+solution = "solution"
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/t.rs" }]
+command = "true"
+[run]
+agents_dir = "agents"
+"#,
+        )
+        .unwrap();
+        let task = Task::load(&task_dir).unwrap();
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        assert!(start.join("agents/worker.json").is_file());
+        assert_eq!(git(&start, &["status", "--porcelain"]).unwrap(), "");
+        let stat = capture_diff(&start, &tmp.path().join("d.patch")).unwrap();
+        assert_eq!(stat.files, 0);
     }
 }
