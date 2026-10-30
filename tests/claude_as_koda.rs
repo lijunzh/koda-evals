@@ -120,6 +120,16 @@ fn flags_keep_the_run_on_defaults_and_inside_the_project() {
     assert!(!args.contains(&"bypassPermissions"));
     let at = |flag: &str| args[args.iter().position(|a| *a == flag).unwrap() + 1];
     assert!(at("--allowedTools").contains("Edit(./**)"));
+    assert!(
+        at("--allowedTools").contains("Edit(//"),
+        "{}",
+        at("--allowedTools")
+    );
+    assert!(
+        at("--allowedTools").contains("Write(//"),
+        "{}",
+        at("--allowedTools")
+    );
     assert!(!at("--tools").contains("Web"));
     let settings: Value = serde_json::from_str(at("--settings")).unwrap();
     let sandbox = &settings["sandbox"];

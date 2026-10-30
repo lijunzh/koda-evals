@@ -20,10 +20,12 @@ other than "none", the child is killed before the first model call finishes.
 
 Nothing from the machine or the project configures the run: --safe-mode and
 an empty --setting-sources turn off user and project settings, CLAUDE.md,
-skills, plugins, hooks, MCP servers and auto memory. Koda itself does load a
-project's CLAUDE.md, so a history task gives Claude Code less than it gives
-koda, which can only make the screen harder. The files stay in the project
-(deleting them would show in the diff), so the model can still read them.
+skills, plugins, hooks, MCP servers and auto memory. The files stay in the
+project (deleting them would show in the diff), and the model may read them
+with its own tools: on the 2026-10-30 ceiling run 7 of 16 history-task runs
+read CLAUDE.md with sed. That is comparable, not an advantage: koda loads a
+project's CLAUDE.md as project memory on every run (koda-core memory.rs), so
+Claude Code gets it only when it looks, koda always.
 
 Trust. Both modes run `dontAsk`: the listed tools are allowed, anything else
 is denied, and nothing waits for a prompt. Bash runs in Claude Code's OS
@@ -71,6 +73,22 @@ TOOLS = ["Read", "Edit", "Write", "Bash", "Grep", "Glob", "Agent"]
 # Project-relative rules keep the file tools inside the project; Bash is held
 # there by the sandbox.
 ALLOW_RULES = ["Read", "Edit(./**)", "Write(./**)", "Bash", "Grep", "Glob", "Agent"]
+
+
+def allow_rules(cwd):
+    """The allow rules for a run rooted at `cwd`.
+
+    Claude Code matches `Edit(./**)` against relative paths only, and it
+    often calls Edit with the project's absolute path; on 2026-10-30 one
+    such call was denied and the model wrote files through Bash for the
+    rest of the run. So the project is allowed by absolute path too, in
+    both spellings when the real path differs (macOS /private, symlinks).
+    """
+    rules = list(ALLOW_RULES)
+    roots = {os.path.abspath(cwd), os.path.realpath(cwd)}
+    for root in sorted(roots):
+        rules += [f"Edit(/{root}/**)", f"Write(/{root}/**)"]
+    return rules
 CRATES_HOSTS = ["crates.io", "index.crates.io", "static.crates.io"]
 
 TOOL_NAMES = {"Agent": "InvokeAgent", "Task": "InvokeAgent", "AskUserQuestion": "AskUser"}
@@ -417,7 +435,7 @@ def main():
             "--strict-mcp-config", "--no-session-persistence",
             "--permission-mode", "dontAsk",
             "--tools", ",".join(TOOLS),
-            "--allowedTools", " ".join(ALLOW_RULES),
+            "--allowedTools", " ".join(allow_rules(os.getcwd())),
             "--settings", sandbox_settings(env)]
     if opts["model"]:
         args += ["--model", opts["model"]]
