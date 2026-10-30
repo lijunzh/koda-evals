@@ -36,6 +36,8 @@ pub struct Transcript {
 pub struct ToolCall<'a> {
     /// Position in `events`, for ordering.
     pub index: usize,
+    /// The call's `id`, which its `tool_call_result` repeats.
+    pub id: &'a str,
     pub name: &'a str,
     pub args: &'a Value,
     pub is_sub_agent: bool,
@@ -76,6 +78,7 @@ impl Transcript {
     pub fn tool_calls(&self) -> impl Iterator<Item = ToolCall<'_>> + '_ {
         self.of_type("tool_call_start").map(|(index, e)| ToolCall {
             index,
+            id: e["id"].as_str().unwrap_or(""),
             name: e["name"].as_str().unwrap_or(""),
             args: &e["args"],
             is_sub_agent: e["is_sub_agent"].as_bool().unwrap_or(false),
@@ -119,6 +122,18 @@ impl Transcript {
         self.of_type("tool_call_result")
             .filter(move |(_, e)| e["name"] == name)
             .filter_map(|(_, e)| e["output"].as_str())
+    }
+
+    /// The output of the `tool_call_result` for the call with this `id`.
+    /// `None` when the call never completed: rejected at an approval,
+    /// or cut off by the wall-clock limit.
+    pub fn result_output(&self, id: &str) -> Option<&str> {
+        if id.is_empty() {
+            return None;
+        }
+        self.of_type("tool_call_result")
+            .find(|(_, e)| e["id"] == id)
+            .and_then(|(_, e)| e["output"].as_str())
     }
 
     /// The agent's last reply (`run_summary.response`), if there is one.
@@ -238,6 +253,11 @@ not json
         assert_eq!(t.top_level_calls().count(), 4);
         assert_eq!(t.final_message(), Some("Done."));
         assert_eq!(t.turn_end_kind(), Some("complete"));
+        assert_eq!(t.tool_calls().next().unwrap().id, "a");
+        assert_eq!(t.result_output("a"), Some("fn f() {}"));
+        // The destructive Bash was rejected: no result.
+        assert_eq!(t.result_output("c"), None);
+        assert_eq!(t.result_output(""), None);
         assert!(t.final_message_index().unwrap() > t.tool_calls().last().unwrap().index);
     }
 
