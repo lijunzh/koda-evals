@@ -1,0 +1,21 @@
+# Screen for Ornith-1.5-35B-A3B as a challenger for Flint's seat (the local
+# fast tier): every task once, LM Studio at the same explicit 65,536-token
+# context as the Flint screens, on the current `main`. Ornith is a 36B
+# Qwen3.5-MoE with 3B active, MIT, vendor Terminal-Bench 2.1 68.5 against
+# Flint's 54.9. What to compare with results/local-flint-screen (6 of 10 on
+# the fixed main, ~11 min a run, 3-7 min of it reasoning): passes, time per
+# run, and how much of each run is thinking.
+#   lms load <ornith model> --identifier ornith -c 65536 -y
+#   cargo run --release -- run runs/local-ornith-screen.toml
+name = "local-ornith-screen"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
