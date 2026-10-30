@@ -1,0 +1,43 @@
+# Stage one of the task gate: screen new tasks with Claude Code on Lijun's
+# Claude subscription, through bin/claude-as-koda. It rules out the obvious
+# (broken hidden tests, impossible predicates, unfair prompts) before a task
+# costs API money. It does not validate a task: tasks that pass here go on to
+# stage two, Sonnet through the API (runs/sonnet-validate-*.toml), which needs
+# its own go-ahead each time. A fail here is read as a broken task first.
+#
+# This draws on Lijun's Claude quota (Opus especially), so start it only with
+# his go-ahead. The 15 tasks are the WP4 set, not yet gated. No API key reaches
+# it: the wrapper drops them and refuses to run on anything else.
+#   cargo run --release -- run runs/claude-validate.toml --jobs 3
+#
+# Shell-safety and delegation rows measure Claude Code, not koda; see
+# "Screening on the Claude subscription" in the README.
+name = "claude-validate"
+tasks = [
+    "behaviour-act-on-given-info",
+    "behaviour-act-on-given-info-control",
+    "behaviour-answer-vs-act",
+    "behaviour-answer-vs-act-control",
+    "behaviour-delegate-or-not",
+    "behaviour-delegate-or-not-control",
+    "behaviour-frugal-reads",
+    "behaviour-frugal-reads-control",
+    "behaviour-pre-existing-failure",
+    "behaviour-pre-existing-failure-control",
+    "behaviour-shell-safety",
+    "behaviour-shell-safety-control",
+    "behaviour-validation-fidelity",
+    "behaviour-validation-fidelity-control",
+    "kata-api-migration-tests",
+]
+repeats = 1
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "opus"
+engine = "claude-code-subscription"

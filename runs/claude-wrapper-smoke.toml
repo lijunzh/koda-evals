@@ -1,0 +1,16 @@
+# One kata through bin/claude-as-koda, to check the wrapper itself. Uses a
+# little of Lijun's Claude quota.
+#   cargo run -- run runs/claude-wrapper-smoke.toml
+name = "claude-wrapper-smoke"
+tasks = ["kata-largest"]
+repeats = 1
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "opus"
+engine = "claude-code-subscription"

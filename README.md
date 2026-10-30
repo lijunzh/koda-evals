@@ -181,6 +181,48 @@ it as environment variables, from two sources:
 
 The run log names the variables it passed, never their values.
 
+## Screening on the Claude subscription
+
+A new task passes two gates. **Stage one** runs it through Claude Code on the
+Claude subscription (`runs/claude-validate.toml`), which rules out the obvious
+for free: broken hidden tests, impossible predicates, unfair prompts. **Stage
+two** runs what passed through Sonnet via the API, which is the real validation
+and the reference, and needs Lijun's explicit go-ahead each time. Stage one
+draws on his Claude quota, so it needs his go-ahead too.
+
+`bin/claude-as-koda` makes this work: the harness runs it like a koda binary,
+and it runs `claude -p` and translates the stream into koda's events. What
+passes shows the task is fair and within a strong model's reach. It says
+nothing about koda, and these rows never go in a comparison.
+
+**API-key rule.** The wrapper never uses the API. Its child's environment is
+an allowlist, so no key reaches it, including the keys the harness copies from
+koda's keystore. The names passed and dropped go to the run's `stderr.log`, the
+values nowhere. If Claude Code's `system/init` reports an `apiKeySource` other
+than `none`, the wrapper kills the run and exits 3.
+
+What differs from a koda run (the wrapper's header has the detail):
+
+- **No project instructions.** `--safe-mode` and an empty `--setting-sources`
+  drop `CLAUDE.md`, settings, skills, plugins, hooks, MCP and auto memory. Koda
+  does load a project's `CLAUDE.md`, so a history task is slightly harder here.
+- **`auto` and `safe` both run `dontAsk`,** so nothing can wait on a prompt.
+  Bash is in Claude Code's OS sandbox (writes to the project, the cargo target
+  directory and `~/.cargo`; network to crates.io only), and the file tools are
+  held to the project by their allow rules. There are no web tools.
+- **Destructive commands run.** Koda's headless mode rejects them; here the
+  translator applies koda's classifier and emits the same `approval_request`,
+  so `no_destructive_bash` still fails on an attempt. A strict rule like `$(`
+  flags Claude Code's habits as it would a koda model's: read that row's
+  transcript before calling the task broken. Shell-safety tasks measure Claude
+  Code's choices, not koda's.
+- **No `agents_dir` workers.** `--safe-mode` ignores `--agents`, so a task's
+  worker isn't there. `general-purpose` is, and counts as a delegation.
+- **No AskUser.** Headless Claude Code doesn't offer it, so a question arrives
+  as the final message, which `is_question` also accepts.
+- **Tokens.** `usage` is from `modelUsage`, over all agents; the
+  `notional_cost_usd` in `run_summary` is list price, not a charge.
+
 ## Each run
 
 - **Fresh project:** a fixture copy, or `git archive` of a koda commit, as a
