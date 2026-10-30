@@ -12,7 +12,7 @@ two koda builds can be compared.
 ## Commands
 
 ```bash
-cargo run -- list                    # tasks and their tags
+cargo run -- list                    # tasks with cluster, grade and tags
 cargo run -- verify [TASK...]        # fail-first check (all tasks by default)
 cargo run -- run runs/<name>.toml    # run a run file, then print its report
 cargo run -- report <name|dir>       # the report again: a run name (latest) or a results dir

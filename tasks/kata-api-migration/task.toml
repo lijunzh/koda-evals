@@ -3,6 +3,8 @@ id = "kata-api-migration"
 # it without changing behavior. Shaped so delegation could help.
 prompt = """We released config-core 2.0 (crates/config-core). Its API changed and the rest of the workspace no longer builds. Update the other crates to the new API so everything compiles and behaves exactly as it did with 1.x. Don't change config-core itself."""
 tags = ["rust", "kata", "compile-error", "multi-file", "delegation"]
+cluster = "kata"
+judgement = "reads changelog before migrating"
 
 [repo]
 fixture = "fixture"

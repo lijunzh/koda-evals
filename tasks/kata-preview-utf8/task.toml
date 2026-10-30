@@ -1,6 +1,7 @@
 id = "kata-preview-utf8"
 prompt = """`preview` in src/lib.rs panics on some non-English text. Fix it so it never panics, keeping its documented behavior."""
 tags = ["rust", "kata", "panic", "utf8"]
+cluster = "kata"
 
 [repo]
 fixture = "fixture"

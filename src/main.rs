@@ -43,7 +43,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// List the tasks and their tags.
+    /// List the tasks with their cluster, grade and tags.
     List,
     /// Fail-first check: hidden tests must fail where the agent starts and
     /// pass on the task's solution.
@@ -89,7 +89,13 @@ fn real_main() -> Result<ExitCode> {
     match cli.command {
         Cmd::List => {
             for t in task::load_all(&tasks_dir)? {
-                println!("{:<28} {}", t.id(), t.spec.tags.join(", "));
+                println!(
+                    "{:<28} {:<14} {:<6} {}",
+                    t.id(),
+                    t.spec.cluster,
+                    t.spec.grade,
+                    t.spec.tags.join(", ")
+                );
             }
             Ok(ExitCode::SUCCESS)
         }

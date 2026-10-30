@@ -9,6 +9,7 @@ prompt = """Three bugs in Vim mode in koda's prompt box (koda-cli/src/composer),
 
 Fix all three."""
 tags = ["rust", "koda-history", "logic", "tui", "multi-bug"]
+cluster = "investigation"
 
 [repo]
 koda_base = "8a428ad^"

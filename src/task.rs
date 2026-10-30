@@ -11,6 +11,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 
+const CLUSTERS: [&str; 4] = ["investigation", "panic", "judgement", "kata"];
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TaskFile {
@@ -18,6 +20,22 @@ pub struct TaskFile {
     pub prompt: String,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// Suite cluster: `investigation`, `panic`, `judgement` or `kata`.
+    #[serde(default)]
+    pub cluster: String,
+    /// Demand coordinate: how deep the task reaches into the code. Nothing
+    /// reads it yet; the report will.
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub depth: String,
+    /// Demand coordinate: the judgement the task asks for. Nothing reads it
+    /// yet; the report will.
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub judgement: String,
+    /// The tier the repeats earned. Empty until they have run.
+    #[serde(default)]
+    pub grade: String,
     pub repo: RepoSpec,
     pub check: CheckSpec,
     #[serde(default)]
@@ -106,6 +124,15 @@ impl Task {
                 "{}: id {:?} must match its directory name",
                 path.display(),
                 spec.id
+            );
+        }
+
+        if !spec.cluster.is_empty() && !CLUSTERS.contains(&spec.cluster.as_str()) {
+            bail!(
+                "{}: cluster {:?} must be one of {}",
+                path.display(),
+                spec.cluster,
+                CLUSTERS.join(", ")
             );
         }
 
@@ -246,6 +273,32 @@ command = "cargo test eval_hidden"
         assert_eq!(task.spec.limits.wall_secs, 900);
         assert_eq!(task.spec.check.timeout_secs, 600);
         assert!(matches!(task.source, Source::Fixture { .. }));
+        assert_eq!(task.spec.cluster, "");
+        assert_eq!(task.spec.grade, "");
+    }
+
+    fn with_cluster(root: &Path, cluster: &str) -> PathBuf {
+        let dir = kata(root, "k1", "");
+        let path = dir.join("task.toml");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let line = format!("cluster = \"{cluster}\"\n[repo]\n");
+        std::fs::write(&path, text.replace("[repo]\n", &line)).unwrap();
+        dir
+    }
+
+    #[test]
+    fn loads_a_known_cluster() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = with_cluster(tmp.path(), "panic");
+        assert_eq!(Task::load(&dir).unwrap().spec.cluster, "panic");
+    }
+
+    #[test]
+    fn rejects_an_unknown_cluster() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = with_cluster(tmp.path(), "panics");
+        let err = Task::load(&dir).unwrap_err();
+        assert!(format!("{err:#}").contains("must be one of"), "{err:#}");
     }
 
     #[test]

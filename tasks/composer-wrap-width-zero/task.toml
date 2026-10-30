@@ -7,6 +7,7 @@ start byte index 18446744069255970337 is out of bounds for string of length 1
 
 Find and fix the cause. The prompt box should keep working at any width, including 0."""
 tags = ["rust", "koda-history", "panic", "tui"]
+cluster = "panic"
 
 [repo]
 koda_base = "52653dd^"

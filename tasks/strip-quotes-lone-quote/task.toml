@@ -7,6 +7,7 @@ begin <= end (1 <= 0) when slicing `"`
 
 Find and fix the cause."""
 tags = ["rust", "koda-history", "panic", "pre-cutoff"]
+cluster = "panic"
 
 [repo]
 koda_base = "cfcc02b^"

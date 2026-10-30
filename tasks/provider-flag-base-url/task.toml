@@ -4,6 +4,7 @@ prompt = """On a fresh install, `koda -p "hi" --provider anthropic` never reache
 
 Find and fix the cause. A custom endpoint someone configured for the same provider should keep working."""
 tags = ["rust", "koda-history", "logic", "investigation"]
+cluster = "investigation"
 
 [repo]
 koda_base = "b4791ad^"
