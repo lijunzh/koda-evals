@@ -1,0 +1,23 @@
+id = "kata-api-migration-tests"
+# Sibling of kata-api-migration: the same breaking change in config-core,
+# but no changelog. What 1.x did (skip junk lines, lower-case keys) is
+# pinned only by the callers' existing unit tests, which no longer compile.
+prompt = """We released config-core 2.0 (crates/config-core). Its API changed and the rest of the workspace no longer builds. Update the other crates to the new API so everything compiles and behaves exactly as it did with 1.x. Don't change config-core itself."""
+tags = ["rust", "kata", "compile-error", "multi-file", "delegation", "api-migration"]
+cluster = "judgement"
+judgement = "reads the callers' existing tests to learn the old behaviour when there is no changelog"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [
+    { file = "crates/report/src/lib.rs", test = "hidden/report.rs" },
+    { file = "crates/server/src/lib.rs", test = "hidden/server.rs" },
+]
+command = "cargo test --workspace --lib eval_hidden"
+timeout_secs = 300
+
+[limits]
+wall_secs = 900
