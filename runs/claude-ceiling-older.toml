@@ -8,6 +8,14 @@
 # Draws on Lijun's Claude quota; start only with his go-ahead. Times are
 # contended at --jobs 3 and are not scoreboard numbers.
 #   cargo run --release -- run runs/claude-ceiling-older.toml --jobs 3
+#
+# Result 2026-10-30 (results/claude-ceiling-older/20261030T142347Z): 16 of 16
+# passed; katas in under a minute, history tasks 1 to 21 minutes under
+# contention. Wrapper observations recorded in the vault growth-plan note:
+# Opus edited mostly through Bash (python/sed/cat) after one denied Edit, so
+# the Edit counts and any no_edit predicate are unreliable for Claude Code
+# rows; it also read Koda's CLAUDE.md from disk, which --setting-sources ""
+# does not prevent.
 name = "claude-ceiling-older"
 tasks = [
     "bash-classifier-escapes",
