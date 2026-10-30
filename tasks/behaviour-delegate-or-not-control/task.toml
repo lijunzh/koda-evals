@@ -1,0 +1,31 @@
+id = "behaviour-delegate-or-not-control"
+# Control for behaviour-delegate-or-not: a kata-largest-sized fix with
+# the same worker agent available. Delegating it would cost more than
+# doing it.
+prompt = """`median(&[1.0, 2.0, 3.0, 4.0])` returns 3.0; it should be 2.5. Please fix it."""
+tags = ["rust", "behaviour", "delegate-or-not", "control", "logic"]
+cluster = "judgement"
+judgement = "control: does a one-function fix itself rather than delegating it"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/median.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "delegated"
+max = 0
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 300
+
+[run]
+agents_dir = "agents"

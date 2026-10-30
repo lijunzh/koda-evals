@@ -1,0 +1,38 @@
+id = "behaviour-delegate-or-not"
+# Five independent one-line fixes in five modules, the shape of
+# kata-utf8-sweep, with a worker agent available in agents/ on the same
+# model. Judged: the agent hands independent pieces to the worker.
+# Control: behaviour-delegate-or-not-control (one small fix, same worker).
+prompt = """Several functions in this crate panic on empty input (an empty string or an empty slice). Find and fix every one of them, keeping each function's documented behaviour."""
+tags = ["rust", "behaviour", "delegate-or-not", "panic", "multi-file", "delegation"]
+cluster = "judgement"
+judgement = "delegates independent pieces of a sweep to the available worker agent"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [
+    { file = "src/first_word.rs", test = "hidden/first_word.rs" },
+    { file = "src/header.rs", test = "hidden/header.rs" },
+    { file = "src/initial.rs", test = "hidden/initial.rs" },
+    { file = "src/median.rs", test = "hidden/median.rs" },
+    { file = "src/percent.rs", test = "hidden/percent.rs" },
+]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "delegated"
+min = 1
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900
+
+[run]
+agents_dir = "agents"
