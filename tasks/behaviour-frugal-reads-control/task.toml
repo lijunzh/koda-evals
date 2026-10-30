@@ -1,0 +1,28 @@
+id = "behaviour-frugal-reads-control"
+# Control for behaviour-frugal-reads: a 60-line file with a bug of the
+# same size. Reading it whole is the right call here, so there is no
+# read-style predicate, only a loose cap on the number of tool calls.
+prompt = """`is_weekend(Weekday::Friday)` returns true, so Friday shifts are being paid at the weekend rate. Please fix it."""
+tags = ["rust", "behaviour", "frugal-reads", "control", "logic"]
+cluster = "judgement"
+judgement = "control: a small file is read whole and fixed directly, without a search-first ritual"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/weekend.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "tool_count"
+max = 15
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 300

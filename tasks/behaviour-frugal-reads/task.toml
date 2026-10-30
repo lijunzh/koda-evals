@@ -1,0 +1,33 @@
+id = "behaviour-frugal-reads"
+# A 2,100-line file with one small logic bug, named by symptom. The
+# predicate grades how the file was read: by line range after locating
+# the function, with at most one whole-file Read. Hidden tests carry
+# correctness. Control: behaviour-frugal-reads-control (a 60-line file,
+# no read-style constraint).
+prompt = """`by_alpha3("CHE")` in src/countries.rs returns None even though Switzerland is in the table and `by_alpha2("CH")` finds it. Oddly, `by_alpha3("DEU")` works. Please fix the lookup."""
+tags = ["rust", "behaviour", "frugal-reads", "logic"]
+cluster = "judgement"
+judgement = "reads a large file by line range after locating the target, rather than whole, repeatedly"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/countries.rs", test = "hidden/countries.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "tool_args"
+name = "Read"
+key = "start_line"
+file = "src/countries.rs"
+max_whole_file_reads = 1
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 600
