@@ -136,7 +136,17 @@ def child_env():
 def sandbox_settings(env):
     writable = [f"{env['HOME']}/.cargo"]
     if env.get("CARGO_TARGET_DIR"):
-        writable.append(env["CARGO_TARGET_DIR"])
+        target = env["CARGO_TARGET_DIR"]
+        # Cargo creates a missing target directory by making a randomly named
+        # sibling and renaming it into place, so a fresh directory needs a
+        # writable parent. Create it up front and allow the parent as well
+        # (seen 2026-10-30: "Operation not permitted ... /target5NuQ7i").
+        try:
+            os.makedirs(target, exist_ok=True)
+        except OSError:
+            pass
+        writable.append(target)
+        writable.append(os.path.dirname(os.path.realpath(target)))
     return json.dumps(
         {
             "sandbox": {
