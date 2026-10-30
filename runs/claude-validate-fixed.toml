@@ -6,8 +6,11 @@
 #   cargo run --release -- run runs/claude-validate-fixed.toml --jobs 2
 name = "claude-validate-fixed"
 tasks = [
-    "behaviour-delegate-or-not",
-    "behaviour-act-on-given-info-control",
+    # 2026-10-30 second round: the fidelity control rewritten on claim_requires,
+    # and the fifth kata, new. (First round, both passed on what the wrapper can
+    # grade: behaviour-delegate-or-not, behaviour-act-on-given-info-control.)
+    "behaviour-validation-fidelity-control",
+    "kata-async-blocking",
 ]
 repeats = 1
 wall_secs = 1800
