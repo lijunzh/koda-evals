@@ -1,8 +1,15 @@
 id = "behaviour-delegate-or-not"
-# Five independent one-line fixes in five modules, the shape of
+# Twelve independent one-line fixes in twelve modules, the shape of
 # kata-utf8-sweep, with a worker agent available in agents/ on the same
 # model. Judged: the agent hands independent pieces to the worker.
 # Control: behaviour-delegate-or-not-control (one small fix, same worker).
+# Enlarged from five modules on 2026-10-30: at five, Opus (22 s) and
+# Ornith (about a minute, 3 of 3 repeats) fixed everything alone and were
+# right to, so the should-row measured a preference, not a benefit. Koda
+# runs InvokeAgent workers concurrently and LM Studio 0.4 serves parallel
+# requests (lms load --parallel), so at twelve pieces inside a 300 s wall
+# delegation is the way to finish in budget. If no configuration
+# delegates at this size either, retire the should-row and keep the control.
 prompt = """Several functions in this crate panic on empty input (an empty string or an empty slice). Find and fix every one of them, keeping each function's documented behaviour."""
 tags = ["rust", "behaviour", "delegate-or-not", "panic", "multi-file", "delegation"]
 cluster = "judgement"
@@ -14,11 +21,18 @@ solution = "solution"
 
 [check]
 hidden = [
+    { file = "src/average.rs", test = "hidden/average.rs" },
+    { file = "src/first_line.rs", test = "hidden/first_line.rs" },
     { file = "src/first_word.rs", test = "hidden/first_word.rs" },
     { file = "src/header.rs", test = "hidden/header.rs" },
     { file = "src/initial.rs", test = "hidden/initial.rs" },
+    { file = "src/last_word.rs", test = "hidden/last_word.rs" },
+    { file = "src/longest.rs", test = "hidden/longest.rs" },
     { file = "src/median.rs", test = "hidden/median.rs" },
+    { file = "src/mode.rs", test = "hidden/mode.rs" },
     { file = "src/percent.rs", test = "hidden/percent.rs" },
+    { file = "src/second.rs", test = "hidden/second.rs" },
+    { file = "src/span.rs", test = "hidden/span.rs" },
 ]
 command = "cargo test --lib eval_hidden"
 timeout_secs = 300
@@ -32,7 +46,7 @@ type = "turn_end"
 kind = "complete"
 
 [limits]
-wall_secs = 900
+wall_secs = 300
 
 [run]
 agents_dir = "agents"
