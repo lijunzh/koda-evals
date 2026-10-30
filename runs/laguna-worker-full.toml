@@ -1,0 +1,25 @@
+# Laguna S 2.1 on all ten tasks under worker conditions (an hour a task,
+# 128K pin), once each. The four long tasks were screened on 2026-10-29
+# (results/laguna-worker-screen/20261029T213000Z and
+# results/laguna-worker-screen-rest/20261029T225523Z: provider-flag-base-url
+# and vim-normal-mode-bugs passed, the other two ran out their hour). This
+# run adds the six Flint-grade tasks, so the worker is measured on the easy
+# work too, and gives the four long ones a second run. What to read: passes
+# on the short tasks against Flint's (all six pass under Flint), and the
+# time Laguna takes on them, since a worker that spends an hour on a kata is
+# not a worker the orchestrator should hand a kata to.
+#   omlx start && cargo run --release -- run runs/laguna-worker-full.toml && omlx stop
+name = "laguna-worker-full"
+repeats = 1
+wall_secs = 3600
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "laguna"
+provider = "lm-studio"
+base_url = "http://127.0.0.1:8123/v1"
+model = "mlx-community/Laguna-S-2.1-oQ4e"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
