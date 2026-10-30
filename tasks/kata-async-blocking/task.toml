@@ -1,0 +1,27 @@
+id = "kata-async-blocking"
+# A symptom report against a small tokio service, cause unnamed. Two
+# causes in two modules: the rate limiter sleeps the thread
+# (limiter.rs) and the accept path holds a std Mutex across the journal
+# await (relay.rs). The hidden tests fail on either alone, on a
+# current-thread runtime: a health check that waits behind twelve
+# deliveries, and concurrent accepts that never finish (run on a side
+# thread with a ten-second deadline, so a hang fails instead of stalling
+# the suite). They also pin the rate limit and the once-only accept, so
+# deleting either is not a fix.
+prompt = """Our relay service stalls under light load. The HTTP layer runs the handlers in this crate on one tokio runtime. With a single client everything is fine, but as soon as a few clients overlap, the health endpoint, which normally answers instantly, takes a second or more, and sometimes two clients submitting at the same moment hang for good until we restart the process. Find out why and fix it. The outbound rate limit and the accept-once guarantee have to keep working as documented."""
+tags = ["rust", "kata", "async", "multi-file"]
+cluster = "kata"
+depth = "two causes in two modules behind one symptom: a blocking sleep in limiter.rs and a std Mutex held across an await in relay.rs; fixing one leaves the other failing, and the fix must keep the once-only accept atomic"
+judgement = "diagnoses a runtime-blocking bug from its symptom and fixes every instance, not the first one found"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/relay.rs", test = "hidden/relay.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[limits]
+wall_secs = 900

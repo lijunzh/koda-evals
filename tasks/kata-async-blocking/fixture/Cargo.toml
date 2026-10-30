@@ -1,0 +1,7 @@
+[package]
+name = "relay"
+version = "0.2.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.54.1", features = ["rt", "sync", "time", "fs", "io-util", "macros"] }
