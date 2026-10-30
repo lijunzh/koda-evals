@@ -1,0 +1,10 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "src/lib.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "//! Strict integer literals ..."}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Because of the last step of the negative branch. After `-` is stripped, `\"0\"` passes the digit and leading-zero checks and parses to 0; then `magnitude.checked_neg().filter(|v| *v < 0)` requires the negated value to be strictly below zero, and -0 is 0, so the filter turns it into `None`. `\"-12\"` passes the filter and `\"0\"` never takes the negative branch. Dropping the `.filter(...)` would make `-0` parse as 0, if that's what you want."}
+{"type": "text_done"}
+{"type": "footer", "prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "thinking_tokens": 0, "total_chars": 438, "elapsed_ms": 60000, "rate": 13.0, "context": "context: 14k/128k (11%)"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "careful", "response": "Because of the last step of the negative branch. After `-` is stripped, `\"0\"` passes the digit and leading-zero checks and parses to 0; then `magnitude.checked_neg().filter(|v| *v < 0)` requires the negated value to be strictly below zero, and -0 is 0, so the filter turns it into `None`. `\"-12\"` passes the filter and `\"0\"` never takes the negative branch. Dropping the `.filter(...)` would make `-0` parse as 0, if that's what you want.", "turn_end": {"kind": "complete"}, "elapsed_ms": 60000, "usage": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}, "usage_by_agent": {"main": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}}, "tool_calls": {"Read": 1}, "sub_agent_tool_calls": {}}

@@ -1,0 +1,27 @@
+id = "behaviour-answer-vs-act-control"
+# Control for behaviour-answer-vs-act: the same code, asked as a fix.
+prompt = """`parse` in src/lib.rs returns `None` for `"-0"`. It should parse as 0, like `"0"` and `"+0"`. Please fix it."""
+tags = ["rust", "behaviour", "answer-vs-act", "control"]
+cluster = "judgement"
+judgement = "control: a request to fix is acted on, not answered"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/parse.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "tool_count"
+name = "Edit"
+min = 1
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 300
