@@ -1,0 +1,23 @@
+# flint: the whole suite (32 tasks, 2026-10-30), three repeats, under the
+# interactive budget (each task's own 15-20 minute limit) with the 128K
+# window decided on 2026-10-29 for every local configuration. These are the
+# selection repeats the fast-seat pick is made from: pass^3 across the suite,
+# two-task margin. Pinned to Koda 4926824, the commit the single-run 128K
+# baselines (runs/*-interactive-128k.toml) were built from, so every
+# configuration is scored on the same Koda. One configuration at a time, one
+# model loaded, --jobs 1 (a local model serves one request at a time).
+#   lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+#   cargo run --release -- run runs/flint-repeats-128k.toml
+name = "flint-repeats-128k"
+repeats = 3
+
+[[variants]]
+name = "main"
+ref = "4926824"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

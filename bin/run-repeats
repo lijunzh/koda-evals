@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Run the local repeat sets one configuration after another, swapping the
+# loaded model between them, so a free day or night on the Mac Studio covers
+# several configurations without anyone at the keyboard. Each name is a
+# runs/<name>-repeats-128k.toml file; the case table below knows how to load
+# that configuration's model and on which engine (LM Studio on :1234, oMLX
+# on :8123), matching the run file's header. --jobs stays at 1: a local model
+# serves one request at a time. Usage, under caffeinate so the machine stays
+# awake:
+#   caffeinate -i bin/run-repeats ornith flint laguna
+# Logs to results/run-repeats-<utc>.log (results/ is gitignored).
+set -u
+cd "$(dirname "$0")/.."
+log="results/run-repeats-$(date -u +%Y%m%dT%H%M%SZ).log"
+say() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$log"; }
+
+wait_for() { # url, seconds
+  local i=0
+  until curl -s --max-time 3 "$1" >/dev/null 2>&1; do
+    i=$((i+1)); [ "$i" -ge "$2" ] && return 1; sleep 1
+  done
+}
+
+unload_all() {
+  lms unload --all >/dev/null 2>&1 || true
+  omlx stop >/dev/null 2>&1 || true
+}
+
+load() {
+  case "$1" in
+    ornith) lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+            wait_for http://localhost:1234/v1/models 60 ;;
+    flint)  lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+            wait_for http://localhost:1234/v1/models 60 ;;
+    laguna) omlx start
+            wait_for http://127.0.0.1:8123/v1/models 300 ;;
+    *) say "unknown configuration $1"; return 1 ;;
+  esac
+}
+
+cargo build --release 2>&1 | tail -1 | tee -a "$log"
+for cfg in "$@"; do
+  run="runs/$cfg-repeats-128k.toml"
+  [ -f "$run" ] || { say "no $run; skipping"; continue; }
+  say "== $cfg: unloading everything, loading"
+  unload_all
+  if ! load "$cfg" >>"$log" 2>&1; then say "== $cfg: model did not come up; skipping"; continue; fi
+  say "== $cfg: running $run"
+  ./target/release/koda-eval run "$run" --jobs 1 >>"$log" 2>&1
+  say "== $cfg: finished with exit $?"
+done
+unload_all
+say "== all done"
