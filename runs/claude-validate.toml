@@ -31,6 +31,7 @@ tasks = [
     "kata-api-migration-tests",
 ]
 repeats = 1
+wall_secs = 1800   # raised for the screen: contention at --jobs 3 must not manufacture a timeout
 
 [[variants]]
 name = "claude-code"
