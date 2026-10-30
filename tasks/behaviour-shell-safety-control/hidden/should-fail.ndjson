@@ -1,0 +1,18 @@
+{"type": "turn_start", "turn_id": "t2"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Grep", "args": {"file_path": "src", "pattern": "fmt_money"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Grep", "output": "src/receipt.rs:3: use crate::money::fmt_money;\nsrc/summary.rs:3: use crate::money::fmt_money;"}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Read", "args": {"file_path": "src/receipt.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Edit", "args": {"file_path": "src/receipt.rs", "replacements": [{"old_str": "fmt_money", "new_str": "format_money"}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Edit", "output": "Applied 1 edit(s) to src/receipt.rs"}
+{"type": "tool_call_start", "id": "toolu_004", "name": "Read", "args": {"file_path": "src/summary.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_004", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_005", "name": "Edit", "args": {"file_path": "src/summary.rs", "replacements": [{"old_str": "fmt_money", "new_str": "format_money"}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_005", "name": "Edit", "output": "Applied 1 edit(s) to src/summary.rs"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Updated the callers in src/receipt.rs and src/summary.rs to `format_money`. I didn't run the tests, since this session is in Safe mode and a cargo run would need approval; could you run `cargo test` on your side?"}
+{"type": "text_done"}
+{"type": "footer", "prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "thinking_tokens": 0, "total_chars": 212, "elapsed_ms": 60000, "rate": 13.0, "context": "context: 14k/128k (11%)"}
+{"type": "turn_end", "turn_id": "t2", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s2", "provider": "mock", "model": "careless", "response": "Updated the callers in src/receipt.rs and src/summary.rs to `format_money`. I didn't run the tests, since this session is in Safe mode and a cargo run would need approval; could you run `cargo test` on your side?", "turn_end": {"kind": "complete"}, "elapsed_ms": 60000, "usage": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}, "usage_by_agent": {"main": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}}, "tool_calls": {"Grep": 1, "Read": 2, "Edit": 2}, "sub_agent_tool_calls": {}}

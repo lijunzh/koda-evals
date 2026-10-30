@@ -1,0 +1,26 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Bash", "args": {"command": "cargo build 2>&1 | grep -E 'error|-->' | head -20"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Bash", "output": "Exit code: 101 | stdout: 6 lines | stderr: 0 lines\n\n--- stdout (6 lines) ---\nerror[E0432]: unresolved import `crate::money::fmt_money`\n --> src/receipt.rs:3:5\nerror[E0432]: unresolved import `crate::money::fmt_money`\n --> src/summary.rs:3:5\nerror[E0425]: cannot find function `fmt_money` in module `money`\n --> src/export.rs:7:33"}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Bash", "args": {"command": "grep -rn fmt_money src"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Bash", "output": "Exit code: 0 | stdout: 6 lines | stderr: 0 lines\n\n--- stdout (6 lines) ---\nsrc/receipt.rs:3:use crate::money::fmt_money;\nsrc/receipt.rs:7:    let amount = fmt_money(cents);\nsrc/summary.rs:3:use crate::money::fmt_money;\nsrc/summary.rs:7:    format!(\"Total: {}\", fmt_money(cents))\nsrc/summary.rs:12:    format!(\"Balance: {}\", fmt_money(due - paid))\nsrc/export.rs:7:    format!(\"{name},{}\", money::fmt_money(cents))"}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Read", "args": {"file_path": "src/receipt.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_004", "name": "Edit", "args": {"file_path": "src/receipt.rs", "replacements": [{"old_str": "fmt_money", "new_str": "format_money"}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_004", "name": "Edit", "output": "Applied 1 edit(s) to src/receipt.rs"}
+{"type": "tool_call_start", "id": "toolu_005", "name": "Read", "args": {"file_path": "src/summary.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_005", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_006", "name": "Edit", "args": {"file_path": "src/summary.rs", "replacements": [{"old_str": "fmt_money", "new_str": "format_money"}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_006", "name": "Edit", "output": "Applied 1 edit(s) to src/summary.rs"}
+{"type": "tool_call_start", "id": "toolu_007", "name": "Read", "args": {"file_path": "src/export.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_007", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_008", "name": "Edit", "args": {"file_path": "src/export.rs", "replacements": [{"old_str": "fmt_money", "new_str": "format_money"}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_008", "name": "Edit", "output": "Applied 1 edit(s) to src/export.rs"}
+{"type": "tool_call_start", "id": "toolu_009", "name": "Bash", "args": {"command": "cargo test 2>&1 | tail -3"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_009", "name": "Bash", "output": "Exit code: 0 | stdout: 1 lines | stderr: 0 lines\n\n--- stdout (1 lines) ---\ntest result: ok. 3 passed; 0 failed"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Updated the three stale callers (src/receipt.rs, src/summary.rs, src/export.rs) from `fmt_money` to `format_money`. The crate builds and `cargo test` passes (3 tests)."}
+{"type": "text_done"}
+{"type": "footer", "prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "thinking_tokens": 0, "total_chars": 167, "elapsed_ms": 60000, "rate": 13.0, "context": "context: 14k/128k (11%)"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "careful", "response": "Updated the three stale callers (src/receipt.rs, src/summary.rs, src/export.rs) from `fmt_money` to `format_money`. The crate builds and `cargo test` passes (3 tests).", "turn_end": {"kind": "complete"}, "elapsed_ms": 60000, "usage": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}, "usage_by_agent": {"main": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}}, "tool_calls": {"Bash": 3, "Read": 3, "Edit": 3}, "sub_agent_tool_calls": {}}

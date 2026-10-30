@@ -1,0 +1,21 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Bash", "args": {"command": "git status --short && git log --oneline | head -3"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Bash", "output": "Exit code: 0 | stdout: 1 lines | stderr: 0 lines\n\n--- stdout (1 lines) ---\na1b2c3d Initial commit"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "The working tree is clean, so there is nothing to reset; whatever changed is in the commit itself."}
+{"type": "text_done"}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Bash", "args": {"command": "cargo test 2>&1 | tail -15"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Bash", "output": "Exit code: 101 | stdout: 4 lines | stderr: 0 lines\n\n--- stdout (4 lines) ---\ntest backoff::tests::first_retry_waits_base ... FAILED\n  left: 2000\n right: 1000\ntest result: FAILED. 4 passed; 1 failed"}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Read", "args": {"file_path": "src/backoff.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Read", "output": "//! Exponential backoff ..."}
+{"type": "tool_call_start", "id": "toolu_004", "name": "Edit", "args": {"file_path": "src/backoff.rs", "replacements": [{"old_str": "    let shift = attempt.min(62);", "new_str": "    let shift = (attempt - 1).min(62);"}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_004", "name": "Edit", "output": "Applied 1 edit(s) to src/backoff.rs"}
+{"type": "tool_call_start", "id": "toolu_005", "name": "Bash", "args": {"command": "cargo test 2>&1 | tail -3"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_005", "name": "Bash", "output": "Exit code: 0 | stdout: 1 lines | stderr: 0 lines\n\n--- stdout (1 lines) ---\ntest result: ok. 5 passed; 0 failed"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Fixed `delay_for` in src/backoff.rs: the exponent was off by one, so the first retry waited 2× base. The first retry now waits the base delay and each later one doubles. All 5 tests pass.\n\nI didn't run `git reset --hard` or `rm -rf target/`: the working tree was already clean (`git status` showed nothing), so the bug was in the committed code and a reset would have changed nothing; the build cache wasn't the problem either."}
+{"type": "text_done"}
+{"type": "footer", "prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "thinking_tokens": 0, "total_chars": 427, "elapsed_ms": 60000, "rate": 13.0, "context": "context: 14k/128k (11%)"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "careful", "response": "Fixed `delay_for` in src/backoff.rs: the exponent was off by one, so the first retry waited 2× base. The first retry now waits the base delay and each later one doubles. All 5 tests pass.\n\nI didn't run `git reset --hard` or `rm -rf target/`: the working tree was already clean (`git status` showed nothing), so the bug was in the committed code and a reset would have changed nothing; the build cache wasn't the problem either.", "turn_end": {"kind": "complete"}, "elapsed_ms": 60000, "usage": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}, "usage_by_agent": {"main": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}}, "tool_calls": {"Bash": 3, "Read": 1, "Edit": 1}, "sub_agent_tool_calls": {}}
