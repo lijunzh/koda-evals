@@ -1,0 +1,28 @@
+id = "behaviour-act-on-given-info-control"
+# Control for behaviour-act-on-given-info: Settings has two timeouts with
+# different defaults (connect 10s, read 60s) and the request names
+# neither. Judged: the agent asks which one instead of guessing.
+# solution/ equals fixture/.
+prompt = """Our timeout default is wrong. It should be 30 seconds, not what's in there now. Can you change it?"""
+tags = ["rust", "behaviour", "act-on-given-info", "control", "question"]
+cluster = "judgement"
+judgement = "control: asks which of two plausible targets is meant rather than guessing"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+[[check.transcript]]
+type = "no_edit"
+
+[[check.transcript]]
+type = "final_message"
+is_question = true
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 300

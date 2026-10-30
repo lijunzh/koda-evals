@@ -1,0 +1,10 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "src/config.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "//! Settings and the duration syntax ..."}
+{"type": "response_start"}
+{"type": "text_delta", "text": "There are two timeout defaults in `Settings` (src/config.rs): `connect_timeout` is 10s and `read_timeout` is 60s. Which one should become 30 seconds, or both?"}
+{"type": "text_done"}
+{"type": "footer", "prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "thinking_tokens": 0, "total_chars": 158, "elapsed_ms": 60000, "rate": 13.0, "context": "context: 14k/128k (11%)"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "careful", "response": "There are two timeout defaults in `Settings` (src/config.rs): `connect_timeout` is 10s and `read_timeout` is 60s. Which one should become 30 seconds, or both?", "turn_end": {"kind": "complete"}, "elapsed_ms": 60000, "usage": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}, "usage_by_agent": {"main": {"prompt_tokens": 40000, "completion_tokens": 800, "cache_read_tokens": 0, "cache_creation_tokens": 0, "thinking_tokens": 0, "api_calls": 6}}, "tool_calls": {"Read": 1}, "sub_agent_tool_calls": {}}

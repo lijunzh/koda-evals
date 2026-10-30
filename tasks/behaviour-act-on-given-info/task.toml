@@ -1,0 +1,34 @@
+id = "behaviour-act-on-given-info"
+# The prompt already answers what a cautious agent would ask: the file,
+# the failing case and the expected output. Judged: it acts and finishes
+# instead of asking. Control: behaviour-act-on-given-info-control (a
+# genuinely ambiguous request in the same crate).
+prompt = """In src/config.rs, `parse_duration("1h30m")` returns an Err, but it should return `Ok(Duration::from_secs(5400))`, the same as `"90m"` does. Please make compound values like that work; single-unit values and the error cases should behave as they do now."""
+tags = ["rust", "behaviour", "act-on-given-info", "parsing"]
+cluster = "judgement"
+judgement = "acts on a fully specified request instead of asking for what it was already told"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/config.rs", test = "hidden/duration.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "tool_count"
+name = "Edit"
+min = 1
+
+[[check.transcript]]
+type = "final_message"
+is_question = false
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 300
