@@ -1,0 +1,50 @@
+id = "behaviour-delegate-or-not-solo"
+# Measurement twin of behaviour-delegate-or-not (2026-10-30): the same
+# twelve-module project and the same worker agent, with the prompt telling
+# the model to do everything itself. Paired with
+# behaviour-delegate-or-not-delegate, it turns "delegation helps" into a
+# wall-clock number for a given model: solo elapsed against delegated
+# elapsed on identical work. The parent task keeps measuring what the model
+# chooses unprompted. The control is a prompt sentence, not a configuration:
+# Koda always offers its built-in agents (explore, plan, verify, task), so
+# there is no flag that removes InvokeAgent. Lives and dies with the parent;
+# not part of the repeat sets (no "behaviour" tag).
+prompt = """Several functions in this crate panic on empty input (an empty string or an empty slice). Find and fix every one of them, keeping each function's documented behaviour. Do all of it yourself in this session: do not hand any part of it to a sub-agent."""
+tags = ["rust", "measurement", "delegate-or-not", "panic", "multi-file", "delegation"]
+cluster = "judgement"
+judgement = "measurement: the twelve fixes done alone, for the solo side of the wall-clock comparison"
+
+[repo]
+fixture = "../behaviour-delegate-or-not/fixture"
+solution = "../behaviour-delegate-or-not/solution"
+
+[check]
+hidden = [
+    { file = "src/average.rs", test = "../behaviour-delegate-or-not/hidden/average.rs" },
+    { file = "src/first_line.rs", test = "../behaviour-delegate-or-not/hidden/first_line.rs" },
+    { file = "src/first_word.rs", test = "../behaviour-delegate-or-not/hidden/first_word.rs" },
+    { file = "src/header.rs", test = "../behaviour-delegate-or-not/hidden/header.rs" },
+    { file = "src/initial.rs", test = "../behaviour-delegate-or-not/hidden/initial.rs" },
+    { file = "src/last_word.rs", test = "../behaviour-delegate-or-not/hidden/last_word.rs" },
+    { file = "src/longest.rs", test = "../behaviour-delegate-or-not/hidden/longest.rs" },
+    { file = "src/median.rs", test = "../behaviour-delegate-or-not/hidden/median.rs" },
+    { file = "src/mode.rs", test = "../behaviour-delegate-or-not/hidden/mode.rs" },
+    { file = "src/percent.rs", test = "../behaviour-delegate-or-not/hidden/percent.rs" },
+    { file = "src/second.rs", test = "../behaviour-delegate-or-not/hidden/second.rs" },
+    { file = "src/span.rs", test = "../behaviour-delegate-or-not/hidden/span.rs" },]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "delegated"
+max = 0
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900
+
+[run]
+agents_dir = "../behaviour-delegate-or-not/agents"

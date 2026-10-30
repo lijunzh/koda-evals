@@ -1,0 +1,51 @@
+id = "behaviour-delegate-or-not-delegate"
+# Measurement twin of behaviour-delegate-or-not (2026-10-30): the same
+# twelve-module project and worker agent, with the prompt telling the model
+# to hand the modules to the worker, several at once. Paired with
+# behaviour-delegate-or-not-solo it gives the delegated side of the
+# wall-clock comparison; bin/parallelism-report reads the per-child spans
+# from koda.log to show how many workers actually overlapped. Koda runs each
+# InvokeAgent as a background task, and LM Studio serves parallel requests
+# (lms load --parallel, default 4), so the ceiling here is the engine's
+# batch size, not Koda. Requires at least two delegations: one worker is
+# not parallelism. Lives and dies with the parent; not part of the repeat
+# sets (no "behaviour" tag).
+prompt = """Several functions in this crate panic on empty input (an empty string or an empty slice). Find and fix every one of them, keeping each function's documented behaviour. Split the work: hand each module's fix to the `worker` agent with InvokeAgent, several at once, then check that everything passes."""
+tags = ["rust", "measurement", "delegate-or-not", "panic", "multi-file", "delegation"]
+cluster = "judgement"
+judgement = "measurement: the twelve fixes handed to concurrent workers, for the delegated side of the wall-clock comparison"
+
+[repo]
+fixture = "../behaviour-delegate-or-not/fixture"
+solution = "../behaviour-delegate-or-not/solution"
+
+[check]
+hidden = [
+    { file = "src/average.rs", test = "../behaviour-delegate-or-not/hidden/average.rs" },
+    { file = "src/first_line.rs", test = "../behaviour-delegate-or-not/hidden/first_line.rs" },
+    { file = "src/first_word.rs", test = "../behaviour-delegate-or-not/hidden/first_word.rs" },
+    { file = "src/header.rs", test = "../behaviour-delegate-or-not/hidden/header.rs" },
+    { file = "src/initial.rs", test = "../behaviour-delegate-or-not/hidden/initial.rs" },
+    { file = "src/last_word.rs", test = "../behaviour-delegate-or-not/hidden/last_word.rs" },
+    { file = "src/longest.rs", test = "../behaviour-delegate-or-not/hidden/longest.rs" },
+    { file = "src/median.rs", test = "../behaviour-delegate-or-not/hidden/median.rs" },
+    { file = "src/mode.rs", test = "../behaviour-delegate-or-not/hidden/mode.rs" },
+    { file = "src/percent.rs", test = "../behaviour-delegate-or-not/hidden/percent.rs" },
+    { file = "src/second.rs", test = "../behaviour-delegate-or-not/hidden/second.rs" },
+    { file = "src/span.rs", test = "../behaviour-delegate-or-not/hidden/span.rs" },]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "delegated"
+min = 2
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900
+
+[run]
+agents_dir = "../behaviour-delegate-or-not/agents"

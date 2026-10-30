@@ -1,0 +1,25 @@
+# flint: does delegation buy wall-clock time on a local model? Three repeats
+# each of the two measurement twins of behaviour-delegate-or-not: the same
+# twelve one-line fixes done alone (-solo) and handed to concurrent worker
+# agents (-delegate). Same pin, window and engine settings as the repeat
+# sets; LM Studio's default batch of 4 parallel requests, stated explicitly
+# so the record says what the ceiling was. A 900 s wall so the solo side is
+# measured, not capped. Read with bin/parallelism-report. Queued behind the
+# repeat chain and the Ornith redo (2026-10-30), not run during them.
+#   lms load recursivesi/flint --identifier recursivesi/flint -c 131072 --parallel 4 -y
+#   cargo run --release -- run runs/parallelism-flint.toml --jobs 1
+name = "parallelism-flint"
+repeats = 3
+wall_secs = 900
+tasks = ["behaviour-delegate-or-not-solo", "behaviour-delegate-or-not-delegate"]
+
+[[variants]]
+name = "main"
+ref = "4926824"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

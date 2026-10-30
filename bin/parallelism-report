@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Solo against delegated: the wall-clock side of behaviour-delegate-or-not.
+
+Reads one or more result directories (or run names, resolved to their
+latest timestamp under results/) and prints, per row, the main agent's
+elapsed time, the hidden-test outcome, and what koda.log says about the
+children: how many InvokeAgent workers ran, the sum of their durations,
+the span from the first worker's start to the last one's end, the peak
+number running at once, and the parallelism factor (sum / span; 1.0 means
+the workers ran one after another). Then a summary per task and model
+with medians, so the solo and delegate twins sit side by side.
+
+Child timings come from tracing's span-close lines in koda.log:
+  <ts> INFO execute_one_tool{tool=InvokeAgent}:execute_sub_agent{...}:
+      koda_core::sub_agent_dispatch: close time.busy=133ms time.idle=1393s
+The close stamp is the child's end; busy + idle is its duration.
+"""
+import json
+import re
+import statistics
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+CLOSE = re.compile(
+    r"^(\S+)\s+\w+\s+execute_one_tool\{tool=InvokeAgent\}:execute_sub_agent\{[^}]*\}: "
+    r"koda_core::sub_agent_dispatch: close time\.busy=(\S+) time\.idle=(\S+)"
+)
+UNITS = {"ns": 1e-9, "µs": 1e-6, "us": 1e-6, "ms": 1e-3, "s": 1.0, "m": 60.0, "h": 3600.0}
+
+
+def seconds(text):
+    m = re.fullmatch(r"([0-9.]+)(ns|µs|us|ms|s|m|h)", text)
+    if not m:
+        raise ValueError(f"duration {text!r}")
+    return float(m.group(1)) * UNITS[m.group(2)]
+
+
+def stamp(text):
+    # 2026-10-30T01:53:47.065572Z
+    return datetime.strptime(text[:26].rstrip("Z"), "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
+
+
+def children(log_path):
+    """[(start, end)] for every finished InvokeAgent child in koda.log."""
+    out = []
+    if not log_path.is_file():
+        return out
+    for line in ANSI.sub("", log_path.read_text(errors="replace")).splitlines():
+        m = CLOSE.match(line)
+        if not m:
+            continue
+        end = stamp(m.group(1)).timestamp()
+        dur = seconds(m.group(2)) + seconds(m.group(3))
+        out.append((end - dur, end))
+    return out
+
+
+def peak(intervals):
+    events = sorted([(s, 1) for s, _ in intervals] + [(e, -1) for _, e in intervals], key=lambda x: (x[0], x[1]))
+    best = cur = 0
+    for _, d in events:
+        cur += d
+        best = max(best, cur)
+    return best
+
+
+def resolve(arg):
+    p = Path(arg)
+    if (p / "results.jsonl").is_file():
+        return p
+    base = Path("results") / arg
+    if base.is_dir():
+        runs = sorted(d for d in base.iterdir() if (d / "results.jsonl").is_file())
+        if runs:
+            return runs[-1]
+    sys.exit(f"no results.jsonl under {arg}")
+
+
+def fmt(x, digits=0):
+    if x is None:
+        return "-"
+    return f"{x:.{digits}f}"
+
+
+def main(args):
+    if not args:
+        sys.exit("usage: parallelism-report <results-dir or run name>...")
+    rows = []
+    for arg in args:
+        d = resolve(arg)
+        for line in (d / "results.jsonl").read_text().splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            if "task" not in r:
+                continue
+            art = d / r["task"] / f"{r['variant']}.{r['model']}.r{r.get('repeat', 1)}"
+            kids = children(art / "koda.log")
+            s = r.get("summary") or {}
+            h = (r.get("check") or {}).get("hidden") or {}
+            total = sum(e - b for b, e in kids)
+            span = (max(e for _, e in kids) - min(b for b, _ in kids)) if kids else None
+            rows.append({
+                "run": d.parent.name,
+                "task": r["task"],
+                "model": r["model"],
+                "repeat": r.get("repeat", 1),
+                "pass": r.get("pass"),
+                "failure": r.get("failure") or "",
+                "elapsed": (s.get("elapsed_ms") or 0) / 1000 or None,
+                "hidden": f"{h.get('hidden_ok', '-')}/{(h.get('hidden_ok') or 0) + (h.get('hidden_failed') or 0)}" if h else "-",
+                "delegations": (r.get("behaviour") or {}).get(
+                    "delegations",
+                    sum((s.get("tool_calls") or {}).get(t, 0) for t in ("InvokeAgent", "SpawnAgent")),
+                ),
+                "children": len(kids),
+                "child_sum": total if kids else None,
+                "child_span": span,
+                "peak": peak(kids) if kids else None,
+                "factor": (total / span) if kids and span else None,
+                "prompt": (s.get("usage") or {}).get("prompt_tokens"),
+                "completion": (s.get("usage") or {}).get("completion_tokens"),
+                # Tokens the workers spent, from usage_by_agent (main excluded).
+                "child_prompt": sum(
+                    (u or {}).get("prompt_tokens", 0)
+                    for name, u in (s.get("usage_by_agent") or {}).items() if name != "main"
+                ) or None,
+                "time_limit": (r.get("behaviour") or {}).get("time_limit_hit", False),
+            })
+
+    print("| run | task | model | r | pass | elapsed s | hidden | InvokeAgent | children | child sum s | child span s | peak | factor | prompt tok | completion tok | child prompt tok |")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    for x in rows:
+        p = "PASS" if x["pass"] else f"FAIL ({x['failure']})" if x["pass"] is not None else "-"
+        if x["time_limit"]:
+            p += " wall"
+        print(f"| {x['run']} | {x['task']} | {x['model']} | {x['repeat']} | {p} | {fmt(x['elapsed'])} | {x['hidden']} | "
+              f"{x['delegations']} | {x['children']} | {fmt(x['child_sum'])} | {fmt(x['child_span'])} | "
+              f"{fmt(x['peak'])} | {fmt(x['factor'], 2)} | {x['prompt'] or '-'} | {x['completion'] or '-'} | {x['child_prompt'] or '-'} |")
+
+    print()
+    print("| task | model | rows | pass | median elapsed s | median children | median peak | median factor | median prompt tok |")
+    print("|---|---|---|---|---|---|---|---|---|")
+    groups = {}
+    for x in rows:
+        groups.setdefault((x["task"], x["model"]), []).append(x)
+
+    def med(xs, key):
+        vals = [x[key] for x in xs if x[key] is not None]
+        return statistics.median(vals) if vals else None
+
+    for (task, model), xs in sorted(groups.items()):
+        print(f"| {task} | {model} | {len(xs)} | {sum(1 for x in xs if x['pass'])}/{len(xs)} | "
+              f"{fmt(med(xs, 'elapsed'))} | {fmt(med(xs, 'children'))} | {fmt(med(xs, 'peak'))} | "
+              f"{fmt(med(xs, 'factor'), 2)} | {fmt(med(xs, 'prompt'))} |")
+
+    # The number the twins exist for.
+    for model in sorted({x["model"] for x in rows}):
+        solo = groups.get(("behaviour-delegate-or-not-solo", model))
+        dele = groups.get(("behaviour-delegate-or-not-delegate", model))
+        if solo and dele:
+            a, b = med(solo, "elapsed"), med(dele, "elapsed")
+            if a and b:
+                print(f"\n{model}: delegated median {b:.0f} s against solo {a:.0f} s, ratio {b / a:.2f} "
+                      f"(below 1.0 means delegation was faster); median peak workers {fmt(med(dele, 'peak'))}, "
+                      f"median factor {fmt(med(dele, 'factor'), 2)}.")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
