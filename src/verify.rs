@@ -94,7 +94,7 @@ fn verify_predicates(task: &Task) -> Result<(bool, String)> {
     let predicates = &task.spec.check.transcript;
     let read = |path: &Path| -> Result<TranscriptOutcome> {
         let t = Transcript::read(path).with_context(|| format!("read {}", path.display()))?;
-        Ok(check::evaluate_predicates(predicates, &t))
+        Ok(check::evaluate_predicates(predicates, &t, None))
     };
     let should_pass = read(&task.canned_pass())?;
     let should_fail = read(&task.canned_fail())?;

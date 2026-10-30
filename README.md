@@ -79,7 +79,7 @@ stated:
 | `tool_count` | `name?`, `min?`, `max?` | calls of `name` (any tool when absent) number within the range |
 | `tool_args` | `name`, `key`, `present?`, `matches?`, `file?`, `max_whole_file_reads?` | every call of `name` (only those whose `file_path` ends with `file`, when given) has `key` (`present`, the default), lacks it (`present = false`), or has it matching the regex; up to `max_whole_file_reads` calls may break the rule |
 | `before` | `a = { name, args_match? }` or a list of them, `b` | a call matching `a` happens before `b`: the first call matching `{ name, args_match? }`, or `"final_message"`, the agent's last reply. `name` is a tool or a list of tools; `args_match` is a regex over any string in the call's arguments; a list of matchers means any of them |
-| `no_edit` | | no `Edit` or `Write` by any agent |
+| `no_edit` | | no `Edit` or `Write` by any agent, and the run's diff is empty (an agent can write files through Bash; `verify` has no diff and checks the calls alone) |
 | `delegated` | `min?`, `max?` | `InvokeAgent` + `SpawnAgent` calls number within the range |
 | `final_message` | `matches?`, `not_matches?`, `is_question?` | the agent's last reply (`run_summary.response`) matches, doesn't match, and/or is a question (its last line ends with `?`, or the agent called AskUser) |
 | `turn_end` | `kind` | the turn ended with that `reason.kind`: `complete`, `error` or `cancelled` |

@@ -16,6 +16,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::proc;
+use crate::project::DiffStat;
 use crate::task::{Anchor, CallMatch, CallMatches, Predicate, Task};
 use crate::transcript::{DELEGATION_TOOLS, EDIT_TOOLS, ToolCall, Transcript};
 
@@ -114,10 +115,11 @@ pub fn evaluate(
     task: &Task,
     hidden: Option<HiddenOutcome>,
     transcript: &Transcript,
+    diff: Option<&DiffStat>,
 ) -> CheckOutcome {
     let predicates = &task.spec.check.transcript;
     let transcript_outcome =
-        (!predicates.is_empty()).then(|| evaluate_predicates(predicates, transcript));
+        (!predicates.is_empty()).then(|| evaluate_predicates(predicates, transcript, diff));
     CheckOutcome {
         hidden,
         transcript: transcript_outcome,
@@ -191,11 +193,18 @@ fn outcome(exit: Option<i32>, timed_out: bool, text: &str) -> HiddenOutcome {
 // ---------------------------------------------------------------------------
 
 /// Evaluate every predicate; none short-circuits, so the row names them all.
-pub fn evaluate_predicates(predicates: &[Predicate], t: &Transcript) -> TranscriptOutcome {
+/// `diff` is what the run left in the project (`None` for a canned transcript
+/// in `verify`); `no_edit` reads it, since an agent can write files through
+/// Bash without an Edit or Write call.
+pub fn evaluate_predicates(
+    predicates: &[Predicate],
+    t: &Transcript,
+    diff: Option<&DiffStat>,
+) -> TranscriptOutcome {
     let verdicts: Vec<Verdict> = predicates
         .iter()
         .map(|p| {
-            let (pass, detail) = check_one(p, t);
+            let (pass, detail) = check_one(p, t, diff);
             Verdict {
                 predicate: p.to_string(),
                 pass,
@@ -311,7 +320,7 @@ fn is_question(t: &Transcript) -> bool {
         })
 }
 
-fn check_one(p: &Predicate, t: &Transcript) -> (bool, String) {
+fn check_one(p: &Predicate, t: &Transcript, diff: Option<&DiffStat>) -> (bool, String) {
     match p {
         Predicate::ToolCount { name, min, max } => {
             let n = t
@@ -392,7 +401,16 @@ fn check_one(p: &Predicate, t: &Transcript) -> (bool, String) {
                 .filter(|c| EDIT_TOOLS.contains(&c.name))
                 .collect();
             match edits.first() {
-                None => (true, "no Edit or Write".into()),
+                None => match diff {
+                    Some(d) if d.files > 0 => (
+                        false,
+                        format!(
+                            "no Edit or Write call, but the diff touches {} file(s) (+{} -{}): written through Bash",
+                            d.files, d.insertions, d.deletions
+                        ),
+                    ),
+                    _ => (true, "no Edit or Write".into()),
+                },
                 Some(c) => (
                     false,
                     format!(
@@ -576,7 +594,7 @@ mod tests {
 
     fn verdicts(toml_text: &str, text: &str) -> Vec<(String, bool, String)> {
         let t = Transcript::parse(text);
-        evaluate_predicates(&predicates(toml_text), &t)
+        evaluate_predicates(&predicates(toml_text), &t, None)
             .predicates
             .into_iter()
             .map(|v| (v.predicate, v.pass, v.detail))
@@ -703,6 +721,27 @@ mod tests {
         );
         assert!(!v[0].1);
         assert!(v[1].1);
+    }
+
+    #[test]
+    fn a_diff_without_an_edit_call_fails_no_edit() {
+        // The model wrote the file through Bash: no Edit or Write in the
+        // stream, but the project changed. Seen on the 2026-10-30 ceiling run.
+        let text = r#"{"type":"tool_call_start","id":"1","name":"Bash","args":{"command":"sed -i '' 's/a/b/' src/lib.rs"},"is_sub_agent":false}
+"#;
+        let t = Transcript::parse(text);
+        let preds = predicates(r#"transcript = [{ type = "no_edit" }]"#);
+        let changed = DiffStat {
+            files: 1,
+            insertions: 1,
+            deletions: 1,
+        };
+        let v = evaluate_predicates(&preds, &t, Some(&changed));
+        assert!(!v.pass, "{:?}", v.predicates);
+        assert!(v.predicates[0].detail.contains("through Bash"));
+        let clean = DiffStat::default();
+        assert!(evaluate_predicates(&preds, &t, Some(&clean)).pass);
+        assert!(evaluate_predicates(&preds, &t, None).pass);
     }
 
     #[test]

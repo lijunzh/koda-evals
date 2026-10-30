@@ -438,7 +438,7 @@ impl RunOne<'_> {
         } else {
             None
         };
-        let check = check::evaluate(task, hidden, &transcript);
+        let check = check::evaluate(task, hidden, &transcript, Some(&diff));
 
         // A task nobody verified starts cold; its first finished run leaves
         // the compiled dependencies for the others.
