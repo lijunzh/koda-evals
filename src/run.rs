@@ -21,6 +21,7 @@ use serde_json::{Value, json};
 
 use crate::project::{self, Stage};
 use crate::task::{self, Task};
+use crate::transcript::Transcript;
 use crate::{build, check, keys, proc, util};
 
 #[derive(Debug, Deserialize)]
@@ -203,7 +204,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                         slot,
                         art,
                         work,
-                        wall_secs: run.wall_secs,
+                        wall_secs: run.wall_secs.unwrap_or(task.spec.limits.wall_secs),
                     });
                 }
             }
@@ -299,8 +300,9 @@ struct Job<'a> {
     slot: String,
     art: PathBuf,
     work: PathBuf,
-    /// The run file's wall-clock override, if any.
-    wall_secs: Option<u64>,
+    /// The effective wall-clock limit: the run file's override, else the
+    /// task's own.
+    wall_secs: u64,
 }
 
 impl Job<'_> {
@@ -367,8 +369,8 @@ struct RunOne<'a> {
     koda_repo: &'a Path,
     /// API keys copied from koda's keystore, as `ENV_NAME -> value`.
     keys: &'a BTreeMap<String, String>,
-    /// The run file's wall-clock override; `None` keeps the task's own limit.
-    wall_secs: Option<u64>,
+    /// The effective wall-clock limit.
+    wall_secs: u64,
 }
 
 impl RunOne<'_> {
@@ -380,7 +382,7 @@ impl RunOne<'_> {
         project::materialize(task, Stage::Start, self.koda_repo, &project)?;
         let target = util::cache_dir().join("target").join(task.id());
 
-        let transcript = self.art.join("transcript.ndjson");
+        let transcript_path = self.art.join("transcript.ndjson");
         let mut cmd = Command::new(self.bin);
         cmd.arg("-p")
             .arg(&task.spec.prompt)
@@ -401,7 +403,7 @@ impl RunOne<'_> {
             .envs(self.keys)
             .envs(&self.model.env)
             .stdin(Stdio::null())
-            .stdout(File::create(&transcript)?)
+            .stdout(File::create(&transcript_path)?)
             .stderr(File::create(self.art.join("stderr.log"))?);
         if let Some(model) = &self.model.model {
             cmd.args(["--model", model]);
@@ -409,31 +411,31 @@ impl RunOne<'_> {
         if let Some(url) = &self.model.base_url {
             cmd.args(["--base-url", url]);
         }
-        let wall_secs = self.wall_secs.unwrap_or(task.spec.limits.wall_secs);
-        let agent = proc::run_with_limit(&mut cmd, Duration::from_secs(wall_secs))?;
+        let agent = proc::run_with_limit(&mut cmd, Duration::from_secs(self.wall_secs))?;
         // koda's own log says why a turn failed ("LLM inference failed" on
         // stderr doesn't). Keep it with the run's other evidence.
         keep_koda_log(&config, self.art);
 
-        let (summary, events) = read_transcript(&transcript)?;
+        let transcript = Transcript::read(&transcript_path)?;
         let diff = project::capture_diff(&project, &self.art.join("diff.patch"))?;
-        let check = match project::inject_hidden(task, &project) {
-            Ok(()) => check::run(task, &project, &target, &self.art.join("check.log"))?,
-            Err(e) => check::not_run(&format!("hidden tests not added: {e:#}")),
+        let hidden = if task.has_hidden() {
+            Some(match project::inject_hidden(task, &project) {
+                Ok(()) => check::run(task, &project, &target, &self.art.join("check.log"))?,
+                Err(e) => check::not_run(&format!("hidden tests not added: {e:#}")),
+            })
+        } else {
+            None
         };
+        let check = check::evaluate(task, hidden, &transcript);
 
         // When koda itself failed (no model call, a provider error, a
         // crash), say so instead of blaming the untouched code.
-        let agent_failed = agent.timed_out
-            || agent.exit != Some(0)
-            || summary
-                .as_ref()
-                .and_then(|s| s["turn_end"]["kind"].as_str())
-                == Some("error");
+        let agent_failed =
+            agent.timed_out || agent.exit != Some(0) || transcript.turn_end_kind() == Some("error");
         let failure = if check.passed() {
             None
         } else if agent_failed && !agent.timed_out {
-            Some("agent failed")
+            Some("agent failed".to_string())
         } else {
             Some(check.failure_kind())
         };
@@ -450,8 +452,8 @@ impl RunOne<'_> {
                 "timed_out": agent.timed_out,
                 "wall_ms": agent.elapsed.as_millis() as u64,
             },
-            "summary": summary,
-            "events": events,
+            "summary": transcript.summary,
+            "events": transcript.counts,
             "diff": diff,
             "check": check,
         }))
@@ -479,31 +481,6 @@ fn keep_koda_log(config: &Path, art: &Path) {
     if !out.is_empty() {
         let _ = std::fs::write(art.join("koda.log"), out);
     }
-}
-
-/// The `run_summary` line (if koda got that far) and a count of every other
-/// event type in the transcript.
-fn read_transcript(path: &Path) -> Result<(Option<Value>, BTreeMap<String, u64>)> {
-    let text = String::from_utf8_lossy(&std::fs::read(path)?).into_owned();
-    Ok(parse_transcript(&text))
-}
-
-fn parse_transcript(text: &str) -> (Option<Value>, BTreeMap<String, u64>) {
-    let mut summary = None;
-    let mut events: BTreeMap<String, u64> = BTreeMap::new();
-    for line in text.lines().filter(|l| !l.trim().is_empty()) {
-        let Ok(value) = serde_json::from_str::<Value>(line) else {
-            *events.entry("unparsed_line".into()).or_default() += 1;
-            continue;
-        };
-        let kind = value["type"].as_str().unwrap_or("untyped").to_string();
-        if kind == "run_summary" {
-            summary = Some(value);
-        } else {
-            *events.entry(kind).or_default() += 1;
-        }
-    }
-    (summary, events)
 }
 
 /// One line for the terminal: outcome, time, tokens.
@@ -542,22 +519,6 @@ fn command_line(cmd: &mut Command) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn transcript_keeps_the_summary_and_counts_events() {
-        let text = r#"{"type":"turn_start","turn_id":"1"}
-{"type":"tool_call_start","id":"a","name":"Read","args":{},"is_sub_agent":false}
-{"type":"tool_call_start","id":"b","name":"Edit","args":{},"is_sub_agent":false}
-not json
-{"type":"run_summary","success":true,"tool_calls":{"Read":1,"Edit":1}}
-"#;
-        let (summary, events) = parse_transcript(text);
-        assert_eq!(summary.unwrap()["tool_calls"]["Edit"], 1);
-        assert_eq!(events["tool_call_start"], 2);
-        assert_eq!(events["turn_start"], 1);
-        assert_eq!(events["unparsed_line"], 1);
-        assert!(!events.contains_key("run_summary"));
-    }
 
     #[test]
     fn run_file_parses_with_defaults() {

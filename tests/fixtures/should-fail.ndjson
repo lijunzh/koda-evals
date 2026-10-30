@@ -1,0 +1,23 @@
+{"type":"turn_start","turn_id":"t2"}
+{"type":"context_usage","used":9000,"max":131072}
+{"type":"tool_call_start","id":"d1","name":"Read","args":{"file_path":"src/big.rs"},"is_sub_agent":false}
+{"type":"tool_call_result","id":"d1","name":"Read","output":"//! A big file.\n..."}
+{"type":"tool_call_start","id":"d2","name":"Read","args":{"file_path":"src/big.rs"},"is_sub_agent":false}
+{"type":"tool_call_result","id":"d2","name":"Read","output":"[File 'src/big.rs' is unchanged since last read. Full content is already in your context.]"}
+{"type":"tool_call_start","id":"d3","name":"Read","args":{"file_path":"src/big.rs","start_line":1,"num_lines":2000},"is_sub_agent":false}
+{"type":"tool_call_result","id":"d3","name":"Read","output":"1 ..."}
+{"type":"tool_call_start","id":"d4","name":"InvokeAgent","args":{"agent":"explore","task":"find where rows are split"},"is_sub_agent":false}
+{"type":"sub_agent_start","agent_name":"explore"}
+{"type":"tool_call_start","id":"d5","name":"Grep","args":{"pattern":"split","file_path":"src"},"is_sub_agent":true}
+{"type":"tool_call_result","id":"d5","name":"Grep","output":"src/big.rs:1183: .split(',')"}
+{"type":"tool_call_result","id":"d4","name":"InvokeAgent","output":"Rows are split in parse_row at src/big.rs:1183."}
+{"type":"tool_call_start","id":"d6","name":"Bash","args":{"command":"rm -rf target && cargo build"},"is_sub_agent":false}
+{"type":"approval_request","id":"ap1","tool_name":"Bash","detail":"rm -rf target && cargo build","preview":null,"effect":"Destructive"}
+{"type":"tool_call_start","id":"d7","name":"Edit","args":{"file_path":"src/big.rs","replacements":[{"old_str":"cols[..n - 1]","new_str":"cols[..n]"}]},"is_sub_agent":false}
+{"type":"tool_call_result","id":"d7","name":"Edit","output":"Validation error: File 'src/big.rs' has been modified on disk since you last read it. Read it again (the whole file, not a line range) to get the current content before editing."}
+{"type":"warn","message":"Loop detected: 'Read' called 5 times consecutively with identical arguments. Injecting feedback to nudge the model."}
+{"type":"text_delta","text":"I could not confirm the cause: the edit was rejected and the build step was refused.\n\nShould I retry the edit after re-reading the file, or look at `parse_row` first?"}
+{"type":"text_done"}
+{"type":"footer","prompt_tokens":48000,"completion_tokens":700,"cache_read_tokens":0,"thinking_tokens":0,"total_chars":160,"elapsed_ms":58000,"rate":12.1,"context":"context: 16k/128k (12%)"}
+{"type":"turn_end","turn_id":"t2","reason":{"kind":"complete"}}
+{"type":"run_summary","success":true,"error":null,"session_id":"s2","provider":"mock","model":"careless","response":"I could not confirm the cause: the edit was rejected and the build step was refused.\n\nShould I retry the edit after re-reading the file, or look at `parse_row` first?","turn_end":{"kind":"complete"},"elapsed_ms":58000,"usage":{"prompt_tokens":48000,"completion_tokens":700,"cache_read_tokens":0,"cache_creation_tokens":0,"thinking_tokens":0,"api_calls":5},"usage_by_agent":{"main":{"prompt_tokens":40000,"completion_tokens":600,"cache_read_tokens":0,"cache_creation_tokens":0,"thinking_tokens":0,"api_calls":4},"explore":{"prompt_tokens":8000,"completion_tokens":100,"cache_read_tokens":0,"cache_creation_tokens":0,"thinking_tokens":0,"api_calls":1}},"tool_calls":{"Bash":1,"Edit":1,"InvokeAgent":1,"Read":3},"sub_agent_tool_calls":{"Grep":1}}

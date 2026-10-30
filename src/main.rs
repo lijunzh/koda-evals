@@ -12,6 +12,7 @@ mod project;
 mod report;
 mod run;
 mod task;
+mod transcript;
 mod util;
 mod verify;
 
@@ -46,7 +47,8 @@ enum Cmd {
     /// List the tasks with their cluster, grade and tags.
     List,
     /// Fail-first check: hidden tests must fail where the agent starts and
-    /// pass on the task's solution.
+    /// pass on the task's solution; transcript predicates must pass the
+    /// task's should-pass transcript and fail its should-fail one.
     Verify {
         /// Task ids (default: every task).
         tasks: Vec<String>,

@@ -104,7 +104,7 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     let fixed = rows.iter().find(|r| r["model"] == "fixes").unwrap();
     assert_eq!(fixed["pass"], true, "{fixed:#}");
     assert_eq!(fixed["summary"]["tool_calls"]["Edit"], 1, "{fixed:#}");
-    assert_eq!(fixed["check"]["hidden_ok"], 3, "{fixed:#}");
+    assert_eq!(fixed["check"]["hidden"]["hidden_ok"], 3, "{fixed:#}");
     assert_eq!(fixed["diff"]["files"], 1, "{fixed:#}");
     let artifacts = dir.join(fixed["artifacts"].as_str().unwrap());
     assert!(artifacts.join("transcript.ndjson").is_file());
