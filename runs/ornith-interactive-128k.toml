@@ -1,0 +1,19 @@
+# ornith: all ten tasks, once, under the interactive budget (each task's own
+# 15-20 minute limit) with the 128K window decided on 2026-10-29 for every
+# local configuration. This is the aligned fast-seat baseline; the 64K
+# screens before it are not comparable on context.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   cargo run --release -- run runs/ornith-interactive-128k.toml
+name = "ornith-interactive-128k"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

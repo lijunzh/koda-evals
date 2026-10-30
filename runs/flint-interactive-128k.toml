@@ -1,0 +1,19 @@
+# flint: all ten tasks, once, under the interactive budget (each task's own
+# 15-20 minute limit) with the 128K window decided on 2026-10-29 for every
+# local configuration. This is the aligned fast-seat baseline; the 64K
+# screens before it are not comparable on context.
+#   lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+#   cargo run --release -- run runs/flint-interactive-128k.toml
+name = "flint-interactive-128k"
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
