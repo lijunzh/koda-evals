@@ -1,0 +1,23 @@
+# Control for the Laguna worker screen: Flint on the same four long tasks
+# under the same worker conditions (an hour a task, a 128K window) instead
+# of the interactive ones it was screened with (20 minutes, 64K). Laguna
+# passed two of these four that Flint never has; this run asks whether that
+# edge is the model or the budget. If Flint passes them given the hour, the
+# worker tier's case rests on something other than these tasks.
+#   lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+#   cargo run --release -- run runs/flint-worker-long.toml
+name = "flint-worker-long"
+tasks = ["bash-classifier-escapes", "composer-wrap-width-zero", "provider-flag-base-url", "vim-normal-mode-bugs"]
+repeats = 1
+wall_secs = 3600
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
