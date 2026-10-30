@@ -459,7 +459,10 @@ mod tests {
         assert_eq!(s.delegated, 1);
         assert_eq!(s.mean_main_tokens, Some(200));
         let md = render(&rows, &Value::Null, "x");
-        assert!(md.contains("| v | m | 1/2 | 50% | 0/1 | 550 | 200 | 1/2 |"), "{md}");
+        assert!(
+            md.contains("| v | m | 1/2 | 50% | 0/1 | 550 | 200 | 1/2 |"),
+            "{md}"
+        );
     }
 
     #[test]
