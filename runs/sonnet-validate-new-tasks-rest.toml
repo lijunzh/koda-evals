@@ -1,0 +1,17 @@
+# The two tasks left when the first sonnet-validate-new-tasks run was cut off
+# by a session restart (results/sonnet-validate-new-tasks/, four of six
+# passed). Same gate, same model, once each.
+#   cargo run --release -- run runs/sonnet-validate-new-tasks-rest.toml --jobs 2
+# Result: both passed (results/sonnet-validate-new-tasks-rest/20261030T104758Z).
+name = "sonnet-validate-new-tasks-rest"
+tasks = ["bash-readonly-fail-closed", "compact-reasoning-summary"]
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"

@@ -1,0 +1,36 @@
+# Task validation gate (eval strategy note, remote API use 3): a new task
+# joins a suite only after Sonnet passes it once. A task Sonnet fails is
+# read as a broken task first. The six tasks built 2026-10-30 from the suite
+# growth plan (WP1 and WP2), once each, on the Koda main the tasks were
+# verified against. About $1.75 a history task.
+#   cargo run --release -- run runs/sonnet-validate-new-tasks.toml --jobs 3
+#
+# Parallelism (2026-10-30): the API is not the bound; the Rust builds are.
+# Every job compiles its own Koda at the task's base and the agent runs cargo
+# inside the project, so N jobs share 16 cores. For a validation run, where
+# only pass/fail matters, --jobs 6 is fine if wall_secs is raised (1800) so
+# contention can't manufacture a timeout on a 20-minute task. Keep --jobs 3
+# for any run whose wall times go into a report; above 1 they are contended.
+#
+# Result: six of six passed (results/sonnet-validate-new-tasks/20261030T103306Z
+# has four; the run was cut off by a session restart and the other two ran
+# again from sonnet-validate-new-tasks-rest.toml).
+name = "sonnet-validate-new-tasks"
+tasks = [
+    "bash-split-multibyte",
+    "loop-guard-char-boundary",
+    "bash-readonly-fail-closed",
+    "edit-stale-after-own-edit",
+    "provider-flags-beat-saved",
+    "compact-reasoning-summary",
+]
+repeats = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"
