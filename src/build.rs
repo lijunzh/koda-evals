@@ -56,6 +56,7 @@ pub fn ensure(koda_repo: &Path, git_ref: &str) -> Result<Built> {
     let _ = std::fs::remove_dir_all(&build);
     std::fs::create_dir_all(&build)?;
     project::archive(koda_repo, &sha, &build)?;
+    project::stamp(&build)?;
 
     let target = util::cache_dir().join("koda-target");
     let status = Command::new("cargo")

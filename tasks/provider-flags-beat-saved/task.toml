@@ -15,10 +15,7 @@ koda_fix = "b3635e8"
 
 [check]
 hidden = [{ file = "koda-cli/tests/smoke_test.rs", test = "hidden/flags_beat_saved.rs" }]
-# The hidden file is not in koda-cli/src, and `git archive` keeps old mtimes:
-# without the touch, cargo reuses the other stage's koda from the shared
-# target dir.
-command = "touch koda-cli/src/lib.rs koda-cli/src/main.rs && cargo test -p koda-cli --test smoke_test eval_hidden"
+command = "cargo test -p koda-cli --test smoke_test eval_hidden"
 timeout_secs = 900
 
 [limits]

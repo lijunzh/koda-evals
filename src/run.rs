@@ -5,8 +5,9 @@
 //! API model. Each one gets a fresh project and a fresh koda config
 //! directory, runs `koda -p … --output-format stream-json` under a
 //! wall-clock limit, and then the task's hidden tests decide pass or fail.
-//! Runs share nothing but the per-task cargo target directory, which cargo
-//! locks itself, so parallel runs are safe; their wall times are contended.
+//! Runs share nothing: each one's cargo target directory is a clone of the
+//! task's cache (see `project::seed_target`), so dependencies compile once
+//! and no run sees another's build. Their wall times are contended.
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -387,8 +388,10 @@ impl RunOne<'_> {
         let project = self.work.join("project");
         let config = self.work.join("config");
         std::fs::create_dir_all(&config)?;
+        let shared = util::cache_dir().join("target").join(task.id());
+        let target = self.work.join("target");
+        project::seed_target(&shared, &target)?;
         project::materialize(task, Stage::Start, self.koda_repo, &project)?;
-        let target = util::cache_dir().join("target").join(task.id());
 
         let transcript_path = self.art.join("transcript.ndjson");
         let trust = task.spec.run.trust.as_str();
@@ -436,6 +439,13 @@ impl RunOne<'_> {
             None
         };
         let check = check::evaluate(task, hidden, &transcript);
+
+        // A task nobody verified starts cold; its first finished run leaves
+        // the compiled dependencies for the others.
+        if !shared.exists() {
+            std::fs::create_dir_all(shared.parent().context("target cache dir")?)?;
+            let _ = std::fs::rename(&target, &shared);
+        }
 
         // When koda itself failed (no model call, a provider error, a
         // crash), say so instead of blaming the untouched code.

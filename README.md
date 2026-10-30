@@ -232,8 +232,13 @@ What differs from a koda run (the wrapper's header has the detail):
 - **Trust mode from the task** (`[run] trust`, default `auto`), inside
   koda's kernel sandbox. A task's `agents_dir` is in the project's start
   commit.
-- **Shared build cache per task:** `CARGO_TARGET_DIR` is
-  `~/.cache/koda-eval/target/<task>`.
+- **Own build dir, shared dependencies:** `CARGO_TARGET_DIR` is a
+  copy-on-write clone of `~/.cache/koda-eval/target/<task>`, inside the
+  run's work directory. Every project file gets a new mtime, so cargo compiles
+  the project's own packages and reuses only compiled dependencies. No run
+  sees a solved stage's build or another run's. Only `verify` writes the
+  shared cache, except that a task's first run leaves its target there if
+  nothing was cached yet.
 - **Wall-clock limit:** the task's `wall_secs`. When it passes, the whole
   process group is killed.
 - **One at a time.** A local model serves one request at a time.

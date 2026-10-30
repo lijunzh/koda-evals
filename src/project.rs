@@ -5,8 +5,10 @@
 //! could `git log` its way to the real fix.
 
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::SystemTime;
 
 use anyhow::{Context, Result, bail};
 
@@ -46,9 +48,66 @@ pub fn materialize(task: &Task, stage: Stage, koda_repo: &Path, dest: &Path) -> 
         std::fs::create_dir_all(&to)?;
         copy_dir(&agents, &to).with_context(|| format!("copy agents from {}", agents.display()))?;
     }
+    stamp(dest)?;
     git(dest, &["init", "-q", "-b", "main"])?;
     git(dest, &["add", "-A"])?;
     git(dest, &["commit", "-q", "--no-verify", "-m", "task start"])?;
+    Ok(())
+}
+
+/// Give every file under `dir` the current time, so cargo compiles it.
+///
+/// Cargo calls a package up to date when its sources are older than its
+/// last build in the target dir, wherever on disk that build's project
+/// was. `git archive` writes commit times and `fs::copy` can keep the
+/// source's, so a new project looks older than the last build: cargo prints
+/// `Finished`, or runs the solved stage's test binary, for code it never
+/// compiled.
+pub(crate) fn stamp(dir: &Path) -> Result<()> {
+    stamp_tree(dir, SystemTime::now())
+}
+
+fn stamp_tree(dir: &Path, now: SystemTime) -> Result<()> {
+    for entry in std::fs::read_dir(dir).with_context(|| format!("read {}", dir.display()))? {
+        let entry = entry?;
+        let kind = entry.file_type()?;
+        if kind.is_dir() {
+            stamp_tree(&entry.path(), now)?;
+        } else if kind.is_file() {
+            File::open(entry.path())
+                .and_then(|f| f.set_modified(now))
+                .with_context(|| format!("stamp {}", entry.path().display()))?;
+        }
+    }
+    Ok(())
+}
+
+/// Clone the task's shared cargo target dir to `target`, the run's own.
+///
+/// `stamp` alone isn't enough at `--jobs N`: a build another run of the
+/// task starts after this project was written is newer than its files
+/// (and than the file the hidden tests went into), so cargo would hand this
+/// run that run's output. A clone keeps every run's packages to itself and
+/// still starts it with the task's compiled dependencies, whose fingerprints
+/// survive because `cp` keeps mtimes. Missing `shared` means a cold start.
+pub fn seed_target(shared: &Path, target: &Path) -> Result<()> {
+    if !shared.is_dir() {
+        return Ok(());
+    }
+    let mut cp = Command::new("cp");
+    if cfg!(target_os = "macos") {
+        cp.arg("-cRp");
+    } else {
+        cp.args(["-a", "--reflink=auto"]);
+    }
+    let out = cp.arg(shared).arg(target).output().context("run cp")?;
+    if !out.status.success() {
+        bail!(
+            "clone {}: {}",
+            shared.display(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
     Ok(())
 }
 
@@ -276,6 +335,165 @@ command = "true"
         let lib = std::fs::read_to_string(start.join("src/lib.rs")).unwrap();
         assert!(lib.contains("mod eval_hidden"));
         assert!(lib.contains("fn two()"));
+    }
+
+    fn cargo(dir: &Path, target: &Path, args: &[&str]) -> (bool, String) {
+        let out = Command::new("cargo")
+            .args(args)
+            .current_dir(dir)
+            .env("CARGO_TARGET_DIR", target)
+            .env("CARGO_TERM_COLOR", "never")
+            .env_remove("RUSTFLAGS")
+            .output()
+            .unwrap();
+        let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
+        text.push_str(&String::from_utf8_lossy(&out.stderr));
+        (out.status.success(), text)
+    }
+
+    const MANIFEST: &str = "[package]\nname = \"k\"\nversion = \"0.1.0\"\nedition = \"2024\"\n";
+    const BROKEN: &str = "pub fn f() -> u8 { \"one\" }\n";
+    const FIXED: &str = "pub fn f() -> u8 { 2 }\n";
+
+    /// Whatever `Stage::Solved` builds must not stand in for `Stage::Start`:
+    /// the first build of the new project has to fail with the real error.
+    fn assert_start_is_compiled_after_solved(task: &Task, koda_repo: &Path, tmp: &Path) {
+        let target = tmp.join("target");
+        let solved = tmp.join("solved");
+        materialize(task, Stage::Solved, koda_repo, &solved).unwrap();
+        inject_hidden(task, &solved).unwrap();
+        // What `verify` leaves, then what a run that fixed the bug leaves.
+        let (ok, text) = cargo(&solved, &target, &["test", "--lib"]);
+        assert!(ok && text.contains("eval_hidden::two ... ok"), "{text}");
+        let (ok, text) = cargo(&solved, &target, &["build"]);
+        assert!(ok, "{text}");
+
+        let start = tmp.join("start");
+        materialize(task, Stage::Start, koda_repo, &start).unwrap();
+        for args in [&["build"][..], &["test", "--lib"][..]] {
+            let (ok, text) = cargo(&start, &target, args);
+            assert!(!ok, "cargo {args:?} reused the solved build:\n{text}");
+            assert!(text.contains("error[E0308]"), "{text}");
+            assert!(!text.contains("eval_hidden"), "{text}");
+        }
+    }
+
+    fn write_task_files(task_dir: &Path, toml: &str) {
+        std::fs::create_dir_all(task_dir.join("hidden")).unwrap();
+        std::fs::write(
+            task_dir.join("hidden/t.rs"),
+            "#[test]\nfn two() { assert_eq!(f(), 2); }\n",
+        )
+        .unwrap();
+        std::fs::write(task_dir.join("task.toml"), toml).unwrap();
+    }
+
+    #[test]
+    fn a_fixture_project_cannot_reuse_the_last_build_in_its_target() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task_dir = tmp.path().join("k");
+        for (rel, text) in [
+            ("fixture/Cargo.toml", MANIFEST),
+            ("fixture/src/lib.rs", BROKEN),
+            ("solution/src/lib.rs", FIXED),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        write_task_files(
+            &task_dir,
+            r#"id = "k"
+prompt = "p"
+[repo]
+fixture = "fixture"
+solution = "solution"
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/t.rs" }]
+command = "true"
+"#,
+        );
+        let task = Task::load(&task_dir).unwrap();
+        assert_start_is_compiled_after_solved(&task, tmp.path(), tmp.path());
+    }
+
+    #[test]
+    fn a_history_project_cannot_reuse_the_last_build_in_its_target() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path().join("repo");
+        std::fs::create_dir_all(repo.join("src")).unwrap();
+        std::fs::write(repo.join("Cargo.toml"), MANIFEST).unwrap();
+        std::fs::write(repo.join("src/lib.rs"), BROKEN).unwrap();
+        git(&repo, &["init", "-q", "-b", "main"]).unwrap();
+        git(&repo, &["add", "-A"]).unwrap();
+        git(&repo, &["commit", "-q", "--no-verify", "-m", "base"]).unwrap();
+        git(&repo, &["tag", "base"]).unwrap();
+        std::fs::write(repo.join("src/lib.rs"), FIXED).unwrap();
+        git(&repo, &["commit", "-qam", "fix", "--no-verify"]).unwrap();
+
+        let task_dir = tmp.path().join("k");
+        write_task_files(
+            &task_dir,
+            r#"id = "k"
+prompt = "p"
+[repo]
+koda_base = "base"
+koda_fix = "main"
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/t.rs" }]
+command = "true"
+"#,
+        );
+        let task = Task::load(&task_dir).unwrap();
+        assert_start_is_compiled_after_solved(&task, &repo, tmp.path());
+    }
+
+    #[test]
+    fn a_seeded_target_keeps_its_cached_builds_and_stays_apart() {
+        let tmp = tempfile::tempdir().unwrap();
+        let project = tmp.path().join("project");
+        std::fs::create_dir_all(project.join("src")).unwrap();
+        std::fs::write(project.join("Cargo.toml"), MANIFEST).unwrap();
+        std::fs::write(project.join("src/lib.rs"), FIXED).unwrap();
+        let shared = tmp.path().join("shared");
+        assert!(cargo(&project, &shared, &["build"]).0);
+
+        let (one, two) = (tmp.path().join("one"), tmp.path().join("two"));
+        seed_target(&shared, &one).unwrap();
+        seed_target(&shared, &two).unwrap();
+        let (ok, text) = cargo(&project, &one, &["build"]);
+        assert!(ok && !text.contains("Compiling"), "cache lost:\n{text}");
+
+        // A newer build in one clone can't make the other look up to date.
+        stamp(&project).unwrap();
+        let (ok, text) = cargo(&project, &one, &["build"]);
+        assert!(ok && text.contains("Compiling"), "{text}");
+        let (ok, text) = cargo(&project, &two, &["build"]);
+        assert!(ok && text.contains("Compiling"), "{text}");
+
+        let cold = tmp.path().join("cold");
+        seed_target(&tmp.path().join("missing"), &cold).unwrap();
+        assert!(!cold.exists());
+    }
+
+    #[test]
+    fn stamp_renews_read_only_files_and_leaves_links_alone() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        use std::time::Duration;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("p");
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        let file = dir.join("sub/f.rs");
+        std::fs::write(&file, "x").unwrap();
+        let old = SystemTime::now() - Duration::from_secs(3600);
+        File::open(&file).unwrap().set_modified(old).unwrap();
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
+        symlink("no-such-file", dir.join("dangling")).unwrap();
+
+        stamp(&dir).unwrap();
+        let mtime = std::fs::metadata(&file).unwrap().modified().unwrap();
+        assert!(mtime > old + Duration::from_secs(3000));
     }
 
     #[test]

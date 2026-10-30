@@ -14,10 +14,7 @@ koda_fix = "1640bec"
 
 [check]
 hidden = [{ file = "koda-core/tests/session_test.rs", test = "hidden/empty_summary.rs" }]
-# The hidden file is not in koda-core/src, and `git archive` keeps old mtimes:
-# without the touch, cargo reuses the other stage's koda-core from the shared
-# target dir.
-command = "touch koda-core/src/lib.rs && cargo test -p koda-core --test session_test --features test-support eval_hidden"
+command = "cargo test -p koda-core --test session_test --features test-support eval_hidden"
 timeout_secs = 900
 
 [limits]
