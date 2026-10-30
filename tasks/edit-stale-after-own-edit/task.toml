@@ -1,0 +1,23 @@
+id = "edit-stale-after-own-edit"
+# Fixed in Koda PR #1435 (2026-10-28), after the model's training cutoff.
+prompt = """koda's Edit tool keeps rejecting its own follow-up edits. After a successful Edit, the next Edit on the same file fails with:
+
+    modified on disk since you last read it (last written by Edit 14s ago)
+
+Nothing else touched the file. In one run this happened 13 times, and the model concluded something else was changing the file and stopped to ask me.
+
+Find and fix the cause. Consecutive Edits to a file should just work. If the file really was changed by something else, such as a shell command or an editor, the Edit must still be rejected, including when koda edited the file earlier."""
+tags = ["rust", "koda-history", "logic", "investigation"]
+cluster = "investigation"
+
+[repo]
+koda_base = "79fba66^"
+koda_fix = "79fba66"
+
+[check]
+hidden = [{ file = "koda-core/src/tools/validate.rs", test = "hidden/own_edit.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 1200

@@ -1,0 +1,26 @@
+id = "bash-readonly-fail-closed"
+# Fixed in Koda PR #1430 (2026-10-28), after the model's training cutoff.
+# Hidden tests use ToolEffect, the classifier's return type on both sides.
+prompt = """Safe mode auto-approves Bash commands koda considers read-only, and these went through without a prompt:
+
+- `ls` and `rm -rf /` on two lines (`ls\\nrm -rf /`)
+- `ls & rm -rf /`
+- `echo it\\'s; echo $(rm -rf /)`
+
+In Auto mode, `echo hi > f; rm -rf /` also ran straight through, without the confirmation `rm -rf /` gets on its own.
+
+Find and fix the cause. A command line must not be treated as safer than the most dangerous thing in it. Everyday read-only commands with harmless redirects, such as `git status 2>&1` and `find . 2>/dev/null`, must keep running without a prompt."""
+tags = ["rust", "koda-history", "security", "logic", "investigation", "bash-safety"]
+cluster = "investigation"
+
+[repo]
+koda_base = "b4a06cf^"
+koda_fix = "b4a06cf"
+
+[check]
+hidden = [{ file = "koda-core/src/bash_safety.rs", test = "hidden/fail_closed.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 1200

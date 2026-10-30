@@ -1,0 +1,25 @@
+id = "provider-flags-beat-saved"
+# Fixed in Koda PR #1408 (2026-10-27), after the model's training cutoff.
+# The PR's tests call a function the fix introduces, so the hidden tests run
+# the real binary instead: its stdin isn't a terminal, but startup probes the
+# chosen endpoint before the TUI needs one.
+prompt = """`koda --provider anthropic` opens the TUI on the last-used local provider instead of Anthropic. On a machine whose last `/model` choice was LM Studio, it starts on LM Studio even with `--model` and `--base-url` on the command line too, although `koda --help` says flags beat saved settings. `koda -p` runs are fine.
+
+Find and fix the cause. Flags apply to that run only, and with no flags koda should still open on the last-used provider."""
+tags = ["rust", "koda-history", "logic", "investigation"]
+cluster = "investigation"
+
+[repo]
+koda_base = "b3635e8^"
+koda_fix = "b3635e8"
+
+[check]
+hidden = [{ file = "koda-cli/tests/smoke_test.rs", test = "hidden/flags_beat_saved.rs" }]
+# The hidden file is not in koda-cli/src, and `git archive` keeps old mtimes:
+# without the touch, cargo reuses the other stage's koda from the shared
+# target dir.
+command = "touch koda-cli/src/lib.rs koda-cli/src/main.rs && cargo test -p koda-cli --test smoke_test eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 1200
