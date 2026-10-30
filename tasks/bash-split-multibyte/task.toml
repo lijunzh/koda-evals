@@ -1,0 +1,22 @@
+id = "bash-split-multibyte"
+# From #1422. The panic is from the 2026-10-28 local-model eval transcripts.
+prompt = """koda crashes on a Bash command that contains non-ASCII text:
+
+thread 'main' panicked at koda-core/src/bash_safety.rs:510:39:
+end byte index 571 is not a char boundary; it is inside 'ん' (bytes 570..573 of string)
+
+Find and fix the cause."""
+tags = ["rust", "koda-history", "panic", "utf8"]
+cluster = "panic"
+
+[repo]
+koda_base = "439c2a7^"
+koda_fix = "439c2a7"
+
+[check]
+hidden = [{ file = "koda-core/src/bash_safety.rs", test = "hidden/split_multibyte.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 900

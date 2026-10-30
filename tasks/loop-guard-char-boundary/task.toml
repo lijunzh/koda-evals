@@ -1,0 +1,22 @@
+id = "loop-guard-char-boundary"
+# From #1429. The panic is from the 2026-10-28 local-model eval transcripts.
+prompt = """koda crashes while a tool call's arguments contain box-drawing characters:
+
+thread 'main' panicked at koda-core/src/loop_guard.rs:169:23:
+end byte index 200 is not a char boundary; it is inside '─' (bytes 198..201 of string)
+
+Find and fix the cause."""
+tags = ["rust", "koda-history", "panic", "utf8"]
+cluster = "panic"
+
+[repo]
+koda_base = "90db205^"
+koda_fix = "90db205"
+
+[check]
+hidden = [{ file = "koda-core/src/loop_guard.rs", test = "hidden/char_boundary.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[limits]
+wall_secs = 900
