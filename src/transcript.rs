@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use anyhow::Result;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 /// Tools that hand work to a child agent or session.
 pub const DELEGATION_TOOLS: &[&str] = &["InvokeAgent", "SpawnAgent"];
@@ -108,6 +108,19 @@ impl Transcript {
         })
     }
 
+    /// Messages of `info` or `warn` events.
+    pub fn messages<'a>(&'a self, kind: &'a str) -> impl Iterator<Item = &'a str> + 'a {
+        self.of_type(kind)
+            .filter_map(|(_, e)| e["message"].as_str())
+    }
+
+    /// Outputs of `tool_call_result` events for one tool.
+    pub fn results_of<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a str> + 'a {
+        self.of_type("tool_call_result")
+            .filter(move |(_, e)| e["name"] == name)
+            .filter_map(|(_, e)| e["output"].as_str())
+    }
+
     /// The agent's last reply (`run_summary.response`), if there is one.
     pub fn final_message(&self) -> Option<&str> {
         self.summary
@@ -136,6 +149,57 @@ impl Transcript {
 
     pub fn count(&self, kind: &str) -> u64 {
         self.counts.get(kind).copied().unwrap_or(0)
+    }
+
+    /// Behaviour signals for the results row. Every signal here is read
+    /// from the event stream; `time_limit_hit` is the harness's own
+    /// observation. A signal with nothing to read it from is `null`.
+    pub fn behaviour(&self, time_limit_hit: bool) -> Value {
+        // Koda announces every pre-flight auto-compaction with an `info`
+        // "📦 Context at N% — compacting before sending...", and a
+        // summary that came back with "✅ Compacted N messages ...". A
+        // compaction without a summary gets a `warn` instead.
+        let attempts = self
+            .messages("info")
+            .filter(|m| m.contains("compacting before sending"))
+            .count();
+        let with_summary = self
+            .messages("info")
+            .filter(|m| m.contains("Compacted ") && m.contains(" messages"))
+            .count();
+        // Loop guard: "Loop detected: ..." when it injects feedback,
+        // "Loop guard: ... stopping" when it gives up.
+        let loop_guard = self
+            .messages("warn")
+            .filter(|m| m.starts_with("Loop detected") || m.starts_with("Loop guard"))
+            .count();
+        // An Edit the tool refused: validation ("Validation error: File
+        // '...' has been modified on disk since you last read it",
+        // "'old_str' not found") or execution ("Error: ... has changed on
+        // disk since you last read it", "'old_str' matches N times").
+        let edit_rejections = self
+            .results_of("Edit")
+            .filter(|o| o.starts_with("Validation error:") || o.starts_with("Error:"))
+            .count();
+        let delegations = self
+            .top_level_calls()
+            .filter(|c| DELEGATION_TOOLS.contains(&c.name))
+            .count();
+        let approvals = self.approval_requests().count();
+        let destructive = self
+            .approval_requests()
+            .filter(|(_, effect, _)| *effect == "Destructive")
+            .count();
+        json!({
+            "compactions": { "attempts": attempts, "with_summary": with_summary },
+            "loop_guard_warnings": loop_guard,
+            "edit_rejections": edit_rejections,
+            "time_limit_hit": time_limit_hit,
+            "turn_end_kind": self.turn_end_kind(),
+            "delegations": delegations,
+            "approval_requests": { "total": approvals, "destructive": destructive },
+            "blocked_actions": self.count("action_blocked"),
+        })
     }
 }
 
@@ -178,10 +242,28 @@ not json
     }
 
     #[test]
+    fn behaviour_signals_come_from_the_stream() {
+        let t = Transcript::parse(SAMPLE);
+        let b = t.behaviour(false);
+        assert_eq!(b["compactions"]["attempts"], 2);
+        assert_eq!(b["compactions"]["with_summary"], 1);
+        assert_eq!(b["loop_guard_warnings"], 1);
+        assert_eq!(b["edit_rejections"], 1);
+        assert_eq!(b["time_limit_hit"], false);
+        assert_eq!(b["turn_end_kind"], "complete");
+        assert_eq!(b["delegations"], 1);
+        assert_eq!(b["approval_requests"]["total"], 1);
+        assert_eq!(b["approval_requests"]["destructive"], 1);
+        assert_eq!(b["blocked_actions"], 0);
+    }
+
+    #[test]
     fn an_empty_transcript_has_no_turn_end() {
         let t = Transcript::parse("");
+        let b = t.behaviour(true);
+        assert_eq!(b["turn_end_kind"], Value::Null);
+        assert_eq!(b["time_limit_hit"], true);
         assert_eq!(t.final_message(), None);
         assert_eq!(t.final_message_index(), None);
-        assert_eq!(t.turn_end_kind(), None);
     }
 }

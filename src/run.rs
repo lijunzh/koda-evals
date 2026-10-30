@@ -79,6 +79,11 @@ pub struct Model {
     pub provider: String,
     pub model: Option<String>,
     pub base_url: Option<String>,
+    /// What serves the model, for the row's configuration identity.
+    /// Default: the provider, plus the `base_url` host when there is one
+    /// (`lm-studio@localhost:1234`). Set it when that isn't the engine,
+    /// e.g. two servers behind one proxy.
+    pub engine: Option<String>,
     /// Extra environment for this model's runs, e.g. `KODA_MOCK_RESPONSES`.
     #[serde(default)]
     pub env: BTreeMap<String, String>,
@@ -321,6 +326,7 @@ impl Job<'_> {
             koda_repo: &opts.koda_repo,
             keys,
             wall_secs: self.wall_secs,
+            jobs: opts.jobs,
         };
         match one.run() {
             Ok(row) => row,
@@ -371,6 +377,8 @@ struct RunOne<'a> {
     keys: &'a BTreeMap<String, String>,
     /// The effective wall-clock limit.
     wall_secs: u64,
+    /// Runs executed at once, for the configuration identity.
+    jobs: usize,
 }
 
 impl RunOne<'_> {
@@ -448,17 +456,59 @@ impl RunOne<'_> {
             "repeat": self.repeat,
             "pass": check.passed(),
             "failure": failure,
+            // What this row was measured under, so rows from different
+            // run files compare.
+            "config": {
+                "engine": engine_of(self.model),
+                "window": window_of(self.model),
+                "wall_secs": self.wall_secs,
+                "trust": trust,
+                "jobs": self.jobs,
+                "cluster": task.spec.cluster,
+                "grade": task.spec.grade,
+            },
             "agent": {
                 "exit": agent.exit,
                 "timed_out": agent.timed_out,
                 "wall_ms": agent.elapsed.as_millis() as u64,
             },
+            "behaviour": transcript.behaviour(agent.timed_out),
             "summary": transcript.summary,
             "events": transcript.counts,
             "diff": diff,
             "check": check,
         }))
     }
+}
+
+/// The engine a model runs on: an explicit `engine`, else the provider
+/// with the `base_url` host (`lm-studio@localhost:1234`), else the
+/// provider alone (`anthropic`).
+fn engine_of(model: &Model) -> String {
+    if let Some(engine) = &model.engine {
+        return engine.clone();
+    }
+    match model.base_url.as_deref().and_then(host_of) {
+        Some(host) => format!("{}@{host}", model.provider),
+        None => model.provider.clone(),
+    }
+}
+
+/// `host[:port]` of a URL, without a URL parser.
+fn host_of(url: &str) -> Option<&str> {
+    let rest = url.split_once("://").map_or(url, |(_, r)| r);
+    let rest = rest.rsplit_once('@').map_or(rest, |(_, r)| r);
+    let host = rest.split(['/', '?', '#']).next().unwrap_or("");
+    (!host.is_empty()).then_some(host)
+}
+
+/// The context window pinned through the model's environment, if any.
+/// `null` means koda used the provider's own figure.
+fn window_of(model: &Model) -> Option<u64> {
+    model
+        .env
+        .get("KODA_MAX_CONTEXT_TOKENS")
+        .and_then(|v| v.trim().parse().ok())
 }
 
 /// Copy koda's log file(s) from the run's config dir into `art/koda.log`.
@@ -520,6 +570,56 @@ fn command_line(cmd: &mut Command) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn model(provider: &str, base_url: Option<&str>, engine: Option<&str>) -> Model {
+        Model {
+            name: "m".into(),
+            provider: provider.into(),
+            model: None,
+            base_url: base_url.map(str::to_string),
+            engine: engine.map(str::to_string),
+            env: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn engine_is_the_provider_and_the_host_unless_named() {
+        assert_eq!(engine_of(&model("anthropic", None, None)), "anthropic");
+        assert_eq!(
+            engine_of(&model("lm-studio", Some("http://localhost:1234/v1"), None)),
+            "lm-studio@localhost:1234"
+        );
+        assert_eq!(
+            engine_of(&model(
+                "openai",
+                Some("https://user:pw@api.example.com/v1/"),
+                None
+            )),
+            "openai@api.example.com"
+        );
+        assert_eq!(
+            engine_of(&model(
+                "lm-studio",
+                Some("http://localhost:1234/v1"),
+                Some("mlx")
+            )),
+            "mlx"
+        );
+        assert_eq!(host_of("localhost:8080"), Some("localhost:8080"));
+        assert_eq!(host_of("http:///v1"), None);
+    }
+
+    #[test]
+    fn window_comes_from_the_model_env() {
+        let mut m = model("lm-studio", None, None);
+        assert_eq!(window_of(&m), None);
+        m.env
+            .insert("KODA_MAX_CONTEXT_TOKENS".into(), "131072".into());
+        assert_eq!(window_of(&m), Some(131_072));
+        m.env
+            .insert("KODA_MAX_CONTEXT_TOKENS".into(), "lots".into());
+        assert_eq!(window_of(&m), None);
+    }
 
     #[test]
     fn run_file_parses_with_defaults() {

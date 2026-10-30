@@ -105,6 +105,20 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     assert_eq!(fixed["pass"], true, "{fixed:#}");
     assert_eq!(fixed["summary"]["tool_calls"]["Edit"], 1, "{fixed:#}");
     assert_eq!(fixed["check"]["hidden"]["hidden_ok"], 3, "{fixed:#}");
+    assert_eq!(fixed["check"]["transcript"], Value::Null, "{fixed:#}");
+    assert_eq!(fixed["config"]["engine"], "mock", "{fixed:#}");
+    assert_eq!(fixed["config"]["trust"], "auto", "{fixed:#}");
+    assert_eq!(fixed["config"]["cluster"], "kata", "{fixed:#}");
+    assert_eq!(fixed["config"]["wall_secs"], 300, "{fixed:#}");
+    assert_eq!(fixed["behaviour"]["turn_end_kind"], "complete", "{fixed:#}");
+    assert_eq!(fixed["behaviour"]["edit_rejections"], 0, "{fixed:#}");
+    assert_eq!(fixed["behaviour"]["time_limit_hit"], false, "{fixed:#}");
+    // The mock provider's window is tiny, so koda compacts; the count is
+    // koda's business, the signal's presence is ours.
+    assert!(
+        fixed["behaviour"]["compactions"]["attempts"].is_u64(),
+        "{fixed:#}"
+    );
     assert_eq!(fixed["diff"]["files"], 1, "{fixed:#}");
     let artifacts = dir.join(fixed["artifacts"].as_str().unwrap());
     assert!(artifacts.join("transcript.ndjson").is_file());

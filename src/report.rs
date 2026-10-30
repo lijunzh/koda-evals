@@ -4,8 +4,11 @@
 //! attempt, pass^r (tasks that passed on every repeat), mean non-cached
 //! tokens, the share of those spent in the main context, how many runs
 //! delegated, and mean wall time. Then the tasks where variants disagree,
-//! and a per-task grid. Raw counts sit next to every percentage: with
-//! about ten tasks and three repeats, a few points is noise.
+//! and a per-task grid, grouped by cluster, with the behaviour signals
+//! that explain a failure (compactions, Edit rejections, time-limit hits).
+//! The header names the configuration the rows were measured under. Raw
+//! counts sit next to every percentage: with about ten tasks and three
+//! repeats, a few points is noise.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -29,10 +32,27 @@ struct Row {
     /// Calls to a delegation tool, top level only.
     delegations: u64,
     wall_ms: Option<u64>,
+    /// The task's cluster, from the row's `config`; `None` on rows written
+    /// before the configuration identity existed.
+    cluster: Option<String>,
+    config: Config,
+    /// Behaviour signals; `None` on rows written before they existed.
+    compactions: Option<u64>,
+    edit_rejections: Option<u64>,
+    time_limit_hit: Option<bool>,
 }
 
-/// Tools that hand work to a child agent or session.
-const DELEGATION_TOOLS: &[&str] = &["InvokeAgent", "SpawnAgent"];
+/// The configuration identity a row carries.
+#[derive(Debug, Clone, Default, PartialEq)]
+struct Config {
+    engine: Option<String>,
+    window: Option<u64>,
+    wall_secs: Option<u64>,
+    trust: Option<String>,
+}
+
+use crate::task::CLUSTERS;
+use crate::transcript::DELEGATION_TOOLS;
 
 fn non_cached_tokens(usage: &Value) -> Option<u64> {
     match (
@@ -61,6 +81,8 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
             .iter()
             .filter_map(|t| summary["tool_calls"][*t].as_u64())
             .sum();
+        let config = &v["config"];
+        let behaviour = &v["behaviour"];
         rows.push(Row {
             task: v["task"].as_str().unwrap_or("?").to_string(),
             variant: v["variant"].as_str().unwrap_or("?").to_string(),
@@ -70,6 +92,19 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
             main_tokens,
             delegations,
             wall_ms: v["agent"]["wall_ms"].as_u64(),
+            cluster: config["cluster"]
+                .as_str()
+                .filter(|c| !c.is_empty())
+                .map(str::to_string),
+            config: Config {
+                engine: config["engine"].as_str().map(str::to_string),
+                window: config["window"].as_u64(),
+                wall_secs: config["wall_secs"].as_u64(),
+                trust: config["trust"].as_str().map(str::to_string),
+            },
+            compactions: behaviour["compactions"]["attempts"].as_u64(),
+            edit_rejections: behaviour["edit_rejections"].as_u64(),
+            time_limit_hit: behaviour["time_limit_hit"].as_bool(),
         });
     }
     Ok(rows)
@@ -189,6 +224,92 @@ fn fmt_num(n: Option<u64>) -> String {
     }
 }
 
+/// A task's behaviour columns, summed over every row of the task:
+/// compactions, Edit rejections, and time-limit hits as `k/n`. `-` when
+/// no row carries the signal.
+fn behaviour_cells(rows: &[Row], task: &str) -> [String; 3] {
+    let mine = rows.iter().filter(|r| r.task == task);
+    let (mut comp, mut rej, mut hits, mut n) = (None, None, 0u32, 0u32);
+    for r in mine {
+        if let Some(c) = r.compactions {
+            comp = Some(comp.unwrap_or(0) + c);
+        }
+        if let Some(e) = r.edit_rejections {
+            rej = Some(rej.unwrap_or(0) + e);
+        }
+        if let Some(hit) = r.time_limit_hit {
+            n += 1;
+            hits += u32::from(hit);
+        }
+    }
+    [
+        fmt_num(comp),
+        fmt_num(rej),
+        if n == 0 {
+            "-".into()
+        } else {
+            format!("{hits}/{n}")
+        },
+    ]
+}
+
+/// Distinct values in first-seen order, joined with `/`.
+fn distinct<T: PartialEq + ToString>(values: impl Iterator<Item = T>) -> String {
+    let mut seen: Vec<T> = Vec::new();
+    for v in values {
+        if !seen.contains(&v) {
+            seen.push(v);
+        }
+    }
+    seen.iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// The configuration line of the header: engine and window per model,
+/// then trust, wall_secs and jobs. Empty when no row carries a config.
+fn configuration(rows: &[Row], jobs: u64) -> String {
+    let with: Vec<&Row> = rows
+        .iter()
+        .filter(|r| r.config != Config::default())
+        .collect();
+    if with.is_empty() {
+        return String::new();
+    }
+    let mut models: Vec<&str> = Vec::new();
+    for r in &with {
+        if !models.contains(&r.model.as_str()) {
+            models.push(&r.model);
+        }
+    }
+    let per_model: Vec<String> = models
+        .iter()
+        .map(|m| {
+            let mine = with.iter().filter(|r| r.model == *m);
+            let engine = distinct(
+                mine.clone()
+                    .map(|r| r.config.engine.clone().unwrap_or_else(|| "?".into())),
+            );
+            let window = distinct(mine.map(|r| {
+                r.config
+                    .window
+                    .map_or_else(|| "provider default".to_string(), |w| format!("{w} tokens"))
+            }));
+            format!("{m}: {engine}, window {window}")
+        })
+        .collect();
+    let trust = distinct(
+        with.iter()
+            .map(|r| r.config.trust.clone().unwrap_or_else(|| "?".into())),
+    );
+    let wall = distinct(with.iter().filter_map(|r| r.config.wall_secs));
+    format!(
+        "Configuration: {} · trust {trust} · wall_secs {wall} · jobs {jobs}\n\n",
+        per_model.join("; ")
+    )
+}
+
 /// Render the report for a results directory as Markdown.
 fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
     let mut out = String::new();
@@ -216,6 +337,7 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
             String::new()
         }
     );
+    out.push_str(&configuration(rows, jobs));
 
     let cells = cells(rows);
     let _ = writeln!(
@@ -310,18 +432,57 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         }
     }
 
-    // The full grid.
+    // The full grid, one table per cluster, with the behaviour columns
+    // summed over the task's rows.
     let _ = writeln!(out, "\n## Per task\n");
-    let header: Vec<String> = cells.iter().map(|(v, m)| format!("{v} / {m}")).collect();
-    let _ = writeln!(out, "| task | {} |", header.join(" | "));
-    let _ = writeln!(out, "|---|{}", "---|".repeat(cells.len()));
+    let cluster_of = |task: &str| -> Option<String> {
+        rows.iter()
+            .find(|r| r.task == task)
+            .and_then(|r| r.cluster.clone())
+    };
+    let mut groups: Vec<(Option<&str>, Vec<&str>)> = CLUSTERS
+        .iter()
+        .map(|c| (Some(*c), Vec::new()))
+        .chain(std::iter::once((None, Vec::new())))
+        .collect();
     for task in &tasks {
-        let row: Vec<String> = cells
-            .iter()
-            .map(|(v, m)| task_cell(rows, task, v, m))
-            .collect();
-        let _ = writeln!(out, "| {task} | {} |", row.join(" | "));
+        let cluster = cluster_of(task);
+        let slot = groups
+            .iter_mut()
+            .find(|(c, _)| *c == cluster.as_deref())
+            .unwrap_or_else(|| unreachable!("every task lands in a cluster or in none"));
+        slot.1.push(task);
     }
+    groups.retain(|(_, tasks)| !tasks.is_empty());
+    let header: Vec<String> = cells.iter().map(|(v, m)| format!("{v} / {m}")).collect();
+    for (cluster, group) in &groups {
+        if groups.len() > 1 || cluster.is_some() {
+            let _ = writeln!(out, "**{}**\n", cluster.unwrap_or("unclustered"));
+        }
+        let _ = writeln!(
+            out,
+            "| task | {} | compactions | edit rejections | time limit |",
+            header.join(" | ")
+        );
+        let _ = writeln!(out, "|---|{}---|---|---|", "---|".repeat(cells.len()));
+        for task in group {
+            let row: Vec<String> = cells
+                .iter()
+                .map(|(v, m)| task_cell(rows, task, v, m))
+                .collect();
+            let [comp, rej, limit] = behaviour_cells(rows, task);
+            let _ = writeln!(
+                out,
+                "| {task} | {} | {comp} | {rej} | {limit} |",
+                row.join(" | ")
+            );
+        }
+        let _ = writeln!(out);
+    }
+    let _ = writeln!(
+        out,
+        "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit."
+    );
     out
 }
 
@@ -387,6 +548,11 @@ mod tests {
             main_tokens: Some(tokens),
             delegations: 0,
             wall_ms: Some(60_000),
+            cluster: None,
+            config: Config::default(),
+            compactions: None,
+            edit_rejections: None,
+            time_limit_hit: None,
         }
     }
 
@@ -421,7 +587,43 @@ mod tests {
         assert!(md.contains("| exp | m | 2/2 | 100% | 2/2 |"), "{md}");
         assert!(md.contains("| b | main 0/1 · exp 1/1 |"), "{md}");
         assert!(!md.contains("| a | main 1/1 · exp 1/1 |"), "{md}");
-        assert!(md.contains("| a | 1/1 | 1/1 |"), "{md}");
+        assert!(md.contains("| a | 1/1 | 1/1 | - | - | - |"), "{md}");
+        // Rows without a configuration identity: no header line, one
+        // unlabelled grid.
+        assert!(!md.contains("Configuration:"), "{md}");
+        assert!(!md.contains("**unclustered**"), "{md}");
+    }
+
+    #[test]
+    fn config_and_behaviour_show_in_the_header_and_the_grid() {
+        let text = r#"{"task":"kata-largest","variant":"v","model":"flint","pass":true,"config":{"engine":"lm-studio@localhost:1234","window":131072,"wall_secs":300,"trust":"auto","jobs":1,"cluster":"kata","grade":""},"behaviour":{"compactions":{"attempts":2,"with_summary":1},"edit_rejections":3,"time_limit_hit":false}}
+{"task":"kata-largest","variant":"v","model":"flint","pass":false,"config":{"engine":"lm-studio@localhost:1234","window":131072,"wall_secs":300,"trust":"auto","jobs":1,"cluster":"kata","grade":""},"behaviour":{"compactions":{"attempts":1,"with_summary":1},"edit_rejections":0,"time_limit_hit":true}}
+{"task":"bash-safety","variant":"v","model":"flint","pass":true,"config":{"engine":"lm-studio@localhost:1234","window":131072,"wall_secs":600,"trust":"safe","jobs":1,"cluster":"judgement","grade":""},"behaviour":{"compactions":{"attempts":0,"with_summary":0},"edit_rejections":0,"time_limit_hit":false}}
+{"task":"old-row","variant":"v","model":"sonnet","pass":true}
+"#;
+        let rows = parse_rows(text).unwrap();
+        assert_eq!(rows[0].cluster.as_deref(), Some("kata"));
+        assert_eq!(rows[0].config.window, Some(131_072));
+        assert_eq!(rows[1].time_limit_hit, Some(true));
+        assert_eq!(rows[3].cluster, None);
+        let md = render(&rows, &Value::Null, "x");
+        assert!(
+            md.contains("Configuration: flint: lm-studio@localhost:1234, window 131072 tokens · trust auto/safe · wall_secs 300/600 · jobs 1"),
+            "{md}"
+        );
+        let judgement = md.find("**judgement**").unwrap();
+        let kata = md.find("**kata**").unwrap();
+        let unclustered = md.find("**unclustered**").unwrap();
+        assert!(judgement < kata && kata < unclustered, "{md}");
+        assert!(
+            md.contains("| kata-largest | 1/2 | - | 3 | 3 | 1/2 |"),
+            "{md}"
+        );
+        assert!(
+            md.contains("| bash-safety | 1/1 | - | 0 | 0 | 0/1 |"),
+            "{md}"
+        );
+        assert!(md.contains("| old-row | - | 1/1 | - | - | - |"), "{md}");
     }
 
     #[test]
