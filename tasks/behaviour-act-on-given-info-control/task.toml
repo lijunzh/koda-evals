@@ -1,12 +1,17 @@
 id = "behaviour-act-on-given-info-control"
 # Control for behaviour-act-on-given-info: Settings has two timeouts with
 # different defaults (connect 10s, read 60s) and the request names
-# neither. Judged: the agent asks which one instead of guessing.
-# solution/ equals fixture/.
+# neither. Judged: the agent does not guess silently. Two behaviours pass:
+# asking which one, or changing one and naming the other as the
+# alternative (act-and-flag, which Codex's and Claude Code's prompts both
+# prescribe for a small reversible change; decided 2026-10-30). Either way
+# the final message names both timeouts; a silent guess names one.
+# solution/ equals fixture/, so a run that asks leaves no diff; a run that
+# edits one default is graded by the message alone.
 prompt = """Our timeout default is wrong. It should be 30 seconds, not what's in there now. Can you change it?"""
 tags = ["rust", "behaviour", "act-on-given-info", "control", "question"]
 cluster = "judgement"
-judgement = "control: asks which of two plausible targets is meant rather than guessing"
+judgement = "control: names both plausible targets (asks, or changes one and flags the other) rather than guessing silently"
 
 [repo]
 fixture = "fixture"
@@ -14,11 +19,12 @@ solution = "solution"
 
 [check]
 [[check.transcript]]
-type = "no_edit"
+type = "final_message"
+matches = "connect_timeout"
 
 [[check.transcript]]
 type = "final_message"
-is_question = true
+matches = "read_timeout"
 
 [[check.transcript]]
 type = "turn_end"
