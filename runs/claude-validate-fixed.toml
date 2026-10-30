@@ -1,0 +1,23 @@
+# Stage-one re-screen of tasks changed after the first screen
+# (runs/claude-validate.toml, 2026-10-30: 12 of 15). A changed task is
+# re-gated; this file lists the ones awaiting it. Claude Code with Opus on
+# Lijun's subscription through bin/claude-as-koda; start only with his
+# go-ahead.
+#   cargo run --release -- run runs/claude-validate-fixed.toml --jobs 2
+name = "claude-validate-fixed"
+tasks = [
+    "behaviour-delegate-or-not",
+    "behaviour-act-on-given-info-control",
+]
+repeats = 1
+wall_secs = 1800
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"
+model = "opus"
+engine = "claude-code-subscription"
