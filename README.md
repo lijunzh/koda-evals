@@ -112,7 +112,9 @@ the failure column names the first one that failed.
 
 **Every task must pass `verify` before it joins a suite.** Hidden tests must
 fail where the agent starts and pass on the solution; otherwise the task is
-free or impossible. `verify` also warms the task's build cache.
+free or impossible. `verify` also warms the task's build cache. It leaves no
+copy of either stage behind, because agents can read the cache; an unfair
+task keeps only its logs, under `~/.cache/koda-eval/verify/<task>`.
 
 Predicates can't be run against a model, so a task with predicates carries
 two canned transcripts, `hidden/should-pass.ndjson` and

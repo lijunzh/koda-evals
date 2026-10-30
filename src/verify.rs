@@ -55,10 +55,19 @@ fn verify_hidden(task: &Task, koda_repo: &Path) -> Result<(bool, String)> {
     std::fs::create_dir_all(&work)?;
     let target = util::cache_dir().join("target").join(task.id());
 
-    let start = check_stage(task, Stage::Start, koda_repo, &work, &target)?;
-    let solved = check_stage(task, Stage::Solved, koda_repo, &work, &target)?;
+    let stages = check_stage(task, Stage::Start, koda_repo, &work, &target).and_then(|start| {
+        let solved = check_stage(task, Stage::Solved, koda_repo, &work, &target)?;
+        Ok((start, solved))
+    });
+    // Agents can read this cache, and the stages hold the solution and the
+    // hidden tests. Only the logs of an unfair task stay.
+    for stage in ["start", "solved"] {
+        let _ = std::fs::remove_dir_all(work.join(stage));
+    }
+    let (start, solved) = stages?;
 
     if !start.passed() && solved.passed() {
+        let _ = std::fs::remove_dir_all(&work);
         return Ok((
             true,
             format!("start {}, solution passes", start.failure_kind()),
