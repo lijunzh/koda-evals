@@ -1,0 +1,33 @@
+# The three tasks left when the first laguna-worker-screen job was stopped
+# after bash-classifier-escapes (results/laguna-worker-screen/20261029T213000Z).
+# Screen for the local *large* model in its product role: the background
+# worker that nobody is waiting on. The four tasks are the ones every local
+# model has failed and every run has filled a 64K window on; the question is
+# whether a 118B-MoE model given worker conditions (an hour, a 128K window)
+# finishes any of them. Two of four would make the orchestrator-plus-worker
+# pair worth building; zero of four means local large is not ready.
+#
+# Model: mlx-community/Laguna-S-2.1-oQ4e (64 GB, 4.60 bits/weight; peak
+# memory 63.5 GB at 64K context per its card), served by oMLX from the
+# LM Studio model folder. oMLX answers none of Koda's context probes, so the
+# window is pinned with KODA_MAX_CONTEXT_TOKENS. Run alone: unload LM Studio
+# and stop rec first, so the worker has the machine.
+#   lms get https://huggingface.co/mlx-community/Laguna-S-2.1-oQ4e   # once, 64 GB
+#   omlx start      # serves on 127.0.0.1:8123, model id from GET /v1/models
+#   cargo run --release -- run runs/laguna-worker-screen-rest.toml
+#   omlx stop
+name = "laguna-worker-screen-rest"
+tasks = ["composer-wrap-width-zero", "provider-flag-base-url", "vim-normal-mode-bugs"]
+repeats = 1
+wall_secs = 3600
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "laguna"
+provider = "lm-studio"
+base_url = "http://127.0.0.1:8123/v1"
+model = "mlx-community/Laguna-S-2.1-oQ4e"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
