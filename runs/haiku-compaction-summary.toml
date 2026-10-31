@@ -11,7 +11,7 @@ repeats = 3
 
 [[variants]]
 name = "fix1444"
-ref = "ba87443"
+ref = "67c0261"
 
 [[models]]
 name = "haiku"
