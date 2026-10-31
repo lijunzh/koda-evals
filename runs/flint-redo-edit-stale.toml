@@ -1,0 +1,22 @@
+# flint: redo of edit-stale-after-own-edit, whose definition changed while
+# Flint's repeat set was running (2026-10-30): a `turn_end complete` rule,
+# because Ornith's three passes were all killed at the 20-minute wall with
+# the fix on disk. Flint's set loaded the old definition when it started.
+# Same pin, window and budget as runs/flint-repeats-128k.toml. Queued
+# behind the parallelism runs; three rows, up to an hour.
+#   lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
+#   cargo run --release -- run runs/flint-redo-edit-stale.toml --jobs 1
+name = "flint-redo-edit-stale"
+repeats = 3
+tasks = ["edit-stale-after-own-edit"]
+
+[[variants]]
+name = "main"
+ref = "4926824"
+
+[[models]]
+name = "flint"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "recursivesi/flint"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

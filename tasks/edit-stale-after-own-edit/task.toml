@@ -1,5 +1,10 @@
 id = "edit-stale-after-own-edit"
 # Fixed in Koda PR #1435 (2026-10-28), after the model's training cutoff.
+# turn_end rule added 2026-10-30 (Lijun): Ornith's three repeats all had
+# the fix on disk and the hidden tests green when the 20-minute wall killed
+# them, and the row read as pass-pass-pass. A run that never finishes is
+# not a pass: the agent has to end its turn. Ornith's and Flint's repeat
+# sets graded the old definition; both get a redo of this task.
 prompt = """koda's Edit tool keeps rejecting its own follow-up edits. After a successful Edit, the next Edit on the same file fails with:
 
     modified on disk since you last read it (last written by Edit 14s ago)
@@ -18,6 +23,10 @@ koda_fix = "79fba66"
 hidden = [{ file = "koda-core/src/tools/validate.rs", test = "hidden/own_edit.rs" }]
 command = "cargo test -p koda-core --lib eval_hidden"
 timeout_secs = 900
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
 
 [limits]
 wall_secs = 1200
