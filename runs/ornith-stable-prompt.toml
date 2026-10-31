@@ -1,0 +1,22 @@
+# ornith, stable system prompt: the four wall-prone investigation tasks, three
+# repeats, Koda branch fix/stable-system-prompt-git (1d11dd9, on top of 4926824).
+# Baseline: the same twelve rows in results/ornith-redo/ on 4926824, where a
+# changing git diff stat in the system prompt lost the prompt cache mid-run.
+# NOT queued: the GPU is shared; start it by hand when Lijun says it is free.
+# Do not use lms unload --all while another session has a model loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/ornith-stable-prompt.toml --jobs 1
+name = "ornith-stable-prompt"
+repeats = 3
+tasks = ["edit-stale-after-own-edit", "vim-normal-mode-bugs", "bash-readonly-fail-closed", "compact-reasoning-summary"]
+
+[[variants]]
+name = "stable"
+ref = "1d11dd9"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
