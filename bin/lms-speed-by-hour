@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Per-hour generation and prompt-processing speed from LM Studio's server logs.
+
+Answers "did the machine slow down over the night?" without a temperature
+sensor: llama.cpp's per-request `eval time` line is the generation speed the
+GPU actually delivered, and thermal throttling would show as a decline over
+hours of continuous load for the same model. First used 2026-10-31 when Lijun
+asked whether Flint's slow repeat set, run straight after Ornith's 8.5 h, was
+the Mac Studio overheating: Ornith generated at the same 85-115 tok/s in its
+redo after 13.5 h of load as in its first hour, and Flint sped up over its
+own five hours, so no.
+
+  bin/lms-speed-by-hour 2026-10-30 2026-10-31      # dates of the log files
+
+Reads ~/.lmstudio/server-logs/<YYYY-MM>/<date>.<n>.log in order, attributes
+each request to the model named on the nearest preceding `[INFO][model]`
+line and to the hour of the nearest preceding timestamp (local time), and
+prints per hour and model: request count, generation tok/s quartiles,
+median prompt-processing tok/s and tokens generated. Requests under 32
+generated tokens (prompt-processing under 256) are skipped as noise. Hours
+with fewer than five requests are not printed. Speed tracks context length
+too (hours with short contexts read faster), so compare hours of the same
+model with similar prompt tok/s, or the same tasks.
+"""
+import collections
+import glob
+import os
+import re
+import statistics
+import sys
+
+ts_re = re.compile(r'^\[(\d{4}-\d\d-\d\d \d\d):\d\d:\d\d\]')
+model_re = re.compile(r'^\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\]\[INFO\]\[([^\]]+)\]')
+gen_re = re.compile(r'\beval time =\s+([\d.]+) ms /\s+(\d+) tokens \([^)]*?,\s+([\d.]+) tokens per second')
+pp_re = re.compile(r'prompt eval time =\s+([\d.]+) ms /\s+(\d+) tokens \([^)]*?,\s+([\d.]+) tokens per second')
+
+
+def files_for(dates):
+    out = []
+    for d in dates:
+        pat = os.path.expanduser(f'~/.lmstudio/server-logs/{d[:7]}/{d}.*.log')
+        out += sorted(glob.glob(pat), key=lambda f: int(f.rsplit('.', 2)[1]))
+    return out
+
+
+def main(dates):
+    if not dates:
+        print(__doc__)
+        return 2
+    gen = collections.defaultdict(list)
+    pp = collections.defaultdict(list)
+    ntok = collections.Counter()
+    hour, model = '?', '?'
+    for f in files_for(dates):
+        with open(f, errors='replace') as fh:
+            for line in fh:
+                m = ts_re.match(line)
+                if m:
+                    hour = m.group(1)
+                m = model_re.match(line)
+                if m:
+                    model = m.group(1).rsplit('/', 1)[-1]
+                m = pp_re.search(line)
+                if m:
+                    if int(m.group(2)) >= 256:
+                        pp[(hour, model)].append(float(m.group(3)))
+                    continue
+                m = gen_re.search(line)
+                if m and int(m.group(2)) >= 32:
+                    gen[(hour, model)].append(float(m.group(3)))
+                    ntok[(hour, model)] += int(m.group(2))
+    print(f"{'hour (local)':16} {'model':10} {'requests':>8}   gen tok/s p25 / median / p75   prompt tok/s   gen tokens")
+    for k in sorted(gen):
+        g = sorted(gen[k])
+        if len(g) < 5:
+            continue
+        p = pp.get(k, [])
+        q = lambda a, f: a[int(f * (len(a) - 1))]
+        print(f"{k[0]:16} {k[1]:10} {len(g):8}   {q(g, .25):6.1f} / {statistics.median(g):6.1f} / {q(g, .75):6.1f}"
+              f"        {statistics.median(p) if p else float('nan'):8.0f}   {ntok[k]:10}")
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
