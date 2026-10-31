@@ -1,0 +1,15 @@
+# Release check for v0.5.1: the 32-task suite once on Haiku 5.5 at Koda's
+# default window, on main at 093ed37. Approved by Lijun 2026-10-31, estimated
+# $3 to $6. Judge it on crashes, failed compactions and dropped messages.
+name = "release-051-haiku"
+repeats = 1
+tasks = ["bash-classifier-escapes", "bash-readonly-fail-closed", "bash-split-multibyte", "behaviour-act-on-given-info", "behaviour-act-on-given-info-control", "behaviour-answer-vs-act", "behaviour-answer-vs-act-control", "behaviour-delegate-or-not", "behaviour-delegate-or-not-control", "behaviour-frugal-reads", "behaviour-frugal-reads-control", "behaviour-pre-existing-failure", "behaviour-pre-existing-failure-control", "behaviour-shell-safety", "behaviour-shell-safety-control", "behaviour-validation-fidelity", "behaviour-validation-fidelity-control", "compact-reasoning-summary", "composer-wrap-width-zero", "edit-stale-after-own-edit", "kata-api-migration", "kata-api-migration-tests", "kata-async-blocking", "kata-largest", "kata-preview-utf8", "kata-utf8-sweep", "loop-guard-char-boundary", "provider-flag-base-url", "provider-flags-beat-saved", "strip-quotes-lone-quote", "think-tag-multibyte", "vim-normal-mode-bugs"]
+
+[[variants]]
+name = "main"
+ref = "093ed37"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

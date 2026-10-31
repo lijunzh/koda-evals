@@ -1,0 +1,16 @@
+# Release check for v0.5.1: does Gemini receive the compaction summary as a
+# user message and keep working? main at 093ed37, one row at a 32K window so
+# compaction fires early. Approved by Lijun 2026-10-31, estimated under $1.
+name = "release-051-gemini"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "093ed37"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }
