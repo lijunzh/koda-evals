@@ -1,5 +1,5 @@
 # Does a real provider behave once the compaction summary arrives as a user
-# message? Koda fix for #1444 (e4e240f, on top of 4926824). Three Haiku 5.5
+# message? Koda fix for #1444 (ba87443, rebased on main aa92738). Three Haiku 5.5
 # runs of compact-reasoning-summary with the window pinned to 32K so
 # compaction fires early. Read the transcripts as well as the pass count:
 # each run should compact, keep working afterwards, and report the model's
@@ -11,7 +11,7 @@ repeats = 3
 
 [[variants]]
 name = "fix1444"
-ref = "e4e240f"
+ref = "ba87443"
 
 [[models]]
 name = "haiku"
