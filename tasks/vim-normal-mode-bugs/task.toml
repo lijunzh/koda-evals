@@ -1,6 +1,9 @@
 id = "vim-normal-mode-bugs"
 # Three of the Vim fixes in Koda PR #1419 (2026-10-27), after the model's
 # training cutoff. Independent bugs in one file.
+# turn_end rule added 2026-10-30 (Lijun, with edit-stale-after-own-edit):
+# a run killed at the wall is not a pass, whatever is on disk. Ornith's and
+# Flint's repeat sets graded the old definition; both get a redo.
 prompt = """Three bugs in Vim mode in koda's prompt box (koda-cli/src/composer), all in Normal mode:
 
 1. `e` does nothing when the cursor is already on the last letter of a word. In Vim it jumps to the end of the next word.
@@ -19,6 +22,10 @@ koda_fix = "8a428ad"
 hidden = [{ file = "koda-cli/src/composer/textarea.rs", test = "hidden/vim.rs" }]
 command = "cargo test -p koda-cli --lib eval_hidden"
 timeout_secs = 900
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
 
 [limits]
 wall_secs = 1200

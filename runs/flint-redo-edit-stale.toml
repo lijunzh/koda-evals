@@ -1,14 +1,21 @@
-# flint: redo of edit-stale-after-own-edit, whose definition changed while
-# Flint's repeat set was running (2026-10-30): a `turn_end complete` rule,
-# because Ornith's three passes were all killed at the 20-minute wall with
-# the fix on disk. Flint's set loaded the old definition when it started.
-# Same pin, window and budget as runs/flint-repeats-128k.toml. Queued
-# behind the parallelism runs; three rows, up to an hour.
+# flint: redo of the four investigation tasks whose definitions changed
+# while Flint's repeat set was running (2026-10-30): a `turn_end complete`
+# rule on edit-stale-after-own-edit, vim-normal-mode-bugs,
+# bash-readonly-fail-closed and compact-reasoning-summary, because Ornith's
+# wall-killed rows had read as passes with the fix on disk. Flint's set
+# loaded the old definitions when it started. Same pin, window and budget
+# as runs/flint-repeats-128k.toml. Queued behind the parallelism runs; the
+# file keeps its first name. Twelve rows, up to four hours at the wall.
 #   lms load recursivesi/flint --identifier recursivesi/flint -c 131072 -y
 #   cargo run --release -- run runs/flint-redo-edit-stale.toml --jobs 1
-name = "flint-redo-edit-stale"
+name = "flint-redo"
 repeats = 3
-tasks = ["edit-stale-after-own-edit"]
+tasks = [
+    "edit-stale-after-own-edit",
+    "vim-normal-mode-bugs",
+    "bash-readonly-fail-closed",
+    "compact-reasoning-summary",
+]
 
 [[variants]]
 name = "main"
