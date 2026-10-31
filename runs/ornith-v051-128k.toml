@@ -1,0 +1,22 @@
+# ornith: the 32-task suite, three repeats, on the v0.5.1 tag at the 128K
+# window. The refresh of results/ornith-repeats-128k/20261030T152608Z (with
+# results/ornith-redo/) on the build with the stable system prompt (#1451) and
+# the compaction fixes. Tasks are listed because a run file without `tasks`
+# sweeps tasks/, twins included. 6 to 9 hours; start only when Lijun says the
+# GPU is free. Unload only the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/ornith-v051-128k.toml --jobs 1
+name = "ornith-v051-128k"
+repeats = 3
+tasks = ["bash-classifier-escapes", "bash-readonly-fail-closed", "bash-split-multibyte", "behaviour-act-on-given-info", "behaviour-act-on-given-info-control", "behaviour-answer-vs-act", "behaviour-answer-vs-act-control", "behaviour-delegate-or-not", "behaviour-delegate-or-not-control", "behaviour-frugal-reads", "behaviour-frugal-reads-control", "behaviour-pre-existing-failure", "behaviour-pre-existing-failure-control", "behaviour-shell-safety", "behaviour-shell-safety-control", "behaviour-validation-fidelity", "behaviour-validation-fidelity-control", "compact-reasoning-summary", "composer-wrap-width-zero", "edit-stale-after-own-edit", "kata-api-migration", "kata-api-migration-tests", "kata-async-blocking", "kata-largest", "kata-preview-utf8", "kata-utf8-sweep", "loop-guard-char-boundary", "provider-flag-base-url", "provider-flags-beat-saved", "strip-quotes-lone-quote", "think-tag-multibyte", "vim-normal-mode-bugs"]
+
+[[variants]]
+name = "v051"
+ref = "v0.5.1"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
