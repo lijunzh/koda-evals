@@ -1,0 +1,23 @@
+# ornith, tool-result cap A/B: the four wall-prone investigation tasks, three
+# repeats, Koda branch feat/tool-result-cap (73abcb0, on top of 4926824) with the
+# per-result cap at 8,000 chars (about 2.3K tokens). The baseline is the same
+# twelve rows in results/ornith-redo/ on 4926824, where the cap is 13,107
+# chars and Bash summaries skip it. Measured before running: 8,000 keeps 87%
+# of tool tokens, Read is 73% of them, so expect a small effect; see
+# "Koda - Code Mode for Long Tasks (Oct 2026)". Queued behind the rec set.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/ornith-tool-cap-8k.toml --jobs 1
+name = "ornith-tool-cap-8k"
+repeats = 3
+tasks = ["edit-stale-after-own-edit", "vim-normal-mode-bugs", "bash-readonly-fail-closed", "compact-reasoning-summary"]
+
+[[variants]]
+name = "cap8k"
+ref = "73abcb0"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072", KODA_TOOL_RESULT_MAX_CHARS = "8000" }
