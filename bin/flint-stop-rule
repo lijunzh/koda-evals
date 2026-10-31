@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""Stopping rule for a repeat set that is being compared against a finished one.
+
+Decided 2026-10-30 (Lijun) while Flint's repeat set ran behind Ornith's: the
+fast seat is picked on pass^3 across the suite with a two-task margin, so a
+challenger that falls three tasks behind on the tasks the incumbent passed^3
+cannot recover the margin on the tasks the incumbent missed. Rather than
+eyeball the log, this watcher applies that rule as rows land and stops the
+set the moment it fires, so the GPU moves on to the queued work.
+
+  bin/flint-stop-rule --challenger results/flint-repeats-128k/<ts>/results.jsonl \
+      --incumbent results/ornith-repeats-128k/<ts>/results.jsonl \
+      --run-file runs/flint-repeats-128k.toml
+
+Per poll it reads the challenger's rows, groups them by task, and counts:
+  deficit  = incumbent pass^3 tasks on which the challenger has a failed row
+  ahead    = incumbent-missed tasks the challenger has passed three times
+Tasks the incumbent never ran (e.g. the parallelism twins) are logged but
+not counted. When deficit >= --deficit it writes --marker (the reason inside),
+kills the koda-eval process for --run-file (SIGTERM; it has no handler and
+exits at once) and then the agent process groups it left behind (SIGKILL, as
+koda-eval itself would at the wall), and exits. The chain script records the
+exit and moves on. Queued jobs that only make sense if the challenger is
+still in contention check for the marker. Nothing here stops on time alone.
+Exits quietly once the run finishes on its own, logging the final counts.
+"""
+import argparse
+import collections
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import time
+
+
+def log(path, msg):
+    line = f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} {msg}"
+    print(line, flush=True)
+    with open(path, "a") as f:
+        f.write(line + "\n")
+
+
+def rows(path):
+    out = []
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    out.append(json.loads(line))
+                except json.JSONDecodeError:
+                    break  # a row still being written
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def pass3_tasks(rs):
+    by = collections.defaultdict(list)
+    for r in rs:
+        by[r["task"]].append(bool(r.get("pass")))
+    return {t for t, v in by.items() if len(v) >= 3 and all(v)}
+
+
+def status(rs):
+    """task -> 'pass3' | 'failed' | 'pending' for the challenger."""
+    by = collections.defaultdict(list)
+    for r in rs:
+        by[r["task"]].append(bool(r.get("pass")))
+    st = {}
+    for t, v in by.items():
+        if not all(v):
+            st[t] = "failed"
+        elif len(v) >= 3:
+            st[t] = "pass3"
+        else:
+            st[t] = "pending"
+    return st
+
+
+def run_pids(run_file):
+    """PIDs of koda-eval processes running run_file, excluding this process
+    and any shell whose command line merely mentions the file."""
+    me = os.getpid()
+    pat = re.compile(r"(^|/)koda-eval run " + re.escape(run_file) + r"(\s|$)")
+    out = subprocess.run(["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True).stdout
+    pids = []
+    for line in out.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3:
+            continue
+        pid, ppid, cmd = int(parts[0]), int(parts[1]), parts[2]
+        if pid == me or ppid == me:
+            continue
+        if pat.search(cmd) and "/bin/zsh" not in cmd and "eval '" not in cmd:
+            pids.append(pid)
+    return pids
+
+
+def children(pid):
+    out = subprocess.run(["pgrep", "-P", str(pid)], capture_output=True, text=True).stdout
+    return [int(x) for x in out.split()]
+
+
+def stop_run(run_file, logp):
+    pids = run_pids(run_file)
+    if not pids:
+        log(logp, "stop requested but no koda-eval process found for " + run_file)
+        return False
+    kids = {p: children(p) for p in pids}
+    for p in pids:
+        os.kill(p, signal.SIGTERM)
+        log(logp, f"SIGTERM koda-eval pid {p}")
+    time.sleep(1)
+    for p, ks in kids.items():
+        for k in ks:
+            subprocess.run(["kill", "-s", "KILL", "--", f"-{k}"], capture_output=True)
+            subprocess.run(["kill", "-s", "KILL", str(k)], capture_output=True)
+            log(logp, f"SIGKILL agent process group {k} (child of {p})")
+    time.sleep(2)
+    left = run_pids(run_file)
+    if left:
+        for p in left:
+            os.kill(p, signal.SIGKILL)
+        log(logp, f"SIGKILL koda-eval still alive: {left}")
+    return True
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--challenger", required=True, help="results.jsonl of the running set")
+    ap.add_argument("--incumbent", required=True, help="results.jsonl of the finished set")
+    ap.add_argument("--run-file", required=True, help="the run file the challenger is running")
+    ap.add_argument("--deficit", type=int, default=3)
+    ap.add_argument("--poll", type=int, default=60, help="seconds between reads")
+    ap.add_argument("--marker", default="results/flint-stopped")
+    ap.add_argument("--log", default="results/flint-watch.log")
+    ap.add_argument("--dry-run", action="store_true", help="log the decision, never kill")
+    a = ap.parse_args()
+
+    inc_rows = rows(a.incumbent)
+    inc_p3 = pass3_tasks(inc_rows)
+    inc_tasks = {r["task"] for r in inc_rows}
+    log(a.log, f"watching {a.challenger} against {a.incumbent}: incumbent pass^3 {len(inc_p3)}/{len(inc_tasks)}; "
+               f"rule: stop at deficit >= {a.deficit}; poll {a.poll}s" + (" (dry run)" if a.dry_run else ""))
+
+    seen = 0
+    while True:
+        rs = rows(a.challenger)
+        st = status(rs)
+        behind = sorted(t for t in inc_p3 if st.get(t) == "failed")
+        ahead = sorted(t for t, s in st.items() if s == "pass3" and t in inc_tasks and t not in inc_p3)
+        for r in rs[seen:]:
+            t = r["task"]
+            tag = "" if t in inc_tasks else " (not in incumbent set)"
+            log(a.log, f"row {len(rs) if r is rs[-1] else rs.index(r) + 1}: {t} r{r.get('repeat', '?')} "
+                       f"{'PASS' if r.get('pass') else 'FAIL'}{tag}; deficit {len(behind)}, ahead {len(ahead)}")
+        if len(rs) != seen:
+            log(a.log, f"behind on: {', '.join(behind) or 'nothing'}; ahead on: {', '.join(ahead) or 'nothing'}")
+        seen = len(rs)
+
+        if len(behind) >= a.deficit:
+            reason = (f"stopping rule fired after row {seen}: {len(behind)} tasks behind the incumbent's pass^3 "
+                      f"({', '.join(behind)}), {len(ahead)} ahead ({', '.join(ahead) or 'none'})")
+            log(a.log, reason)
+            if a.dry_run:
+                log(a.log, "dry run: not stopping")
+                return 0
+            with open(a.marker, "w") as f:
+                f.write(reason + "\n")
+            stop_run(a.run_file, a.log)
+            log(a.log, f"marker written: {a.marker}")
+            return 0
+
+        if not run_pids(a.run_file):
+            # Give a just-finished run a moment to flush its last row.
+            time.sleep(5)
+            rs = rows(a.challenger)
+            st = status(rs)
+            behind = sorted(t for t in inc_p3 if st.get(t) == "failed")
+            ahead = sorted(t for t, s in st.items() if s == "pass3" and t in inc_tasks and t not in inc_p3)
+            p3 = sorted(t for t, s in st.items() if s == "pass3" and t in inc_tasks)
+            log(a.log, f"run finished without the rule firing: {len(rs)} rows, challenger pass^3 {len(p3)}/{len(inc_tasks)} "
+                       f"on the incumbent's tasks against {len(inc_p3)}; behind on {len(behind)}, ahead on {len(ahead)}")
+            return 0
+        time.sleep(a.poll)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
