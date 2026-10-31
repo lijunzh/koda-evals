@@ -1,0 +1,23 @@
+# muse-glimmer: a quick fast-seat screen, once each, on v0.5.1 at its 128K
+# maximum. The 25 tasks outside the investigation cluster, the small bounded
+# work a fast seat has to do, read against the same tasks in
+# runs/ornith-v051-128k.toml. Single runs, so not a suite score and not a
+# pick; a close result earns three repeats. About an hour on Ornith's pace,
+# likely longer. Start only when Lijun says the GPU is free. Unload only the
+# model you loaded.
+#   lms load meta/muse-glimmer --identifier glimmer -c 131072 -y
+#   ./target/release/koda-eval run runs/glimmer-v051-screen.toml --jobs 1
+name = "glimmer-v051-screen"
+repeats = 1
+tasks = ["bash-split-multibyte", "behaviour-act-on-given-info", "behaviour-act-on-given-info-control", "behaviour-answer-vs-act", "behaviour-answer-vs-act-control", "behaviour-delegate-or-not", "behaviour-delegate-or-not-control", "behaviour-frugal-reads", "behaviour-frugal-reads-control", "behaviour-pre-existing-failure", "behaviour-pre-existing-failure-control", "behaviour-shell-safety", "behaviour-shell-safety-control", "behaviour-validation-fidelity", "behaviour-validation-fidelity-control", "composer-wrap-width-zero", "kata-api-migration", "kata-api-migration-tests", "kata-async-blocking", "kata-largest", "kata-preview-utf8", "kata-utf8-sweep", "loop-guard-char-boundary", "strip-quotes-lone-quote", "think-tag-multibyte"]
+
+[[variants]]
+name = "v051"
+ref = "v0.5.1"
+
+[[models]]
+name = "glimmer"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "glimmer"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
