@@ -1,0 +1,18 @@
+# ornith: does compaction carry on correctly on a local model with the #1444
+# fix (#1449) and the stable prompt (#1451) together? Commit 53ec510, 128K
+# window. Read the transcripts: every compaction should continue the work,
+# nothing should be dropped, and the final response should be the model's own.
+name = "ornith-1449-compact"
+repeats = 2
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "pr1449"
+ref = "53ec510"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
