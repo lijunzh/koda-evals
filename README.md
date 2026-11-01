@@ -280,8 +280,9 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
   - `check`: `hidden` (exit, hidden tests passed and failed, compile
     error, output tail) and `transcript` (each predicate's verdict); either
     is `null` when the task doesn't have that part.
-- Per run: `transcript.ndjson`, `stderr.log`, `diff.patch`, `check.log` and
-  `koda.log` (koda's own log, kept as evidence).
+- Per run: `transcript.ndjson`, `stderr.log`, `diff.patch`, `check.log`,
+  `koda.log` (koda's own log, kept as evidence) and `koda.db` (the whole
+  conversation, compacted rows included).
 - `meta.json`: the run file, each koda binary's `--version`, ref and commit,
   and `rustc --version`.
 - `report.md`: the report below.
