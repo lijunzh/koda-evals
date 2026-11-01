@@ -1,0 +1,15 @@
+# The #1454 check on merged main: compaction on real Gemini at a 32K window.
+# Approved by Lijun 2026-10-31, up to about 4.4M prompt tokens over 20 minutes.
+name = "gemini-1454-main"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "abc26e06879e6d9d0be55e3d3aa53d82ebd6207d"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }

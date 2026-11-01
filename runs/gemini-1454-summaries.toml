@@ -1,0 +1,15 @@
+# #1454 again, with stored summaries in koda.log: did the task survive? Includes
+# the summary parser fix. 32K window. Approved by Lijun 2026-11-01.
+name = "gemini-1454-summaries"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "42392340e428b6d22e1b0ba9402af7968643babc"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768", RUST_LOG = "koda_core=info,koda_cli=info,koda_core::compact=debug" }

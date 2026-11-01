@@ -1,0 +1,15 @@
+# Does compaction keep a working model on task? Haiku passes this task without
+# compacting, so a 32K window tests Koda. Approved by Lijun 2026-11-01.
+name = "haiku-compaction-32k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "36cacce3ec8dbd58cefb19edf786bc610c2045db"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768", RUST_LOG = "koda_core=info,koda_cli=info,koda_core::compact=debug" }
