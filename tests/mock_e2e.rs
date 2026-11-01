@@ -119,6 +119,23 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
         fixed["behaviour"]["compactions"]["attempts"].is_u64(),
         "{fixed:#}"
     );
+    // The fix is an Edit or a Write. Whether koda's log carries the
+    // `turn end` and `model call` lines depends on its build; the keys are ours.
+    assert!(
+        fixed["behaviour"]["edits_attempted"].as_u64() >= Some(1),
+        "{fixed:#}"
+    );
+    for key in [
+        "ended_with_question",
+        "peak_context_tokens",
+        "peak_context_percent",
+        "compaction_tokens",
+        "compaction_ms",
+        "compaction_share",
+        "summary_chars_max",
+    ] {
+        assert!(fixed["behaviour"].get(key).is_some(), "{key}: {fixed:#}");
+    }
     assert_eq!(fixed["diff"]["files"], 1, "{fixed:#}");
     let artifacts = dir.join(fixed["artifacts"].as_str().unwrap());
     assert!(artifacts.join("transcript.ndjson").is_file());

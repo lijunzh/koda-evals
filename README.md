@@ -276,7 +276,19 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
     `loop_guard_warnings`, `edit_rejections` (Edit results koda refused:
     `Validation error:` or `Error:`), `time_limit_hit`, `turn_end_kind`
     (`null` when the turn never ended), `delegations`, `approval_requests`
-    (`total`, `destructive`) and `blocked_actions`.
+    (`total`, `destructive`) and `blocked_actions`. Also `edits_attempted`
+    (`Edit` and `Write` calls, from the transcript) and, from `koda.log`
+    (ANSI codes stripped), the signals that explain a failed row:
+    `ended_with_question` (`ends_with_question` on the last `turn end`
+    line; such a run is recorded `complete`), `peak_context_tokens` and
+    `peak_context_percent` (the largest `context_tokens` on a `purpose="turn"`
+    `model call` line, `estimated_tokens` when that is 0, against the
+    window; the percent is `null` when the run file pins none),
+    `compaction_tokens` and `compaction_ms` (prompt + completion tokens and
+    `elapsed_ms` over `purpose="compaction"` calls), `compaction_share`
+    (that time as a fraction of `agent.wall_ms`) and `summary_chars_max`
+    (the largest `summary_chars` on a `compaction` line). A signal the log
+    can't give, such as a log from before koda wrote these lines, is `null`.
   - `check`: `hidden` (exit, hidden tests passed and failed, compile
     error, output tail) and `transcript` (each predicate's verdict); either
     is `null` when the task doesn't have that part.
@@ -301,11 +313,28 @@ two numbers for comparing ways of delegating:
 
 The header names the configuration the rows were measured under: engine
 and window per model, trust, wall_secs and jobs. Then the tasks where
-variants disagree, per model, and a per-task grid grouped by cluster, with
-three behaviour columns summed over the task's runs: compactions, Edit
-rejections, and runs that hit the time limit. Raw counts sit next to every
-percentage: with about ten tasks and three repeats, a gap of a few points
-is noise.
+variants disagree, per model, and a per-task grid grouped by cluster. Its
+columns show what went wrong in the task's runs without opening a file,
+summed or counted over them:
+
+- **compactions**, **edit rejections**, **time limit** (runs that hit the
+  wall-clock limit, as *k of N*).
+- **asked:** runs that ended on a question to the user, as *k of N*. They
+  count as complete, so this is the only place a stop-to-ask shows.
+- **no edits:** runs that never called `Edit` or `Write`, as *k of N*. With
+  an empty `diff.patch`, the run never tried.
+- **peak context:** the fullest run's largest request in tokens, with its
+  share of the window.
+- **compaction tokens** and **compaction time:** what compaction cost, the
+  time with its share of the runs' wall time.
+- **summary max:** the longest compaction summary in characters, so growth
+  shows.
+
+A `-` means the log has nothing to say. `report` fills these from a row's
+own artifacts when `results.jsonl` predates them, so old result
+directories show the same columns (`results.jsonl` is not rewritten). Raw
+counts sit next to every percentage: with about ten tasks and three
+repeats, a gap of a few points is noise.
 
 ## Tests
 

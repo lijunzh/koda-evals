@@ -23,7 +23,7 @@ use serde_json::{Value, json};
 use crate::project::{self, Stage};
 use crate::task::{self, Task};
 use crate::transcript::Transcript;
-use crate::{build, check, keys, proc, util};
+use crate::{build, check, keys, klog, proc, util};
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -486,12 +486,30 @@ impl RunOne<'_> {
                 "timed_out": agent.timed_out,
                 "wall_ms": agent.elapsed.as_millis() as u64,
             },
-            "behaviour": transcript.behaviour(agent.timed_out),
+            "behaviour": self.behaviour(&transcript, &agent),
             "summary": transcript.summary.clone().or_else(|| summary_from_db(self.art)),
             "events": transcript.counts,
             "diff": diff,
             "check": check,
         }))
+    }
+}
+
+impl RunOne<'_> {
+    /// The event stream's signals plus koda's log's. A log with nothing to
+    /// read (none kept, or written before koda logged these lines) leaves
+    /// its fields `null`.
+    fn behaviour(&self, transcript: &Transcript, agent: &proc::Finished) -> Value {
+        let mut behaviour = transcript.behaviour(agent.timed_out);
+        let signals = klog::read(&self.art.join("koda.log")).unwrap_or_default();
+        let wall_ms = agent.elapsed.as_millis() as u64;
+        if let (Some(row), Value::Object(log)) = (
+            behaviour.as_object_mut(),
+            signals.to_json(window_of(self.model), wall_ms),
+        ) {
+            row.extend(log);
+        }
+        behaviour
     }
 }
 

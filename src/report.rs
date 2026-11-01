@@ -40,6 +40,16 @@ struct Row {
     compactions: Option<u64>,
     edit_rejections: Option<u64>,
     time_limit_hit: Option<bool>,
+    /// The run stopped on a question to the user (koda's log); `None` when
+    /// the log has no `turn end` line.
+    ended_with_question: Option<bool>,
+    /// `Edit` and `Write` calls; zero with an empty diff means it never tried.
+    edits_attempted: Option<u64>,
+    peak_context_tokens: Option<u64>,
+    peak_context_percent: Option<f64>,
+    compaction_tokens: Option<u64>,
+    compaction_ms: Option<u64>,
+    summary_chars_max: Option<u64>,
 }
 
 /// The configuration identity a row carries.
@@ -51,8 +61,9 @@ struct Config {
     trust: Option<String>,
 }
 
+use crate::klog;
 use crate::task::CLUSTERS;
-use crate::transcript::DELEGATION_TOOLS;
+use crate::transcript::{DELEGATION_TOOLS, Transcript};
 
 fn non_cached_tokens(usage: &Value) -> Option<u64> {
     match (
@@ -64,14 +75,19 @@ fn non_cached_tokens(usage: &Value) -> Option<u64> {
     }
 }
 
-fn parse_rows(text: &str) -> Result<Vec<Row>> {
+/// The rows of a `results.jsonl`. With the results directory, a row written
+/// before the trouble signals existed gets them from its own artifacts.
+fn parse_rows(text: &str, dir: Option<&Path>) -> Result<Vec<Row>> {
     let mut rows = Vec::new();
     for (i, line) in text.lines().enumerate() {
         if line.trim().is_empty() {
             continue;
         }
-        let v: Value =
+        let mut v: Value =
             serde_json::from_str(line).with_context(|| format!("results.jsonl line {}", i + 1))?;
+        if let Some(dir) = dir {
+            backfill(&mut v, dir);
+        }
         let summary = &v["summary"];
         let tokens = non_cached_tokens(&summary["usage"]);
         // Builds older than per-agent usage report none; with no children
@@ -105,9 +121,45 @@ fn parse_rows(text: &str) -> Result<Vec<Row>> {
             compactions: behaviour["compactions"]["attempts"].as_u64(),
             edit_rejections: behaviour["edit_rejections"].as_u64(),
             time_limit_hit: behaviour["time_limit_hit"].as_bool(),
+            ended_with_question: behaviour["ended_with_question"].as_bool(),
+            edits_attempted: behaviour["edits_attempted"].as_u64(),
+            peak_context_tokens: behaviour["peak_context_tokens"].as_u64(),
+            peak_context_percent: behaviour["peak_context_percent"].as_f64(),
+            compaction_tokens: behaviour["compaction_tokens"].as_u64(),
+            compaction_ms: behaviour["compaction_ms"].as_u64(),
+            summary_chars_max: behaviour["summary_chars_max"].as_u64(),
         });
     }
     Ok(rows)
+}
+
+/// Fill the trouble signals a row lacks from its artifacts (`koda.log`,
+/// `transcript.ndjson`), so an old results directory reports like a new one.
+/// A field the row has, even a `null`, is kept; `results.jsonl` is not
+/// rewritten.
+fn backfill(row: &mut Value, dir: &Path) {
+    let Some(art) = row["artifacts"].as_str().map(|a| dir.join(a)) else {
+        return;
+    };
+    let wall_ms = row["agent"]["wall_ms"].as_u64().unwrap_or(0);
+    let window = row["config"]["window"].as_u64();
+    let mut found = serde_json::Map::new();
+    if let Some(log) = klog::read(&art.join("koda.log"))
+        && let Value::Object(fields) = log.to_json(window, wall_ms)
+    {
+        found = fields;
+    }
+    if let Ok(transcript) = Transcript::read(&art.join("transcript.ndjson")) {
+        found.insert(
+            "edits_attempted".into(),
+            transcript.edits_attempted().into(),
+        );
+    }
+    if let Some(behaviour) = row["behaviour"].as_object_mut() {
+        for (key, value) in found {
+            behaviour.entry(key).or_insert(value);
+        }
+    }
 }
 
 /// `(variant, model)` in first-seen order, which is the run file's order.
@@ -250,6 +302,72 @@ fn behaviour_cells(rows: &[Row], task: &str) -> [String; 3] {
         } else {
             format!("{hits}/{n}")
         },
+    ]
+}
+
+/// The columns that show how a task's runs went wrong, over every row of
+/// the task: runs that ended on a question and runs that never attempted an
+/// edit as `k/n`, the peak context (the fullest run's, with its share of the
+/// window), compaction tokens and time summed (with the share of the runs'
+/// wall time), and the largest summary in characters. `-` when no row
+/// carries the signal.
+fn trouble_cells(rows: &[Row], task: &str) -> [String; 6] {
+    let mine: Vec<&Row> = rows.iter().filter(|r| r.task == task).collect();
+    let k_of_n = |flags: Vec<bool>| {
+        if flags.is_empty() {
+            "-".to_string()
+        } else {
+            format!("{}/{}", flags.iter().filter(|&&f| f).count(), flags.len())
+        }
+    };
+    let asked = k_of_n(mine.iter().filter_map(|r| r.ended_with_question).collect());
+    let no_edits = k_of_n(
+        mine.iter()
+            .filter_map(|r| r.edits_attempted.map(|n| n == 0))
+            .collect(),
+    );
+    // The fullest run by share of its window when any row has one, else by
+    // tokens: 50K in a 200K window is less trouble than 30K in a 32K one.
+    let peak = mine
+        .iter()
+        .filter(|r| r.peak_context_tokens.is_some())
+        .max_by(|a, b| {
+            let key = |r: &Row| (r.peak_context_percent, r.peak_context_tokens);
+            key(a)
+                .partial_cmp(&key(b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map_or_else(
+            || "-".to_string(),
+            |r| match r.peak_context_percent {
+                Some(p) => format!("{} ({p:.0}%)", fmt_num(r.peak_context_tokens)),
+                None => fmt_num(r.peak_context_tokens),
+            },
+        );
+    let sum = |values: Vec<u64>| (!values.is_empty()).then(|| values.iter().sum::<u64>());
+    let compaction_tokens = sum(mine.iter().filter_map(|r| r.compaction_tokens).collect());
+    let compaction_ms = sum(mine.iter().filter_map(|r| r.compaction_ms).collect());
+    // Share of the wall time of the runs that have both figures.
+    let (ms, wall) = mine
+        .iter()
+        .filter_map(|r| Some((r.compaction_ms?, r.wall_ms?)))
+        .fold((0u64, 0u64), |(ms, wall), (m, w)| (ms + m, wall + w));
+    let compaction_time = match compaction_ms {
+        Some(total) if wall > 0 => format!(
+            "{} ({:.0}%)",
+            fmt_secs(Some(total)),
+            100.0 * ms as f64 / wall as f64
+        ),
+        total => fmt_secs(total),
+    };
+    let summary_max = mine.iter().filter_map(|r| r.summary_chars_max).max();
+    [
+        asked,
+        no_edits,
+        peak,
+        fmt_num(compaction_tokens),
+        compaction_time,
+        fmt_num(summary_max),
     ]
 }
 
@@ -461,27 +579,33 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         }
         let _ = writeln!(
             out,
-            "| task | {} | compactions | edit rejections | time limit |",
+            "| task | {} | compactions | edit rejections | time limit | asked | no edits | peak context | compaction tokens | compaction time | summary max |",
             header.join(" | ")
         );
-        let _ = writeln!(out, "|---|{}---|---|---|", "---|".repeat(cells.len()));
+        let _ = writeln!(
+            out,
+            "|---|{}---|---|---|---|---|---|---|---|---|",
+            "---|".repeat(cells.len())
+        );
         for task in group {
             let row: Vec<String> = cells
                 .iter()
                 .map(|(v, m)| task_cell(rows, task, v, m))
                 .collect();
             let [comp, rej, limit] = behaviour_cells(rows, task);
+            let trouble = trouble_cells(rows, task);
             let _ = writeln!(
                 out,
-                "| {task} | {} | {comp} | {rej} | {limit} |",
-                row.join(" | ")
+                "| {task} | {} | {comp} | {rej} | {limit} | {} |",
+                row.join(" | "),
+                trouble.join(" | ")
             );
         }
         let _ = writeln!(out);
     }
     let _ = writeln!(
         out,
-        "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit."
+        "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit. Asked is the runs that ended on a question to the user, which count as complete; no edits is the runs that never called Edit or Write. Peak context is the fullest run's largest request, with its share of the window when the run file pins one. Compaction tokens (prompt + completion) and time are summed over the task's runs, the time with its share of their wall time. Summary max is the longest compaction summary in characters. `-` means the run's log has nothing to say."
     );
     out
 }
@@ -516,7 +640,7 @@ pub fn locate(root: &Path, what: &Path) -> Result<PathBuf> {
 pub fn report(dir: &Path) -> Result<()> {
     let text = std::fs::read_to_string(dir.join("results.jsonl"))
         .with_context(|| format!("read {}", dir.join("results.jsonl").display()))?;
-    let rows = parse_rows(&text)?;
+    let rows = parse_rows(&text, Some(dir))?;
     if rows.is_empty() {
         bail!("{} holds no results", dir.display());
     }
@@ -553,6 +677,13 @@ mod tests {
             compactions: None,
             edit_rejections: None,
             time_limit_hit: None,
+            ended_with_question: None,
+            edits_attempted: None,
+            peak_context_tokens: None,
+            peak_context_percent: None,
+            compaction_tokens: None,
+            compaction_ms: None,
+            summary_chars_max: None,
         }
     }
 
@@ -601,7 +732,7 @@ mod tests {
 {"task":"bash-safety","variant":"v","model":"flint","pass":true,"config":{"engine":"lm-studio@localhost:1234","window":131072,"wall_secs":600,"trust":"safe","jobs":1,"cluster":"judgement","grade":""},"behaviour":{"compactions":{"attempts":0,"with_summary":0},"edit_rejections":0,"time_limit_hit":false}}
 {"task":"old-row","variant":"v","model":"sonnet","pass":true}
 "#;
-        let rows = parse_rows(text).unwrap();
+        let rows = parse_rows(text, None).unwrap();
         assert_eq!(rows[0].cluster.as_deref(), Some("kata"));
         assert_eq!(rows[0].config.window, Some(131_072));
         assert_eq!(rows[1].time_limit_hit, Some(true));
@@ -627,6 +758,65 @@ mod tests {
     }
 
     #[test]
+    fn trouble_shows_in_the_grid_and_missing_signals_show_a_dash() {
+        let text = r#"{"task":"asks","variant":"v","model":"m","pass":false,"agent":{"wall_ms":100000},"behaviour":{"compactions":{"attempts":2},"edit_rejections":0,"time_limit_hit":false,"ended_with_question":true,"edits_attempted":2,"peak_context_tokens":57000,"peak_context_percent":89.1,"compaction_tokens":20000,"compaction_ms":45000,"compaction_share":0.45,"summary_chars_max":12000}}
+{"task":"idle","variant":"v","model":"m","pass":false,"agent":{"wall_ms":1200000},"behaviour":{"compactions":{"attempts":0},"edit_rejections":0,"time_limit_hit":true,"ended_with_question":false,"edits_attempted":0,"peak_context_tokens":30000,"peak_context_percent":null,"compaction_tokens":0,"compaction_ms":0,"compaction_share":0.0,"summary_chars_max":null}}
+{"task":"idle","variant":"v","model":"m","pass":true,"agent":{"wall_ms":300000},"behaviour":{"compactions":{"attempts":0},"edit_rejections":0,"time_limit_hit":false,"ended_with_question":false,"edits_attempted":3,"peak_context_tokens":20000,"peak_context_percent":null,"compaction_tokens":0,"compaction_ms":0,"summary_chars_max":null}}
+{"task":"old-row","variant":"v","model":"m","pass":true,"agent":{"wall_ms":1000},"behaviour":{"compactions":{"attempts":1},"edit_rejections":0,"time_limit_hit":false}}
+"#;
+        let rows = parse_rows(text, None).unwrap();
+        assert_eq!(rows[0].ended_with_question, Some(true));
+        assert_eq!(rows[0].peak_context_percent, Some(89.1));
+        assert_eq!(rows[3].edits_attempted, None);
+        let md = render(&rows, &Value::Null, "x");
+        assert!(
+            md.contains("| asks | 0/1 | 2 | 0 | 0/1 | 1/1 | 0/1 | 57,000 (89%) | 20,000 | 0m45s (45%) | 12,000 |"),
+            "{md}"
+        );
+        // Two runs: one never edited; the fullest by tokens when no run
+        // has a percent; no compaction at all is 0, not `-`.
+        assert!(
+            md.contains("| idle | 1/2 | 0 | 0 | 1/2 | 0/2 | 1/2 | 30,000 | 0 | 0m00s (0%) | - |"),
+            "{md}"
+        );
+        assert!(
+            md.contains("| old-row | 1/1 | 1 | 0 | 0/1 | - | - | - | - | - | - |"),
+            "{md}"
+        );
+    }
+
+    #[test]
+    fn an_old_row_gets_its_signals_from_its_artifacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let art = dir.path().join("t").join("v.m.r1");
+        std::fs::create_dir_all(&art).unwrap();
+        std::fs::write(
+            art.join("koda.log"),
+            "2026-11-01T11:17:57Z INFO koda_core::inference_helpers: model call purpose=\"turn\" context_tokens=32000\n\
+             2026-11-01T11:20:53Z INFO koda_core::inference: turn end ends_with_question=true\n",
+        )
+        .unwrap();
+        std::fs::write(
+            art.join("transcript.ndjson"),
+            "{\"type\":\"tool_call_start\",\"id\":\"a\",\"name\":\"Write\",\"args\":{},\"is_sub_agent\":false}\n",
+        )
+        .unwrap();
+        let text = r#"{"task":"t","variant":"v","model":"m","pass":false,"artifacts":"t/v.m.r1","config":{"window":64000},"agent":{"wall_ms":100000},"behaviour":{"compactions":{"attempts":0},"summary_chars_max":7}}
+{"task":"u","variant":"v","model":"m","pass":false,"artifacts":"u/v.m.r1","behaviour":{"compactions":{"attempts":0}}}
+"#;
+        let rows = parse_rows(text, Some(dir.path())).unwrap();
+        assert_eq!(rows[0].ended_with_question, Some(true));
+        assert_eq!(rows[0].edits_attempted, Some(1));
+        assert_eq!(rows[0].peak_context_tokens, Some(32_000));
+        assert_eq!(rows[0].peak_context_percent, Some(50.0));
+        // What the row already says stays.
+        assert_eq!(rows[0].summary_chars_max, Some(7));
+        // No artifacts on disk: nothing to say.
+        assert_eq!(rows[1].ended_with_question, None);
+        assert_eq!(rows[1].edits_attempted, None);
+    }
+
+    #[test]
     fn one_variant_has_nothing_to_compare() {
         let rows = vec![row("a", "main", Some(true), 100)];
         let md = render(&rows, &Value::Null, "x");
@@ -638,7 +828,7 @@ mod tests {
         let text = r#"{"task":"a","variant":"v","model":"m","pass":true,"agent":{"wall_ms":1500},"summary":{"usage":{"prompt_tokens":10,"completion_tokens":5}}}
 {"task":"a","variant":"v","model":"m","pass":null,"harness_error":"boom"}
 "#;
-        let rows = parse_rows(text).unwrap();
+        let rows = parse_rows(text, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].tokens, Some(15));
         assert_eq!(rows[1].pass, None);
@@ -653,7 +843,7 @@ mod tests {
         let text = r#"{"task":"a","variant":"v","model":"m","pass":true,"summary":{"usage":{"prompt_tokens":900,"completion_tokens":100},"usage_by_agent":{"main":{"prompt_tokens":250,"completion_tokens":50},"explore":{"prompt_tokens":650,"completion_tokens":50}},"tool_calls":{"Read":3,"InvokeAgent":2}}}
 {"task":"a","variant":"v","model":"m","pass":false,"summary":{"usage":{"prompt_tokens":100,"completion_tokens":0},"tool_calls":{"Read":1}}}
 "#;
-        let rows = parse_rows(text).unwrap();
+        let rows = parse_rows(text, None).unwrap();
         assert_eq!(rows[0].tokens, Some(1000));
         assert_eq!(rows[0].main_tokens, Some(300));
         assert_eq!(rows[0].delegations, 2);
