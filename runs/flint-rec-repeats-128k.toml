@@ -1,0 +1,29 @@
+# flint on rec: the engine question left open when Flint's LM Studio set was
+# stopped on 2026-10-31 (growth plan, "Engine caveat"). Same 32 tasks, three
+# repeats, Koda 4926824 and 128K window as runs/flint-repeats-128k.toml, so
+# the two Flint sets differ only in the engine. The tasks are listed
+# explicitly: the LM Studio set swept tasks/ and picked up the two
+# parallelism twins, which is why it had 102 rows. Run under the stopping
+# rule (bin/flint-stop-rule, three tasks behind Ornith's pass^3), which
+# kills the set early if Flint on rec is no better placed than on LM Studio.
+# rec answers none of Koda's window probes, so the window is pinned by env;
+# rec serve --context 131072 matches it. The bearer token comes from
+# `rec auth token` and is exported as KODA_API_KEY by the queue script, not
+# written here. One model in memory: LM Studio is unloaded first.
+#   rec serve --context 131072 &   # wait for "flint is ready"
+#   KODA_API_KEY=$(rec auth token) ./target/release/koda-eval run runs/flint-rec-repeats-128k.toml --jobs 1
+#   rec stop
+name = "flint-rec-repeats-128k"
+repeats = 3
+tasks = ["bash-classifier-escapes", "bash-readonly-fail-closed", "bash-split-multibyte", "behaviour-act-on-given-info", "behaviour-act-on-given-info-control", "behaviour-answer-vs-act", "behaviour-answer-vs-act-control", "behaviour-delegate-or-not", "behaviour-delegate-or-not-control", "behaviour-frugal-reads", "behaviour-frugal-reads-control", "behaviour-pre-existing-failure", "behaviour-pre-existing-failure-control", "behaviour-shell-safety", "behaviour-shell-safety-control", "behaviour-validation-fidelity", "behaviour-validation-fidelity-control", "compact-reasoning-summary", "composer-wrap-width-zero", "edit-stale-after-own-edit", "kata-api-migration", "kata-api-migration-tests", "kata-async-blocking", "kata-largest", "kata-preview-utf8", "kata-utf8-sweep", "loop-guard-char-boundary", "provider-flag-base-url", "provider-flags-beat-saved", "strip-quotes-lone-quote", "think-tag-multibyte", "vim-normal-mode-bugs"]
+
+[[variants]]
+name = "main"
+ref = "4926824"
+
+[[models]]
+name = "flint-rec"
+provider = "lm-studio"
+base_url = "http://127.0.0.1:11500/v1"
+model = "flint"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

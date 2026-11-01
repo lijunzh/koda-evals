@@ -427,6 +427,7 @@ impl RunOne<'_> {
         // koda's own log says why a turn failed ("LLM inference failed" on
         // stderr doesn't). Keep it with the run's other evidence.
         keep_koda_log(&config, self.art);
+        keep_koda_db(&config, self.art);
 
         let transcript = Transcript::read(&transcript_path)?;
         let diff = project::capture_diff(&project, &self.art.join("diff.patch"))?;
@@ -483,7 +484,7 @@ impl RunOne<'_> {
                 "wall_ms": agent.elapsed.as_millis() as u64,
             },
             "behaviour": transcript.behaviour(agent.timed_out),
-            "summary": transcript.summary,
+            "summary": transcript.summary.clone().or_else(|| summary_from_db(self.art)),
             "events": transcript.counts,
             "diff": diff,
             "check": check,
@@ -542,6 +543,53 @@ fn keep_koda_log(config: &Path, art: &Path) {
     if !out.is_empty() {
         let _ = std::fs::write(art.join("koda.log"), out);
     }
+}
+
+/// Copy koda's database, with any WAL files a killed run left, into `art`.
+/// It holds the whole conversation, compacted rows included. Best effort,
+/// like the log.
+fn keep_koda_db(config: &Path, art: &Path) {
+    let Ok(entries) = std::fs::read_dir(config.join("koda").join("db")) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        if name.to_string_lossy().starts_with("koda.db") {
+            let _ = std::fs::copy(entry.path(), art.join(&name));
+        }
+    }
+}
+
+/// A stand-in summary for a run killed before it wrote its own, with the
+/// usage koda stored. The run's config dir is fresh, so every row is this run's.
+fn summary_from_db(art: &Path) -> Option<Value> {
+    let conn = rusqlite::Connection::open_with_flags(
+        art.join("koda.db"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
+    )
+    .ok()?;
+    conn.query_row(
+        "SELECT COALESCE(SUM(prompt_tokens), 0), COALESCE(SUM(completion_tokens), 0),
+                COALESCE(SUM(cache_read_tokens), 0), COALESCE(SUM(cache_creation_tokens), 0),
+                COALESCE(SUM(thinking_tokens), 0), COUNT(*)
+         FROM messages
+         WHERE prompt_tokens IS NOT NULL OR completion_tokens IS NOT NULL",
+        [],
+        |row| {
+            Ok(json!({
+                "usage_source": "database",
+                "usage": {
+                    "prompt_tokens": row.get::<_, i64>(0)?,
+                    "completion_tokens": row.get::<_, i64>(1)?,
+                    "cache_read_tokens": row.get::<_, i64>(2)?,
+                    "cache_creation_tokens": row.get::<_, i64>(3)?,
+                    "thinking_tokens": row.get::<_, i64>(4)?,
+                    "api_calls": row.get::<_, i64>(5)?,
+                },
+            }))
+        },
+    )
+    .ok()
 }
 
 /// One line for the terminal: outcome, time, tokens.
@@ -697,6 +745,42 @@ provider = "mock"
         )
         .unwrap();
         assert!(validate(&run).is_err());
+    }
+
+    #[test]
+    fn a_killed_run_gets_its_usage_from_the_database() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config");
+        let db_dir = config.join("koda").join("db");
+        std::fs::create_dir_all(&db_dir).unwrap();
+        let conn = rusqlite::Connection::open(db_dir.join("koda.db")).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE messages (
+                 prompt_tokens INTEGER, completion_tokens INTEGER,
+                 cache_read_tokens INTEGER, cache_creation_tokens INTEGER,
+                 thinking_tokens INTEGER);
+             INSERT INTO messages VALUES (100, 10, 5, NULL, 2), (200, 20, NULL, NULL, NULL),
+                                         (NULL, NULL, NULL, NULL, NULL);",
+        )
+        .unwrap();
+        drop(conn);
+        let art = dir.path().join("art");
+        std::fs::create_dir_all(&art).unwrap();
+
+        keep_koda_db(&config, &art);
+        let summary = summary_from_db(&art).unwrap();
+
+        assert_eq!(summary["usage_source"], "database");
+        assert_eq!(summary["usage"]["prompt_tokens"], 300);
+        assert_eq!(summary["usage"]["completion_tokens"], 30);
+        assert_eq!(summary["usage"]["cache_read_tokens"], 5);
+        assert_eq!(summary["usage"]["api_calls"], 2);
+    }
+
+    #[test]
+    fn a_run_with_no_database_gets_no_summary() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(summary_from_db(dir.path()).is_none());
     }
 
     #[test]

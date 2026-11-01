@@ -1,0 +1,20 @@
+# Mechanism test, not a suite score: draft #1449 at bbffec3 on Ornith with the
+# window pinned to 32K, so compaction fires early and the run has time to
+# finish afterwards. The small window handicaps the model on purpose; never
+# compare this row with 128K results. Pass condition: every compaction
+# continues the work, nothing is dropped, and a natural finish reports the
+# model's own text.
+name = "ornith-1449-window32k"
+repeats = 1
+tasks = ["vim-normal-mode-bugs"]
+
+[[variants]]
+name = "pr1449"
+ref = "bbffec3"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }

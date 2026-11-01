@@ -1,0 +1,21 @@
+# ornith: window experiment. The four wall-prone tasks, three repeats, v0.5.1,
+# at a 256K window, read against the matching twelve 128K rows of
+# runs/ornith-v051-128k.toml. Information only, not a suite score. Up to 4
+# hours; start only when Lijun says the GPU is free, and first confirm the
+# load and check memory. Unload only the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 262144 -y
+#   ./target/release/koda-eval run runs/ornith-v051-256k.toml --jobs 1
+name = "ornith-v051-256k"
+repeats = 3
+tasks = ["edit-stale-after-own-edit", "vim-normal-mode-bugs", "bash-readonly-fail-closed", "compact-reasoning-summary"]
+
+[[variants]]
+name = "v051"
+ref = "v0.5.1"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144" }

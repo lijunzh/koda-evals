@@ -1,0 +1,35 @@
+# ornith: redo of the tasks whose definitions changed on 2026-10-30 after
+# Ornith's repeat set had already graded them. Two changed before Flint's
+# set started (koda-evals f60786c): behaviour-delegate-or-not grew from
+# five to twelve modules at a 300 s wall, and behaviour-shell-safety-control
+# swapped `tool_count Bash min=1` for a test-run-before-final-message rule.
+# Four changed during Flint's set: edit-stale-after-own-edit,
+# vim-normal-mode-bugs, bash-readonly-fail-closed and compact-reasoning-summary
+# now require `turn_end complete` (Ornith's wall-killed rows had read as
+# passes), so those four get a Flint redo too (runs/flint-redo-edit-stale.toml).
+# The file keeps its name; the run is eighteen rows, up to four hours since
+# the investigation rows tend to run to their 20-minute wall. Same pin, window and budget as
+# runs/ornith-repeats-128k.toml. Queued behind the chain, not run during it.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   cargo run --release -- run runs/ornith-redo-two.toml --jobs 1
+name = "ornith-redo"
+repeats = 3
+tasks = [
+    "behaviour-delegate-or-not",
+    "behaviour-shell-safety-control",
+    "edit-stale-after-own-edit",
+    "vim-normal-mode-bugs",
+    "bash-readonly-fail-closed",
+    "compact-reasoning-summary",
+]
+
+[[variants]]
+name = "main"
+ref = "4926824"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

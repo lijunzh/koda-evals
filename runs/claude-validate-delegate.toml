@@ -1,0 +1,21 @@
+# Stage-one screen of behaviour-delegate-or-not after it grew from five to
+# twelve modules at a 300 s wall (koda-evals f60786c, 2026-10-30). Sonnet in
+# Claude Code on Lijun's subscription through bin/claude-as-koda, the gate
+# model decided 2026-10-30; the wrapper cannot observe delegation (Claude
+# Code does not read agents/), so this grades fixture fairness and the
+# twelve hidden tests only. Start only with Lijun's go-ahead.
+#   cargo run --release -- run runs/claude-validate-delegate.toml --jobs 1
+name = "claude-validate-delegate"
+tasks = ["behaviour-delegate-or-not"]
+repeats = 1
+wall_secs = 1800
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "sonnet"
+provider = "claude-subscription"
+model = "sonnet"
+engine = "claude-code-subscription"

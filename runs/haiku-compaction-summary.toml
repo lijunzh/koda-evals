@@ -1,0 +1,20 @@
+# Does a real provider behave once the compaction summary arrives as a user
+# message? Koda fix for #1444 (ba87443: ba87443 plus the Anthropic thinking fix a9ace48). Three Haiku 5.5
+# runs of compact-reasoning-summary with the window pinned to 32K so
+# compaction fires early. Read the transcripts as well as the pass count:
+# each run should compact, keep working afterwards, and report the model's
+# own final text. Approved by Lijun 2026-10-31, estimated under $1.
+#   ./target/release/koda-eval run runs/haiku-compaction-summary.toml --jobs 1
+name = "haiku-compaction-summary"
+tasks = ["compact-reasoning-summary"]
+repeats = 3
+
+[[variants]]
+name = "fix1444"
+ref = "67c0261"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }
