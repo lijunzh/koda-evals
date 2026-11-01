@@ -11,7 +11,7 @@ prompt = """Three bugs in Vim mode in koda's prompt box (koda-cli/src/composer),
 3. `o` on the last line adds a new line, but the cursor stays at the end of the old line, so what I type lands there instead of on the new line.
 
 Fix all three."""
-tags = ["rust", "koda-history", "logic", "tui", "multi-bug"]
+tags = ["rust", "koda-history", "logic", "tui", "multi-bug", "suite"]
 cluster = "investigation"
 
 [repo]

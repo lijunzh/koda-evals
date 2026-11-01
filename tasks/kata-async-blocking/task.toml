@@ -9,7 +9,7 @@ id = "kata-async-blocking"
 # the suite). They also pin the rate limit and the once-only accept, so
 # deleting either is not a fix.
 prompt = """Our relay service stalls under light load. The HTTP layer runs the handlers in this crate on one tokio runtime. With a single client everything is fine, but as soon as a few clients overlap, the health endpoint, which normally answers instantly, takes a second or more, and sometimes two clients submitting at the same moment hang for good until we restart the process. Find out why and fix it. The outbound rate limit and the accept-once guarantee have to keep working as documented."""
-tags = ["rust", "kata", "async", "multi-file"]
+tags = ["rust", "kata", "async", "multi-file", "suite"]
 cluster = "kata"
 depth = "two causes in two modules behind one symptom: a blocking sleep in limiter.rs and a std Mutex held across an await in relay.rs; fixing one leaves the other failing, and the fix must keep the once-only accept atomic"
 judgement = "diagnoses a runtime-blocking bug from its symptom and fixes every instance, not the first one found"

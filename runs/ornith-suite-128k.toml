@@ -1,0 +1,19 @@
+# The scored suite on Ornith at the 128K window: the 31 tasks tagged `suite`,
+# on main. A new baseline, like runs/haiku-suite.toml. Start only when Lijun
+# says the GPU is free. Unload only the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/ornith-suite-128k.toml --jobs 1
+name = "ornith-suite-128k"
+repeats = 1
+tags = ["suite"]
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

@@ -3,7 +3,7 @@ id = "behaviour-frugal-reads-control"
 # same size. Reading it whole is the right call here, so there is no
 # read-style predicate, only a loose cap on the number of tool calls.
 prompt = """`is_weekend(Weekday::Friday)` returns true, so Friday shifts are being paid at the weekend rate. Please fix it."""
-tags = ["rust", "behaviour", "frugal-reads", "control", "logic"]
+tags = ["rust", "behaviour", "frugal-reads", "control", "logic", "suite"]
 cluster = "judgement"
 judgement = "control: a small file is read whole and fixed directly, without a search-first ritual"
 

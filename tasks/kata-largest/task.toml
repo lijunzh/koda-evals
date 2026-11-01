@@ -1,6 +1,6 @@
 id = "kata-largest"
 prompt = """This crate doesn't compile. Fix it without changing what `largest` is documented to do."""
-tags = ["rust", "kata", "compile-error"]
+tags = ["rust", "kata", "compile-error", "suite"]
 cluster = "kata"
 
 [repo]

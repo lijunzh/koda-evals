@@ -993,4 +993,18 @@ b = { name = "Edit" }
         assert_eq!(ids(select(&all, &["b".into()], &[]).unwrap()), ["b"]);
         assert!(select(&all, &["zzz".into()], &[]).is_err());
     }
+
+    #[test]
+    fn the_suite_leaves_out_measurement_tasks() {
+        let all = load_all(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tasks")).unwrap();
+        let suite = select(&all, &[], &["suite".into()]).unwrap();
+        assert_eq!(suite.len(), 31);
+        for task in suite {
+            assert!(
+                !task.spec.tags.iter().any(|t| t == "measurement"),
+                "{}",
+                task.id()
+            );
+        }
+    }
 }

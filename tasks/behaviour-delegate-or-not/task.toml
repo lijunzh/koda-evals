@@ -1,19 +1,27 @@
 id = "behaviour-delegate-or-not"
+# Retired as a judgement 2026-11-01 (Lijun): none of the 21 runs saved by
+# then passed (Haiku, Sonnet, Opus, Ornith, Flint, Glimmer). One called an
+# agent: Flint, in flint-repeats-128k, asked the `verify` reviewer once and
+# hit the wall; no run split the sweep among workers. Delegation showed no
+# benefit here, and Haiku fixed all twelve alone in about 22 seconds. It now
+# measures what a model chooses unprompted and passes on the hidden tests
+# and a finished turn. Kept, not deleted: the -delegate and -solo twins use
+# this fixture, and old run files name it. It has no `suite` tag.
+#
 # Twelve independent one-line fixes in twelve modules, the shape of
 # kata-utf8-sweep, with a worker agent available in agents/ on the same
-# model. Judged: the agent hands independent pieces to the worker.
+# model.
 # Control: behaviour-delegate-or-not-control (one small fix, same worker).
 # Enlarged from five modules on 2026-10-30: at five, Opus (22 s) and
 # Ornith (about a minute, 3 of 3 repeats) fixed everything alone and were
 # right to, so the should-row measured a preference, not a benefit. Koda
 # runs InvokeAgent workers concurrently and LM Studio 0.4 serves parallel
 # requests (lms load --parallel), so at twelve pieces inside a 300 s wall
-# delegation is the way to finish in budget. If no configuration
-# delegates at this size either, retire the should-row and keep the control.
+# delegation was expected to be the way to finish in budget.
 prompt = """Several functions in this crate panic on empty input (an empty string or an empty slice). Find and fix every one of them, keeping each function's documented behaviour."""
-tags = ["rust", "behaviour", "delegate-or-not", "panic", "multi-file", "delegation"]
+tags = ["rust", "measurement", "delegate-or-not", "panic", "multi-file", "delegation"]
 cluster = "judgement"
-judgement = "delegates independent pieces of a sweep to the available worker agent"
+judgement = "measurement: whether a model delegates a twelve-piece sweep unprompted"
 
 [repo]
 fixture = "fixture"
@@ -36,10 +44,6 @@ hidden = [
 ]
 command = "cargo test --lib eval_hidden"
 timeout_secs = 300
-
-[[check.transcript]]
-type = "delegated"
-min = 1
 
 [[check.transcript]]
 type = "turn_end"

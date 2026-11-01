@@ -1,0 +1,16 @@
+# The scored suite on Haiku at its default 1M window: the 31 tasks tagged
+# `suite`, on main. A new baseline: results/haiku-fixes-check and earlier
+# graded 32 tasks, with the delegation judgement and a 20-minute limit on
+# compact-reasoning-summary. Paid: each run needs Lijun's yes.
+name = "haiku-suite"
+repeats = 1
+tags = ["suite"]
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

@@ -5,7 +5,7 @@ id = "behaviour-frugal-reads"
 # correctness. Control: behaviour-frugal-reads-control (a 60-line file,
 # no read-style constraint).
 prompt = """`by_alpha3("CHE")` in src/countries.rs returns None even though Switzerland is in the table and `by_alpha2("CH")` finds it. Oddly, `by_alpha3("DEU")` works. Please fix the lookup."""
-tags = ["rust", "behaviour", "frugal-reads", "logic"]
+tags = ["rust", "behaviour", "frugal-reads", "logic", "suite"]
 cluster = "judgement"
 judgement = "reads a large file by line range after locating the target, rather than whole, repeatedly"
 

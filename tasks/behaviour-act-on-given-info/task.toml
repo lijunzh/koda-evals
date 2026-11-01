@@ -4,7 +4,7 @@ id = "behaviour-act-on-given-info"
 # instead of asking. Control: behaviour-act-on-given-info-control (a
 # genuinely ambiguous request in the same crate).
 prompt = """In src/config.rs, `parse_duration("1h30m")` returns an Err, but it should return `Ok(Duration::from_secs(5400))`, the same as `"90m"` does. Please make compound values like that work; single-unit values and the error cases should behave as they do now."""
-tags = ["rust", "behaviour", "act-on-given-info", "parsing"]
+tags = ["rust", "behaviour", "act-on-given-info", "parsing", "suite"]
 cluster = "judgement"
 judgement = "acts on a fully specified request instead of asking for what it was already told"
 
