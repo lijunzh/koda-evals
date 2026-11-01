@@ -1,0 +1,15 @@
+# E3: the Gemini fixes and the new compaction policy on the real API. 64K, the
+# window the compaction row moved to. Approved by Lijun 2026-11-01.
+name = "e3-gemini-64k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "1212279ab2bd0170989ca3146e9af4ea24d55738"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "64000" }
