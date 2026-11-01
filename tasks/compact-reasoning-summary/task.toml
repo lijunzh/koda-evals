@@ -5,6 +5,9 @@ id = "compact-reasoning-summary"
 # turn_end rule added 2026-10-30 (Lijun, with edit-stale-after-own-edit):
 # a run killed at the wall is not a pass, whatever is on disk. Ornith's and
 # Flint's repeat sets graded the old definition; both get a redo.
+# wall_secs raised from 1200 on 2026-11-01 (Lijun): at Haiku's default 1M
+# window nothing compacts and the last three runs took 856, 1195 and 1200+
+# seconds with the code right in all three.
 prompt = """Long sessions against a local reasoning model on an OpenAI-compatible server go wrong. Auto-compaction fails with "LLM returned an empty summary": the model's reply comes back with finish_reason "length" and no text. In one set of runs 19 of 21 compactions failed this way. After three failures koda stops compacting, and requests then go out at 100-261% of the context window, so the server trims the prompt where the model can't see it.
 
 Find and fix the cause. An empty reply must not be stored as a summary, compaction should work for models that reason before they answer, and whatever happens to the summary, koda must not send a request past the window. The latest user message must still be in it."""
@@ -25,4 +28,4 @@ type = "turn_end"
 kind = "complete"
 
 [limits]
-wall_secs = 1200
+wall_secs = 1800
