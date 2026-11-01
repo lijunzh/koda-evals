@@ -1,0 +1,15 @@
+# #1454 on main with every compaction fix, summaries logged. Judge it on the
+# compaction criteria. 32K window. Approved by Lijun 2026-11-01.
+name = "gemini-1454-parser-fixed"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "36cacce3ec8dbd58cefb19edf786bc610c2045db"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768", RUST_LOG = "koda_core=info,koda_cli=info,koda_core::compact=debug" }

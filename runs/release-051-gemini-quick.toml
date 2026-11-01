@@ -1,0 +1,17 @@
+# Short real-API check of koda#1458: tool use, retries and compaction on Gemini.
+# A 64K window so compaction fires, cut off at 8 minutes. It may not finish the
+# task; read the compaction and signature lines. Approved by Lijun 2026-10-31.
+name = "release-051-gemini-quick"
+repeats = 1
+wall_secs = 480
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "fix"
+ref = "ee23bd687602a4562e8cf03d38d0eaf1abd6489e"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "64000" }

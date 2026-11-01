@@ -1,0 +1,16 @@
+# Re-run of release-051-gemini-fix at a 128K window: a 32K pin leaves about 14K
+# of working room above the baseline. Approved by Lijun 2026-10-31, worst case
+# about 11M prompt tokens.
+name = "release-051-gemini-128k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "fix"
+ref = "c8aa14fca6d64b03d24464f55a931590fd4e8a4c"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "128000" }

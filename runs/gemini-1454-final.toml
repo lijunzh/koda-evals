@@ -1,0 +1,15 @@
+# Final #1454 check on merged main with the summary and tool-batch fixes.
+# 32K window. Approved by Lijun 2026-10-31, up to about 4.75M prompt tokens.
+name = "gemini-1454-final"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "95c0dbe67d1a149a1c318e6f7f8c52daff565055"
+
+[[models]]
+name = "flash"
+provider = "gemini"
+model = "gemini-flash-latest"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }

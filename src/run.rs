@@ -412,6 +412,9 @@ impl RunOne<'_> {
             .env_remove("KODA_MODEL")
             .env_remove("KODA_BASE_URL")
             .env_remove("KODA_MODE")
+            // Debug text is the evidence for a failed row; a model's own
+            // `env` can still override this.
+            .env("RUST_LOG", "koda_core=debug,koda_cli=info")
             .envs(self.keys)
             .envs(&self.model.env)
             .stdin(Stdio::null())
