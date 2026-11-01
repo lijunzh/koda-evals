@@ -453,8 +453,10 @@ impl RunOne<'_> {
 
         // When koda itself failed (no model call, a provider error, a
         // crash), say so instead of blaming the untouched code.
-        let agent_failed =
-            agent.timed_out || agent.exit != Some(0) || transcript.turn_end_kind() == Some("error");
+        let agent_failed = agent.timed_out
+            || agent.exit != Some(0)
+            || transcript.turn_end_kind() == Some("error")
+            || !transcript.protocol_supported();
         let failure = if check.passed() {
             None
         } else if agent_failed && !agent.timed_out {

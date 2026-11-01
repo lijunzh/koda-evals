@@ -3,11 +3,16 @@
 //! behaviour signals on every results row.
 //!
 //! Event kinds the harness reads: `tool_call_start` {id, name, args,
-//! is_sub_agent}, `tool_call_result` {id, name, output}, `text_done`,
+//! parent_id}, `tool_call_result` {id, name, output, outcome}, `text_done`,
 //! `approval_request` {tool_name, detail, effect}, `action_blocked`
-//! {tool_name, detail}, `ask_user_request`, `info` and `warn` {message},
-//! `turn_end` {reason: {kind}}, and the final `run_summary`. Everything
-//! else is only counted.
+//! {tool_name, detail}, `ask_user_request`, `compaction` {status,
+//! summary_tokens}, `loop_guard`, `turn_end` {reason: {kind}}, and the final
+//! `run_summary`. Everything else is only counted, so an unknown type is
+//! skipped: koda's protocol allows new notifications without a version change.
+//!
+//! koda before protocol 1 sent `is_sub_agent`, no `outcome`, and compaction
+//! and the loop guard as `info` and `warn` text. Run files compare older
+//! binaries, and `bin/claude-as-koda` writes that shape, so those still parse.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -17,6 +22,9 @@ use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+
+/// The newest koda wire protocol this reader understands.
+const PROTOCOL_VERSION: u64 = 1;
 
 /// Tools that hand work to a child agent or session.
 pub const DELEGATION_TOOLS: &[&str] = &["InvokeAgent", "SpawnAgent"];
@@ -136,7 +144,8 @@ impl Transcript {
             id: e["id"].as_str().unwrap_or(""),
             name: e["name"].as_str().unwrap_or(""),
             args: &e["args"],
-            is_sub_agent: e["is_sub_agent"].as_bool().unwrap_or(false),
+            is_sub_agent: e["parent_id"].is_string()
+                || e["is_sub_agent"].as_bool().unwrap_or(false),
         })
     }
 
@@ -172,11 +181,25 @@ impl Transcript {
             .filter_map(|(_, e)| e["message"].as_str())
     }
 
-    /// Outputs of `tool_call_result` events for one tool.
-    pub fn results_of<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a str> + 'a {
+    /// `tool_call_result` events for one tool.
+    fn results_of<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a Value> + 'a {
         self.of_type("tool_call_result")
             .filter(move |(_, e)| e["name"] == name)
-            .filter_map(|(_, e)| e["output"].as_str())
+            .map(|(_, e)| e)
+    }
+
+    /// `compaction` lines with this `status`.
+    fn compactions<'a>(&'a self, status: &'a str) -> impl Iterator<Item = &'a Value> + 'a {
+        self.of_type("compaction")
+            .filter(move |(_, e)| e["status"] == status)
+            .map(|(_, e)| e)
+    }
+
+    /// `protocol_version` from `hello`. `None` before protocol 1.
+    pub fn protocol_version(&self) -> Option<u64> {
+        self.of_type("hello")
+            .next()
+            .and_then(|(_, e)| e["protocol_version"].as_u64())
     }
 
     /// The output of the `tool_call_result` for the call with this `id`.
@@ -203,6 +226,22 @@ impl Transcript {
     /// the event order. `None` when the agent never finished a reply.
     pub fn final_message_index(&self) -> Option<usize> {
         self.of_type("text_done").last().map(|(i, _)| i)
+    }
+
+    /// False when koda speaks a newer protocol than this reader, whose
+    /// counts can't be trusted.
+    pub fn protocol_supported(&self) -> bool {
+        self.protocol_version()
+            .is_none_or(|version| version <= PROTOCOL_VERSION)
+    }
+
+    /// Whether the call with this `id` reported an `error` outcome.
+    pub fn result_failed(&self, id: &str) -> bool {
+        !id.is_empty()
+            && self
+                .of_type("tool_call_result")
+                .find(|(_, e)| e["id"] == id)
+                .is_some_and(|(_, e)| e["outcome"] == "error")
     }
 
     /// `reason.kind` of the last `turn_end` event, else the run summary's.
@@ -261,31 +300,45 @@ impl Transcript {
     /// from the event stream; `time_limit_hit` is the harness's own
     /// observation. A signal with nothing to read it from is `null`.
     pub fn behaviour(&self, time_limit_hit: bool) -> Value {
-        // Koda announces every pre-flight auto-compaction with an `info`
-        // "📦 Context at N% — compacting before sending...", and a
-        // summary that came back with "✅ Compacted N messages ...". A
-        // compaction without a summary gets a `warn` instead.
-        let attempts = self
-            .messages("info")
-            .filter(|m| m.contains("compacting before sending"))
-            .count();
+        // A `compaction` line with status `started` per attempt, and
+        // `completed` with a `summary_tokens` for one that got a summary.
+        // Before protocol 1 the same facts were text: an `info` "📦 Context
+        // at N% — compacting before sending..." and a "✅ Compacted N
+        // messages ...". A run has one form or the other.
+        let attempts = self.compactions("started").count()
+            + self
+                .messages("info")
+                .filter(|m| m.contains("compacting before sending"))
+                .count();
         let with_summary = self
-            .messages("info")
-            .filter(|m| m.contains("Compacted ") && m.contains(" messages"))
-            .count();
-        // Loop guard: "Loop detected: ..." when it injects feedback,
-        // "Loop guard: ... stopping" when it gives up.
-        let loop_guard = self
-            .messages("warn")
-            .filter(|m| m.starts_with("Loop detected") || m.starts_with("Loop guard"))
-            .count();
+            .compactions("completed")
+            .filter(|e| e["summary_tokens"].is_number())
+            .count()
+            + self
+                .messages("info")
+                .filter(|m| m.contains("Compacted ") && m.contains(" messages"))
+                .count();
+        // Loop guard: a `loop_guard` line each time it acts. Before protocol
+        // 1, "Loop detected: ..." when it injected feedback and "Loop guard:
+        // ... stopping" when it gave up.
+        let loop_guard = self.count("loop_guard") as usize
+            + self
+                .messages("warn")
+                .filter(|m| m.starts_with("Loop detected") || m.starts_with("Loop guard"))
+                .count();
         // An Edit the tool refused: validation ("Validation error: File
         // '...' has been modified on disk since you last read it",
         // "'old_str' not found") or execution ("Error: ... has changed on
-        // disk since you last read it", "'old_str' matches N times").
+        // disk since you last read it", "'old_str' matches N times"). The
+        // `outcome` says so; before protocol 1 only the text did.
         let edit_rejections = self
             .results_of("Edit")
-            .filter(|o| o.starts_with("Validation error:") || o.starts_with("Error:"))
+            .filter(|e| match e["outcome"].as_str() {
+                Some(outcome) => outcome == "error",
+                None => e["output"]
+                    .as_str()
+                    .is_some_and(|o| o.starts_with("Validation error:") || o.starts_with("Error:")),
+            })
             .count();
         let delegations = self
             .top_level_calls()
@@ -303,6 +356,7 @@ impl Transcript {
             "edits_attempted": self.edits_attempted(),
             "time_limit_hit": time_limit_hit,
             "turn_end_kind": self.turn_end_kind(),
+            "protocol_version": self.protocol_version(),
             "delegations": delegations,
             "approval_requests": { "total": approvals, "destructive": destructive },
             "blocked_actions": self.count("action_blocked"),
@@ -369,6 +423,73 @@ not json
         assert_eq!(b["approval_requests"]["total"], 1);
         assert_eq!(b["approval_requests"]["destructive"], 1);
         assert_eq!(b["blocked_actions"], 0);
+        assert_eq!(b["protocol_version"], Value::Null);
+    }
+
+    const SAMPLE_V1: &str = r#"{"type":"hello","protocol_version":1,"koda_version":"0.6.0","capabilities":["one_shot","self_answer"]}
+{"type":"session_ready","session_id":"s","provider":"anthropic","model":"m","context_window":1000,"trust":"auto","tools":["Read"]}
+{"type":"turn_start","session_id":"s","turn_id":"t"}
+{"type":"tool_call_start","session_id":"s","turn_id":"t","id":"a","name":"Bash","args":{"command":"cargo test"}}
+{"type":"tool_call_result","session_id":"s","turn_id":"t","id":"a","name":"Bash","output":"Exit code: 101 | stdout: 1 lines","outcome":"error"}
+{"type":"compaction","session_id":"s","turn_id":"t","trigger":"threshold","status":"started","context_percent":94}
+{"type":"compaction","session_id":"s","turn_id":"t","trigger":"threshold","status":"skipped","reason":"too_short"}
+{"type":"compaction","session_id":"s","turn_id":"t","trigger":"threshold","status":"started","context_percent":96}
+{"type":"compaction","session_id":"s","turn_id":"t","trigger":"threshold","status":"completed","messages_removed":3,"summary_tokens":18}
+{"type":"compaction","session_id":"s","turn_id":"t","trigger":"window","status":"completed","messages_removed":3,"summary_tokens":null}
+{"type":"retry","session_id":"s","turn_id":"t","reason":"rate_limit","attempt":1,"max_attempts":5,"delay_ms":1000}
+{"type":"loop_guard","session_id":"s","turn_id":"t","action":"feedback","detail":"Bash repeated"}
+{"type":"tool_call_start","session_id":"s","turn_id":"t","id":"b","name":"InvokeAgent","args":{}}
+{"type":"sub_agent_start","session_id":"s","turn_id":"t","parent_id":"b","agent_name":"explore"}
+{"type":"tool_call_start","session_id":"s","turn_id":"t","parent_id":"b","id":"c","name":"Read","args":{}}
+{"type":"tool_call_start","session_id":"s","turn_id":"t","id":"d","name":"Edit","args":{"file_path":"a.rs"}}
+{"type":"tool_call_result","session_id":"s","turn_id":"t","id":"d","name":"Edit","output":"Validation error: 'old_str' not found","outcome":"error"}
+{"type":"tool_call_start","session_id":"s","turn_id":"t","id":"e","name":"Edit","args":{"file_path":"a.rs"}}
+{"type":"tool_call_result","session_id":"s","turn_id":"t","id":"e","name":"Edit","output":"Error: is not the outcome","outcome":"success"}
+{"type":"text_done","session_id":"s","turn_id":"t"}
+{"type":"turn_summary","session_id":"s","turn_id":"t","usage":{"prompt_tokens":1,"completion_tokens":1,"cache_read_tokens":0,"cache_creation_tokens":0,"thinking_tokens":0,"api_calls":1},"elapsed_ms":5}
+{"type":"turn_end","session_id":"s","turn_id":"t","reason":{"kind":"complete"}}
+{"type":"run_summary","session_id":"s","success":true,"response":"Done.","turn_end":{"kind":"complete"}}
+"#;
+
+    #[test]
+    fn behaviour_reads_the_typed_protocol() {
+        let t = Transcript::parse(SAMPLE_V1);
+        assert_eq!(t.protocol_version(), Some(1));
+        assert!(t.protocol_supported());
+        let b = t.behaviour(false);
+        assert_eq!(b["protocol_version"], 1);
+        assert_eq!(b["compactions"]["attempts"], 2);
+        assert_eq!(b["compactions"]["with_summary"], 1);
+        assert_eq!(b["loop_guard_warnings"], 1);
+        assert_eq!(b["edit_rejections"], 1);
+        assert_eq!(b["delegations"], 1);
+        assert_eq!(b["turn_end_kind"], "complete");
+        assert_eq!(t.top_level_calls().count(), 4);
+        assert_eq!(t.tool_calls().count(), 5);
+        assert!(t.result_failed("a"));
+        assert!(!t.result_failed("e"));
+        assert!(!t.result_failed("no such call"));
+        assert_eq!(t.final_message(), Some("Done."));
+    }
+
+    #[test]
+    fn a_newer_protocol_is_not_supported() {
+        let t = Transcript::parse(r#"{"type":"hello","protocol_version":2}"#);
+        assert!(!t.protocol_supported());
+        assert!(Transcript::parse("").protocol_supported());
+    }
+
+    #[test]
+    fn an_unknown_line_type_is_counted_and_skipped() {
+        let t = Transcript::parse(
+            r#"{"type":"something_new","session_id":"s","value":1}
+{"type":"run_summary","response":"Done.","turn_end":{"kind":"complete"}}
+"#,
+        );
+        assert_eq!(t.count("something_new"), 1);
+        assert_eq!(t.count("unparsed_line"), 0);
+        assert_eq!(t.final_message(), Some("Done."));
+        assert_eq!(t.protocol_version(), None);
     }
 
     #[test]

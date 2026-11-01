@@ -87,9 +87,9 @@ stated:
 | `approvals` | `min?`, `max?` | `approval_request` events number within the range |
 | `claim_requires` | `claim`, `call`, `exit_ok?` | the final message doesn't match the `claim` regex, or it does and a call matching `call` (a matcher or a list, as `before.a`) came before it; with `exit_ok = true` the last such call's result must show success. "Tests pass" is allowed only after a test run |
 
-`exit_ok` reads the call's `tool_call_result`. Koda's Bash results start
-`Exit code: N | …` and its Cargo results carry `(exit code N, …)`; a
-nonzero code is a failure. A result with no code (Claude Code through
+`exit_ok` reads the call's `tool_call_result`. An `outcome` of `error` is a
+failure. Koda's Bash results also start `Exit code: N | …` and its Cargo
+results carry `(exit code N, …)`; a nonzero code is a failure. A result with no code (Claude Code through
 `bin/claude-as-koda` drops it) counts as success unless it carries one of
 cargo's own failure lines (`test result: FAILED`, `error: test failed`,
 `error: could not compile`, `error[E…`); those lines also catch a piped
@@ -274,8 +274,10 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
   - `behaviour`, read from the event stream: `compactions` (`attempts`,
     and `with_summary` for the ones that produced one),
     `loop_guard_warnings`, `edit_rejections` (Edit results koda refused:
-    `Validation error:` or `Error:`), `time_limit_hit`, `turn_end_kind`
-    (`null` when the turn never ended), `delegations`, `approval_requests`
+    `outcome` `error`, or `Validation error:` or `Error:` from a koda older
+    than protocol 1), `time_limit_hit`, `turn_end_kind` (`null` when the
+    turn never ended), `protocol_version` (`null` before protocol 1),
+    `delegations`, `approval_requests`
     (`total`, `destructive`), `blocked_actions` and `tool_use` (Grep calls,
     empty and regex counts, and Bash calls doing a search or read). Also
     `edits_attempted`
