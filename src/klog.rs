@@ -28,6 +28,10 @@ pub struct LogSignals {
     /// `context_tokens`, or koda's `estimated_tokens` when that is 0 or
     /// missing.
     pub peak_context_tokens: Option<u64>,
+    /// The peak is koda's estimate, not a provider count. Estimates run
+    /// well under the real figure (about 28K against 45K in one log), so
+    /// the report marks them. `None` with no peak.
+    pub peak_context_estimated: Option<bool>,
     /// `prompt_tokens + completion_tokens` over `compaction` model calls.
     pub compaction_tokens: Option<u64>,
     /// `elapsed_ms` over `compaction` model calls.
@@ -52,6 +56,7 @@ impl LogSignals {
         json!({
             "ended_with_question": self.ended_with_question,
             "peak_context_tokens": self.peak_context_tokens,
+            "peak_context_estimated": self.peak_context_estimated,
             "peak_context_percent": percent,
             "compaction_tokens": self.compaction_tokens,
             "compaction_ms": self.compaction_ms,
@@ -85,11 +90,17 @@ pub fn parse(text: &str) -> LogSignals {
             let f = Fields::new(rest);
             match f.get("purpose") {
                 Some("turn") => {
-                    let context = f
-                        .num("context_tokens")
-                        .filter(|&n| n > 0)
-                        .or_else(|| f.num("estimated_tokens"));
-                    s.peak_context_tokens = s.peak_context_tokens.max(context);
+                    let counted = f.num("context_tokens").filter(|&n| n > 0);
+                    let estimated = counted.is_none();
+                    if let Some(tokens) = counted.or_else(|| f.num("estimated_tokens"))
+                        && s.peak_context_tokens.is_none_or(|peak| {
+                            // A tie goes to the provider's count.
+                            tokens > peak || (tokens == peak && !estimated)
+                        })
+                    {
+                        s.peak_context_tokens = Some(tokens);
+                        s.peak_context_estimated = Some(estimated);
+                    }
                 }
                 Some("compaction") => {
                     let tokens = f.num("prompt_tokens").unwrap_or(0)
@@ -180,6 +191,7 @@ model call purpose="turn" context_tokens=999999 (an echoed file, not a log line)
         assert_eq!(s.ended_with_question, Some(true));
         // The second turn reported no context_tokens: its estimate counts.
         assert_eq!(s.peak_context_tokens, Some(30_000));
+        assert_eq!(s.peak_context_estimated, Some(true));
         assert_eq!(s.compaction_tokens, Some(3989 + 2865 + 30));
         assert_eq!(s.compaction_ms, Some(12_881));
         assert_eq!(s.summary_chars_max, Some(5066));
@@ -189,6 +201,27 @@ model call purpose="turn" context_tokens=999999 (an echoed file, not a log line)
     fn ansi_colour_codes_are_stripped() {
         let line = "\x1b[2m2026-11-01T11:20:53.057Z\x1b[0m \x1b[32m INFO\x1b[0m \x1b[2mkoda_core::inference\x1b[0m\x1b[2m:\x1b[0m turn end \x1b[3mends_with_question\x1b[0m\x1b[2m=\x1b[0mfalse\n";
         assert_eq!(parse(line).ended_with_question, Some(false));
+    }
+
+    #[test]
+    fn the_peak_says_whether_it_is_an_estimate() {
+        let call = |context: u64, estimated: u64| {
+            format!(
+                "2026-11-01T11:17:57Z INFO koda_core::inference_helpers: model call purpose=\"turn\" estimated_tokens={estimated} context_tokens={context}\n"
+            )
+        };
+        // A real count above every estimate wins and is not marked.
+        let s = parse(&(call(0, 20_000) + &call(45_000, 28_000)));
+        assert_eq!(s.peak_context_tokens, Some(45_000));
+        assert_eq!(s.peak_context_estimated, Some(false));
+        // An estimate above every count wins and is marked.
+        let s = parse(&(call(10_000, 9_000) + &call(0, 28_000)));
+        assert_eq!(s.peak_context_tokens, Some(28_000));
+        assert_eq!(s.peak_context_estimated, Some(true));
+        // A tie goes to the count.
+        let s = parse(&(call(0, 12_000) + &call(12_000, 8_000)));
+        assert_eq!(s.peak_context_estimated, Some(false));
+        assert_eq!(parse("").peak_context_estimated, None);
     }
 
     #[test]
@@ -204,6 +237,7 @@ model call purpose="turn" context_tokens=999999 (an echoed file, not a log line)
             "2026-11-01T11:17:57Z INFO koda_core::inference_helpers: model call purpose=\"turn\" context_tokens=5\n",
         );
         assert_eq!(s.peak_context_tokens, Some(5));
+        assert_eq!(s.peak_context_estimated, Some(false));
         assert_eq!((s.compaction_tokens, s.compaction_ms), (Some(0), Some(0)));
         assert_eq!(s.summary_chars_max, None);
         assert_eq!(s.ended_with_question, None);
@@ -223,6 +257,7 @@ model call purpose="turn" context_tokens=999999 (an echoed file, not a log line)
         let v = s.to_json(Some(64_000), 100_000);
         assert_eq!(v["ended_with_question"], true);
         assert_eq!(v["peak_context_tokens"], 30_000);
+        assert_eq!(v["peak_context_estimated"], true);
         assert_eq!(v["peak_context_percent"], 46.9);
         assert_eq!(v["compaction_ms"], 12_881);
         assert_eq!(v["compaction_share"], 0.129);

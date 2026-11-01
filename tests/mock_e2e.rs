@@ -128,6 +128,7 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     for key in [
         "ended_with_question",
         "peak_context_tokens",
+        "peak_context_estimated",
         "peak_context_percent",
         "compaction_tokens",
         "compaction_ms",
