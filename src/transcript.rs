@@ -11,8 +11,11 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
+use std::sync::LazyLock;
 
 use anyhow::Result;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 /// Tools that hand work to a child agent or session.
@@ -20,6 +23,58 @@ pub const DELEGATION_TOOLS: &[&str] = &["InvokeAgent", "SpawnAgent"];
 
 /// Tools that change files.
 pub const EDIT_TOOLS: &[&str] = &["Edit", "Write"];
+
+/// A leading `cd <dir> &&`, which says nothing about what a command does.
+static LEADING_CD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s*cd\s+\S+\s*(?:&&|;)\s*").unwrap());
+
+/// What a run did with Grep, and the Bash calls doing a dedicated tool's job.
+/// Sub-agents included. A Bash call is classed by its first command, so a
+/// search later in a chain doesn't count.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct ToolUse {
+    /// Grep calls that got a result.
+    pub grep_calls: u64,
+    pub grep_empty: u64,
+    /// Those whose pattern has regex characters.
+    pub grep_regex_calls: u64,
+    pub grep_regex_empty: u64,
+    pub bash_calls: u64,
+    /// Bash calls starting with `grep` or `rg`.
+    pub bash_search: u64,
+    /// Bash calls starting with `sed` (not `-i`) or `cat` (not a heredoc).
+    pub bash_read: u64,
+}
+
+impl ToolUse {
+    pub fn add(&mut self, other: &ToolUse) {
+        self.grep_calls += other.grep_calls;
+        self.grep_empty += other.grep_empty;
+        self.grep_regex_calls += other.grep_regex_calls;
+        self.grep_regex_empty += other.grep_regex_empty;
+        self.bash_calls += other.bash_calls;
+        self.bash_search += other.bash_search;
+        self.bash_read += other.bash_read;
+    }
+}
+
+fn is_regex(pattern: &str) -> bool {
+    pattern.contains(|c| "|\\^$*+?()[]{}".contains(c))
+}
+
+fn is_shell_search(command: &str) -> bool {
+    let command = LEADING_CD.replace(command, "");
+    matches!(command.split_whitespace().next(), Some("grep" | "rg"))
+}
+
+fn is_shell_read(command: &str) -> bool {
+    let command = LEADING_CD.replace(command, "");
+    match command.split_whitespace().next() {
+        Some("sed") => !command.contains(" -i"),
+        Some("cat") => !command.contains("<<"),
+        _ => false,
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct Transcript {
@@ -170,6 +225,34 @@ impl Transcript {
             .count()
     }
 
+    /// What the run did with Grep and Bash.
+    pub fn tool_use(&self) -> ToolUse {
+        let mut used = ToolUse::default();
+        for call in self.tool_calls() {
+            match call.name {
+                "Grep" => {
+                    let Some(output) = self.result_output(call.id) else {
+                        continue;
+                    };
+                    let regex = call.args["pattern"].as_str().is_some_and(is_regex);
+                    let empty = output.starts_with("No matches found");
+                    used.grep_calls += 1;
+                    used.grep_empty += u64::from(empty);
+                    used.grep_regex_calls += u64::from(regex);
+                    used.grep_regex_empty += u64::from(regex && empty);
+                }
+                "Bash" => {
+                    let command = call.args["command"].as_str().unwrap_or("");
+                    used.bash_calls += 1;
+                    used.bash_search += u64::from(is_shell_search(command));
+                    used.bash_read += u64::from(is_shell_read(command));
+                }
+                _ => {}
+            }
+        }
+        used
+    }
+
     pub fn count(&self, kind: &str) -> u64 {
         self.counts.get(kind).copied().unwrap_or(0)
     }
@@ -223,6 +306,7 @@ impl Transcript {
             "delegations": delegations,
             "approval_requests": { "total": approvals, "destructive": destructive },
             "blocked_actions": self.count("action_blocked"),
+            "tool_use": self.tool_use(),
         })
     }
 }
@@ -285,6 +369,39 @@ not json
         assert_eq!(b["approval_requests"]["total"], 1);
         assert_eq!(b["approval_requests"]["destructive"], 1);
         assert_eq!(b["blocked_actions"], 0);
+    }
+
+    #[test]
+    fn tool_use_tells_regex_searches_and_shell_habits_apart() {
+        let t = Transcript::parse(
+            r#"{"type":"tool_call_start","id":"a","name":"Grep","args":{"pattern":"foo|bar"},"is_sub_agent":false}
+{"type":"tool_call_result","id":"a","name":"Grep","output":"No matches found for 'foo|bar'"}
+{"type":"tool_call_start","id":"b","name":"Grep","args":{"pattern":"plain"},"is_sub_agent":true}
+{"type":"tool_call_result","id":"b","name":"Grep","output":"1 matches (1 file):\na.rs:1:plain"}
+{"type":"tool_call_start","id":"c","name":"Grep","args":{"pattern":"absent"},"is_sub_agent":false}
+{"type":"tool_call_result","id":"c","name":"Grep","output":"No matches found for 'absent'"}
+{"type":"tool_call_start","id":"d","name":"Grep","args":{"pattern":"cut off"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"e","name":"Bash","args":{"command":"cd /work && grep -n x a.rs | head"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"f","name":"Bash","args":{"command":"rg x"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"g","name":"Bash","args":{"command":"sed -n 1,20p a.rs"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"h","name":"Bash","args":{"command":"sed -i s/a/b/ a.rs"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"i","name":"Bash","args":{"command":"cat a.rs"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"j","name":"Bash","args":{"command":"cat > a.rs <<'EOF'\nx\nEOF"},"is_sub_agent":false}
+{"type":"tool_call_start","id":"k","name":"Bash","args":{"command":"cargo test; grep x a.rs"},"is_sub_agent":false}
+"#,
+        );
+        assert_eq!(
+            t.tool_use(),
+            ToolUse {
+                grep_calls: 3,
+                grep_empty: 2,
+                grep_regex_calls: 1,
+                grep_regex_empty: 1,
+                bash_calls: 7,
+                bash_search: 2,
+                bash_read: 2,
+            }
+        );
     }
 
     #[test]
