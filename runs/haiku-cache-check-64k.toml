@@ -1,0 +1,16 @@
+# Does the conversation breakpoint from koda#1478 raise the cache read share?
+# One row on main. The share was 41% on the last three runs. Approved by Lijun
+# 2026-11-01.
+name = "haiku-cache-check-64k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "5a63fe292a7d1b493d50b4cadf830fc5aff88311"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "64000" }
