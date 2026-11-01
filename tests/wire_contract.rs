@@ -3,7 +3,7 @@
 //! binary (`bin/capture-koda-wire`). No model and no API key.
 
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde_json::Value;
@@ -41,10 +41,8 @@ struct Finished {
     stderr: String,
 }
 
-/// `koda-eval run` on one task, with a `koda` that prints `stream`.
-fn score(stream: &Path) -> Finished {
-    let tmp = tempfile::tempdir().unwrap();
-    let root = tmp.path();
+/// A project with one task and a `koda` that prints `stream`, and its run file.
+fn project(root: &Path, stream: &Path) -> PathBuf {
     let fixture = root.join("tasks/wire/fixture");
     std::fs::create_dir_all(&fixture).unwrap();
     std::fs::write(fixture.join("README.md"), "A project.\n").unwrap();
@@ -69,15 +67,25 @@ fn score(stream: &Path) -> Finished {
     let run_file = root.join("wire.toml");
     let run = RUN.replace("BIN", koda.to_str().unwrap());
     std::fs::write(&run_file, run).unwrap();
+    run_file
+}
 
-    let out = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
-        .arg("--root")
+fn koda_eval(root: &Path, run_file: &Path) -> Command {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_koda-eval"));
+    cmd.arg("--root")
         .arg(root)
         .arg("run")
-        .arg(&run_file)
-        .env("XDG_CACHE_HOME", root.join("cache"))
-        .output()
-        .unwrap();
+        .arg(run_file)
+        .env("XDG_CACHE_HOME", root.join("cache"));
+    cmd
+}
+
+/// `koda-eval run` on one task, with a `koda` that prints `stream`.
+fn score(stream: &Path) -> Finished {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let run_file = project(root, stream);
+    let out = koda_eval(root, &run_file).output().unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
     assert!(out.status.success(), "stdout:\n{stdout}\nstderr:\n{stderr}");
@@ -146,6 +154,42 @@ fn a_run_from_before_the_protocol_keeps_its_pass() {
     let run = score_hello(r#"{"type":"turn_start","turn_id":"0"}"#);
     assert_eq!(run.row["pass"], true, "{:#}", run.row);
     assert_eq!(run.row["behaviour"]["protocol_version"], Value::Null);
+}
+
+#[test]
+fn a_cleanup_that_cant_be_checked_stops_the_run_ungraded() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let run_file = project(root, Path::new(CAPTURED));
+    let run = std::fs::read_to_string(&run_file).unwrap();
+    std::fs::write(&run_file, format!("repeats = 2\n{run}")).unwrap();
+
+    let bin = root.join("no-ps");
+    std::fs::create_dir(&bin).unwrap();
+    let ps = bin.join("ps");
+    std::fs::write(&ps, "#!/bin/sh\necho 'not allowed' >&2\nexit 1\n").unwrap();
+    std::fs::set_permissions(&ps, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap());
+
+    let out = koda_eval(root, &run_file)
+        .env("PATH", path)
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success(), "{stderr}");
+    assert!(stderr.contains("stopping the run"), "{stderr}");
+
+    let runs: Vec<_> = std::fs::read_dir(root.join("results/wire"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    let rows = std::fs::read_to_string(runs[0].join("results.jsonl")).unwrap();
+    assert_eq!(rows.lines().count(), 1, "{rows}");
+    let row: Value = serde_json::from_str(rows.trim()).unwrap();
+    assert_eq!(row["pass"], Value::Null, "{row:#}");
+    assert_eq!(row["check"], Value::Null, "{row:#}");
+    let error = row["harness_error"].as_str().unwrap();
+    assert!(error.contains("not allowed"), "{error}");
 }
 
 #[test]

@@ -233,6 +233,9 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         if !opts.keep_work {
             let _ = std::fs::remove_dir_all(&job.work);
         }
+        if row["cleanup_failed"] == true {
+            bail!("stopping the run: {}", row["harness_error"]);
+        }
         Ok(())
     };
 
@@ -335,6 +338,7 @@ impl Job<'_> {
                 "task": self.task.id(), "variant": self.variant.name,
                 "model": self.model.name, "repeat": self.repeat,
                 "pass": null, "harness_error": format!("{e:#}"),
+                "cleanup_failed": e.is::<proc::CleanupFailed>(),
             }),
         }
     }
