@@ -284,6 +284,8 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
     `peak_context_percent` (the largest `context_tokens` on a `purpose="turn"`
     `model call` line, `estimated_tokens` when that is 0, against the
     window; the percent is `null` when the run file pins none),
+    `peak_context_estimated` (the peak is koda's estimate, which can run
+    far under the real figure, not a provider count),
     `compaction_tokens` and `compaction_ms` (prompt + completion tokens and
     `elapsed_ms` over `purpose="compaction"` calls), `compaction_share`
     (that time as a fraction of `agent.wall_ms`) and `summary_chars_max`
@@ -324,7 +326,8 @@ summed or counted over them:
 - **no edits:** runs that never called `Edit` or `Write`, as *k of N*. With
   an empty `diff.patch`, the run never tried.
 - **peak context:** the fullest run's largest request in tokens, with its
-  share of the window.
+  share of the window. A leading `~` marks koda's estimate, used when the
+  log has no provider count: read it as a floor.
 - **compaction tokens** and **compaction time:** what compaction cost, the
   time with its share of the runs' wall time.
 - **summary max:** the longest compaction summary in characters, so growth

@@ -46,6 +46,8 @@ struct Row {
     /// `Edit` and `Write` calls; zero with an empty diff means it never tried.
     edits_attempted: Option<u64>,
     peak_context_tokens: Option<u64>,
+    /// The peak is koda's estimate, not a provider count.
+    peak_context_estimated: Option<bool>,
     peak_context_percent: Option<f64>,
     compaction_tokens: Option<u64>,
     compaction_ms: Option<u64>,
@@ -124,6 +126,7 @@ fn parse_rows(text: &str, dir: Option<&Path>) -> Result<Vec<Row>> {
             ended_with_question: behaviour["ended_with_question"].as_bool(),
             edits_attempted: behaviour["edits_attempted"].as_u64(),
             peak_context_tokens: behaviour["peak_context_tokens"].as_u64(),
+            peak_context_estimated: behaviour["peak_context_estimated"].as_bool(),
             peak_context_percent: behaviour["peak_context_percent"].as_f64(),
             compaction_tokens: behaviour["compaction_tokens"].as_u64(),
             compaction_ms: behaviour["compaction_ms"].as_u64(),
@@ -339,9 +342,16 @@ fn trouble_cells(rows: &[Row], task: &str) -> [String; 6] {
         })
         .map_or_else(
             || "-".to_string(),
-            |r| match r.peak_context_percent {
-                Some(p) => format!("{} ({p:.0}%)", fmt_num(r.peak_context_tokens)),
-                None => fmt_num(r.peak_context_tokens),
+            |r| {
+                let mark = if r.peak_context_estimated == Some(true) {
+                    "~"
+                } else {
+                    ""
+                };
+                match r.peak_context_percent {
+                    Some(p) => format!("{mark}{} ({p:.0}%)", fmt_num(r.peak_context_tokens)),
+                    None => format!("{mark}{}", fmt_num(r.peak_context_tokens)),
+                }
             },
         );
     let sum = |values: Vec<u64>| (!values.is_empty()).then(|| values.iter().sum::<u64>());
@@ -605,7 +615,7 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
     }
     let _ = writeln!(
         out,
-        "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit. Asked is the runs that ended on a question to the user, which count as complete; no edits is the runs that never called Edit or Write. Peak context is the fullest run's largest request, with its share of the window when the run file pins one. Compaction tokens (prompt + completion) and time are summed over the task's runs, the time with its share of their wall time. Summary max is the longest compaction summary in characters. `-` means the run's log has nothing to say."
+        "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit. Asked is the runs that ended on a question to the user, which count as complete; no edits is the runs that never called Edit or Write. Peak context is the fullest run's largest request, with its share of the window when the run file pins one; a leading `~` marks koda's estimate, which runs well under the real figure, used when the log has no provider count. Compaction tokens (prompt + completion) and time are summed over the task's runs, the time with its share of their wall time. Summary max is the longest compaction summary in characters. `-` means the run's log has nothing to say."
     );
     out
 }
@@ -680,6 +690,7 @@ mod tests {
             ended_with_question: None,
             edits_attempted: None,
             peak_context_tokens: None,
+            peak_context_estimated: None,
             peak_context_percent: None,
             compaction_tokens: None,
             compaction_ms: None,
@@ -760,7 +771,7 @@ mod tests {
     #[test]
     fn trouble_shows_in_the_grid_and_missing_signals_show_a_dash() {
         let text = r#"{"task":"asks","variant":"v","model":"m","pass":false,"agent":{"wall_ms":100000},"behaviour":{"compactions":{"attempts":2},"edit_rejections":0,"time_limit_hit":false,"ended_with_question":true,"edits_attempted":2,"peak_context_tokens":57000,"peak_context_percent":89.1,"compaction_tokens":20000,"compaction_ms":45000,"compaction_share":0.45,"summary_chars_max":12000}}
-{"task":"idle","variant":"v","model":"m","pass":false,"agent":{"wall_ms":1200000},"behaviour":{"compactions":{"attempts":0},"edit_rejections":0,"time_limit_hit":true,"ended_with_question":false,"edits_attempted":0,"peak_context_tokens":30000,"peak_context_percent":null,"compaction_tokens":0,"compaction_ms":0,"compaction_share":0.0,"summary_chars_max":null}}
+{"task":"idle","variant":"v","model":"m","pass":false,"agent":{"wall_ms":1200000},"behaviour":{"compactions":{"attempts":0},"edit_rejections":0,"time_limit_hit":true,"ended_with_question":false,"edits_attempted":0,"peak_context_tokens":30000,"peak_context_estimated":true,"peak_context_percent":null,"compaction_tokens":0,"compaction_ms":0,"compaction_share":0.0,"summary_chars_max":null}}
 {"task":"idle","variant":"v","model":"m","pass":true,"agent":{"wall_ms":300000},"behaviour":{"compactions":{"attempts":0},"edit_rejections":0,"time_limit_hit":false,"ended_with_question":false,"edits_attempted":3,"peak_context_tokens":20000,"peak_context_percent":null,"compaction_tokens":0,"compaction_ms":0,"summary_chars_max":null}}
 {"task":"old-row","variant":"v","model":"m","pass":true,"agent":{"wall_ms":1000},"behaviour":{"compactions":{"attempts":1},"edit_rejections":0,"time_limit_hit":false}}
 "#;
@@ -776,7 +787,7 @@ mod tests {
         // Two runs: one never edited; the fullest by tokens when no run
         // has a percent; no compaction at all is 0, not `-`.
         assert!(
-            md.contains("| idle | 1/2 | 0 | 0 | 1/2 | 0/2 | 1/2 | 30,000 | 0 | 0m00s (0%) | - |"),
+            md.contains("| idle | 1/2 | 0 | 0 | 1/2 | 0/2 | 1/2 | ~30,000 | 0 | 0m00s (0%) | - |"),
             "{md}"
         );
         assert!(
@@ -809,6 +820,7 @@ mod tests {
         assert_eq!(rows[0].edits_attempted, Some(1));
         assert_eq!(rows[0].peak_context_tokens, Some(32_000));
         assert_eq!(rows[0].peak_context_percent, Some(50.0));
+        assert_eq!(rows[0].peak_context_estimated, Some(false));
         // What the row already says stays.
         assert_eq!(rows[0].summary_chars_max, Some(7));
         // No artifacts on disk: nothing to say.
