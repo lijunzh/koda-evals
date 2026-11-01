@@ -1,0 +1,21 @@
+# Release check on Ornith, the local seat: the seven behaviour pairs and the
+# compaction row, once each on main after lijunzh/koda#1478. Same window and
+# tasks as results/ornith-v051-128k/20261031T175439Z, so it shows what the
+# prompt, compaction and stop-reason changes did since v0.5.1. Approved by
+# Lijun 2026-11-01. Unload only the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   cargo run --quiet -- run runs/ornith-release-check-128k.toml --jobs 1
+name = "ornith-release-check-128k"
+repeats = 1
+tasks = ["behaviour-act-on-given-info", "behaviour-act-on-given-info-control", "behaviour-answer-vs-act", "behaviour-answer-vs-act-control", "behaviour-delegate-or-not", "behaviour-delegate-or-not-control", "behaviour-frugal-reads", "behaviour-frugal-reads-control", "behaviour-pre-existing-failure", "behaviour-pre-existing-failure-control", "behaviour-shell-safety", "behaviour-shell-safety-control", "behaviour-validation-fidelity", "behaviour-validation-fidelity-control", "compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "5a63fe292a7d1b493d50b4cadf830fc5aff88311"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
