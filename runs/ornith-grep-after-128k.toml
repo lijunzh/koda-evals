@@ -1,0 +1,20 @@
+# The Grep fix on Ornith, with the stream, Unicode and prompt fixes: the same
+# 15 tasks and window as results/ornith-release-check-128k/20261101T135046Z,
+# on main after lijunzh/koda#1482. Approved by Lijun 2026-11-01. Unload only
+# the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   cargo run --quiet -- run runs/ornith-grep-after-128k.toml --jobs 1
+name = "ornith-grep-after-128k"
+repeats = 1
+tasks = ["behaviour-act-on-given-info", "behaviour-act-on-given-info-control", "behaviour-answer-vs-act", "behaviour-answer-vs-act-control", "behaviour-delegate-or-not", "behaviour-delegate-or-not-control", "behaviour-frugal-reads", "behaviour-frugal-reads-control", "behaviour-pre-existing-failure", "behaviour-pre-existing-failure-control", "behaviour-shell-safety", "behaviour-shell-safety-control", "behaviour-validation-fidelity", "behaviour-validation-fidelity-control", "compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "b8dccb087ef4e24256afb43797f177ecf8cc6796"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
