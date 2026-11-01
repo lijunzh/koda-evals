@@ -9,7 +9,7 @@ id = "behaviour-act-on-given-info-control"
 # solution/ equals fixture/, so a run that asks leaves no diff; a run that
 # edits one default is graded by the message alone.
 prompt = """Our timeout default is wrong. It should be 30 seconds, not what's in there now. Can you change it?"""
-tags = ["rust", "behaviour", "act-on-given-info", "control", "question"]
+tags = ["rust", "behaviour", "act-on-given-info", "control", "question", "suite"]
 cluster = "judgement"
 judgement = "control: names both plausible targets (asks, or changes one and flags the other) rather than guessing silently"
 

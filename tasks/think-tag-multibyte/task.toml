@@ -6,7 +6,7 @@ thread 'tokio-runtime-worker' panicked at koda-core/src/providers/think_tag_filt
 byte index 3 is not a char boundary; it is inside '🐻' (bytes 1..5) of ` 🐻** is`
 
 Find and fix the cause."""
-tags = ["rust", "koda-history", "panic", "utf8", "pre-cutoff"]
+tags = ["rust", "koda-history", "panic", "utf8", "pre-cutoff", "suite"]
 cluster = "panic"
 
 [repo]

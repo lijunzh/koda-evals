@@ -12,7 +12,7 @@ prompt = """koda's Edit tool keeps rejecting its own follow-up edits. After a su
 Nothing else touched the file. In one run this happened 13 times, and the model concluded something else was changing the file and stopped to ask me.
 
 Find and fix the cause. Consecutive Edits to a file should just work. If the file really was changed by something else, such as a shell command or an editor, the Edit must still be rejected, including when koda edited the file earlier."""
-tags = ["rust", "koda-history", "logic", "investigation"]
+tags = ["rust", "koda-history", "logic", "investigation", "suite"]
 cluster = "investigation"
 
 [repo]

@@ -6,7 +6,7 @@ id = "provider-flags-beat-saved"
 prompt = """`koda --provider anthropic` opens the TUI on the last-used local provider instead of Anthropic. On a machine whose last `/model` choice was LM Studio, it starts on LM Studio even with `--model` and `--base-url` on the command line too, although `koda --help` says flags beat saved settings. `koda -p` runs are fine.
 
 Find and fix the cause. Flags apply to that run only, and with no flags koda should still open on the last-used provider."""
-tags = ["rust", "koda-history", "logic", "investigation"]
+tags = ["rust", "koda-history", "logic", "investigation", "suite"]
 cluster = "investigation"
 
 [repo]

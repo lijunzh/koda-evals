@@ -1,7 +1,7 @@
 id = "kata-utf8-sweep"
 # Five independent fixes in five files: shaped so delegation could help.
 prompt = """Several functions in this crate panic on non-English input, like the name "Élodie" or a string with emoji. Find and fix every one of them, keeping each function's documented behavior."""
-tags = ["rust", "kata", "panic", "utf8", "multi-file", "delegation"]
+tags = ["rust", "kata", "panic", "utf8", "multi-file", "delegation", "suite"]
 cluster = "kata"
 
 [repo]

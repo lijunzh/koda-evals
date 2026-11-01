@@ -6,7 +6,7 @@ thread 'main' panicked at koda-core/src/bash_safety.rs:510:39:
 end byte index 571 is not a char boundary; it is inside 'ん' (bytes 570..573 of string)
 
 Find and fix the cause."""
-tags = ["rust", "koda-history", "panic", "utf8"]
+tags = ["rust", "koda-history", "panic", "utf8", "suite"]
 cluster = "panic"
 
 [repo]

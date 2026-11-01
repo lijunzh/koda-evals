@@ -183,6 +183,12 @@ env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on ev
 # engine = "mlx"                                # when provider@host isn't the engine
 ```
 
+**The suite is the `suite` tag:** 31 tasks, what `runs/haiku-suite.toml` and
+`runs/ornith-suite-128k.toml` select. Measurement tasks don't carry it, and a
+run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
+tasks included, so don't use that for a score. Changing what the suite holds,
+or how one of its tasks is graded, starts a new baseline.
+
 A `ref` variant is resolved to its commit, unpacked with `git archive`,
 built in release mode and cached at `~/.cache/koda-eval/bin/<sha>/koda`; the
 same commit is never built twice. All refs share one

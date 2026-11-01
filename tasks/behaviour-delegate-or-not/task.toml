@@ -1,10 +1,12 @@
 id = "behaviour-delegate-or-not"
-# Retired as a judgement 2026-11-01 (Lijun): no configuration delegated
-# here, 0 of 20 runs across Haiku, Sonnet, Opus, Ornith, Flint and Glimmer,
-# and Haiku fixed all twelve alone in 22 seconds, which is the right call.
-# It now measures what a model chooses unprompted and passes on the hidden
-# tests alone. Kept, not deleted: the -delegate and -solo twins use this
-# fixture, and old run files name it. Leave it out of suite run files.
+# Retired as a judgement 2026-11-01 (Lijun): none of the 21 runs saved by
+# then passed (Haiku, Sonnet, Opus, Ornith, Flint, Glimmer). One called an
+# agent: Flint, in flint-repeats-128k, asked the `verify` reviewer once and
+# hit the wall; no run split the sweep among workers. Delegation showed no
+# benefit here, and Haiku fixed all twelve alone in about 22 seconds. It now
+# measures what a model chooses unprompted and passes on the hidden tests
+# and a finished turn. Kept, not deleted: the -delegate and -solo twins use
+# this fixture, and old run files name it. It has no `suite` tag.
 #
 # Twelve independent one-line fixes in twelve modules, the shape of
 # kata-utf8-sweep, with a worker agent available in agents/ on the same

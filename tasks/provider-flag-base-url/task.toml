@@ -3,7 +3,7 @@ id = "provider-flag-base-url"
 prompt = """On a fresh install, `koda -p "hi" --provider anthropic` never reaches Anthropic: it prints "Network glitch … Retrying" a few times and then "LLM inference failed". With ANTHROPIC_API_KEY set and the same command plus `--base-url https://api.anthropic.com` it works.
 
 Find and fix the cause. A custom endpoint someone configured for the same provider should keep working."""
-tags = ["rust", "koda-history", "logic", "investigation"]
+tags = ["rust", "koda-history", "logic", "investigation", "suite"]
 cluster = "investigation"
 
 [repo]
