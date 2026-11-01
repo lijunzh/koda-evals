@@ -1,0 +1,16 @@
+# The compaction row on the new policy: provider counts, the user's words kept
+# verbatim, a size-based tail. 64K, since 32K leaves this task about 4K of room
+# by real count. Approved by Lijun 2026-11-01.
+name = "e2-haiku-64k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "1212279ab2bd0170989ca3146e9af4ea24d55738"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "64000" }
