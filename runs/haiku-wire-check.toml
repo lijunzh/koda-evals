@@ -1,0 +1,17 @@
+# Wire protocol step 2 on Haiku before it merges: the 31 tasks tagged `suite`
+# once, at Koda's default window, on the head of lijunzh/koda#1486. The first
+# real-model run on protocol 1 and the new command handling. Compare task by
+# task with results/haiku-fixes-check/20261101T180542Z. Approved by Lijun
+# 2026-11-01, about $5.
+name = "haiku-wire-check"
+repeats = 1
+tags = ["suite"]
+
+[[variants]]
+name = "wire"
+ref = "9642de99e522b2c649bc1be214ad31e2688eaae5"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
