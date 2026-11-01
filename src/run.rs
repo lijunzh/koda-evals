@@ -453,11 +453,15 @@ impl RunOne<'_> {
 
         // When koda itself failed (no model call, a provider error, a
         // crash), say so instead of blaming the untouched code.
-        let agent_failed = agent.timed_out
-            || agent.exit != Some(0)
-            || transcript.turn_end_kind() == Some("error")
-            || !transcript.protocol_supported();
-        let failure = if check.passed() {
+        let agent_failed =
+            agent.timed_out || agent.exit != Some(0) || transcript.turn_end_kind() == Some("error");
+        // A protocol this reader doesn't know leaves the checks unreadable,
+        // so a pass from them means nothing.
+        let unsupported = transcript.unsupported_protocol();
+        let pass = check.passed() && unsupported.is_none();
+        let failure = if unsupported.is_some() {
+            unsupported
+        } else if pass {
             None
         } else if agent_failed && !agent.timed_out {
             Some("agent failed".to_string())
@@ -470,7 +474,7 @@ impl RunOne<'_> {
             "variant": self.variant,
             "model": self.model.name,
             "repeat": self.repeat,
-            "pass": check.passed(),
+            "pass": pass,
             "failure": failure,
             // What this row was measured under, so rows from different
             // run files compare.

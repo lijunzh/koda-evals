@@ -228,11 +228,16 @@ impl Transcript {
         self.of_type("text_done").last().map(|(i, _)| i)
     }
 
-    /// False when koda speaks a newer protocol than this reader, whose
-    /// counts can't be trusted.
-    pub fn protocol_supported(&self) -> bool {
-        self.protocol_version()
-            .is_none_or(|version| version <= PROTOCOL_VERSION)
+    /// The failure to report when koda's `hello` names a protocol this reader
+    /// doesn't know: a newer one, or a version it can't read. `None` with no
+    /// `hello`, since koda before protocol 1 sent none.
+    pub fn unsupported_protocol(&self) -> Option<String> {
+        let (_, hello) = self.of_type("hello").next()?;
+        match &hello["protocol_version"] {
+            version if version.as_u64().is_some_and(|v| v <= PROTOCOL_VERSION) => None,
+            Value::Null => Some("unsupported protocol".to_string()),
+            version => Some(format!("unsupported protocol {version}")),
+        }
     }
 
     /// Whether the call with this `id` reported an `error` outcome.
@@ -455,7 +460,7 @@ not json
     fn behaviour_reads_the_typed_protocol() {
         let t = Transcript::parse(SAMPLE_V1);
         assert_eq!(t.protocol_version(), Some(1));
-        assert!(t.protocol_supported());
+        assert_eq!(t.unsupported_protocol(), None);
         let b = t.behaviour(false);
         assert_eq!(b["protocol_version"], 1);
         assert_eq!(b["compactions"]["attempts"], 2);
@@ -472,11 +477,75 @@ not json
         assert_eq!(t.final_message(), Some("Done."));
     }
 
+    /// What koda really wrote; `bin/capture-koda-wire` records it.
+    const CAPTURED: &str = include_str!("../tests/fixtures/koda-wire-v1.ndjson");
+
     #[test]
-    fn a_newer_protocol_is_not_supported() {
-        let t = Transcript::parse(r#"{"type":"hello","protocol_version":2}"#);
-        assert!(!t.protocol_supported());
-        assert!(Transcript::parse("").protocol_supported());
+    fn reads_what_koda_wrote() {
+        let t = Transcript::parse(CAPTURED);
+        assert_eq!(t.count("unparsed_line"), 0);
+        assert_eq!(t.protocol_version(), Some(1));
+        assert_eq!(t.unsupported_protocol(), None);
+        assert_eq!(t.turn_end_kind(), Some("complete"));
+        assert_eq!(t.final_message(), Some("Done."));
+        assert!(t.final_message_index().is_some());
+
+        // Sub-agent calls are told apart from the agent's own.
+        let of = |id: &str| t.tool_calls().find(|c| c.id == id).unwrap();
+        assert!(!of("agent").is_sub_agent);
+        assert!(of("child-1").is_sub_agent);
+        assert_eq!(of("read-ok").args["file_path"], "notes_0.txt");
+
+        // A result is matched to its call, and says how it went.
+        assert!(t.result_output("read-ok").unwrap().starts_with("note 0:"));
+        assert!(!t.result_failed("read-ok"));
+        assert!(t.result_failed("edit-bad"));
+        assert!(t.result_failed("bash-fails"));
+        assert_eq!(t.result_output("rm"), None, "rejected, so no result");
+
+        assert_eq!(t.count("ask_user_request"), 1);
+        assert_eq!(
+            t.approval_requests().collect::<Vec<_>>(),
+            [("Bash", "Destructive", "rm -rf target")]
+        );
+        assert_eq!(
+            t.blocked_actions().collect::<Vec<_>>(),
+            [("Bash", "rm -rf notes")]
+        );
+
+        let b = t.behaviour(false);
+        assert_eq!(b["protocol_version"], 1);
+        assert_eq!(b["turn_end_kind"], "complete");
+        assert_eq!(b["compactions"]["attempts"], 4);
+        assert_eq!(b["compactions"]["with_summary"], 1);
+        assert_eq!(b["loop_guard_warnings"], 1);
+        assert_eq!(b["edit_rejections"], 1);
+        assert_eq!(b["edits_attempted"], 1);
+        assert_eq!(b["delegations"], 1);
+        assert_eq!(b["approval_requests"]["destructive"], 1);
+        assert_eq!(b["blocked_actions"], 1);
+        assert_eq!(b["tool_use"]["bash_calls"], 8);
+
+        let summary = t.summary.as_ref().unwrap();
+        assert_eq!(summary["usage_by_agent"]["explore"]["api_calls"], 3);
+    }
+
+    #[test]
+    fn a_protocol_this_reader_cannot_read_is_named() {
+        let of = |hello: &str| Transcript::parse(hello).unsupported_protocol();
+        assert_eq!(
+            of(r#"{"type":"hello","protocol_version":2}"#).as_deref(),
+            Some("unsupported protocol 2")
+        );
+        assert_eq!(
+            of(r#"{"type":"hello","protocol_version":"1"}"#).as_deref(),
+            Some(r#"unsupported protocol "1""#)
+        );
+        assert_eq!(
+            of(r#"{"type":"hello"}"#).as_deref(),
+            Some("unsupported protocol")
+        );
+        assert_eq!(of(""), None, "koda before protocol 1 sends no hello");
     }
 
     #[test]

@@ -261,6 +261,11 @@ What differs from a koda run (the wrapper's header has the detail):
   process group is killed.
 - **One at a time.** A local model serves one request at a time.
 
+A run passes only if koda speaks a protocol this harness reads. When its
+`hello` names a newer protocol, or a version the harness can't read, the row
+fails with `unsupported protocol N`, whatever the checks say. A koda from
+before protocol 1 sends no `hello` and is graded as usual.
+
 Results go to `results/<run>/<timestamp>/` (gitignored):
 - `results.jsonl`: one row per run with pass/fail, the failure kind, the
   agent's `run_summary` (tokens, LLM calls, tool calls), event counts, diff
@@ -363,6 +368,16 @@ KODA_EVAL_TEST_BIN=~/.cache/koda-eval/koda-test-support/debug/koda cargo test --
 A koda built without that feature treats `--provider mock` as unknown and
 falls back to its default local server, so every run fails with "agent
 failed" and no tokens.
+
+`tests/fixtures/koda-wire-v1.ndjson` is what a real koda wrote against a local
+stub of an OpenAI-compatible server, and `cargo test` always reads it, through
+the reader and through the runner. Nothing compares it with today's koda, so
+record it again whenever the protocol changes. It takes a plain koda build, no
+model and no key:
+
+```bash
+bin/capture-koda-wire ~/repo/koda/target/debug/koda
+```
 
 ## Status
 
