@@ -1,0 +1,16 @@
+# Release check on the new prompt and compaction policy: three repeats of the
+# compaction row on Haiku at 64K. The ref is koda#1476's head, whose tree is
+# main after the squash. Approved by Lijun 2026-11-01.
+name = "haiku-check-64k"
+repeats = 3
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "b26d61275e603bacc5376e5ea9db415d0f85067c"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "64000" }
