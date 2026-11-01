@@ -162,6 +162,14 @@ impl Transcript {
             })
     }
 
+    /// `Edit` and `Write` calls, sub-agents included. Calls, not successes:
+    /// a row with none and an empty diff never tried.
+    pub fn edits_attempted(&self) -> usize {
+        self.tool_calls()
+            .filter(|c| EDIT_TOOLS.contains(&c.name))
+            .count()
+    }
+
     pub fn count(&self, kind: &str) -> u64 {
         self.counts.get(kind).copied().unwrap_or(0)
     }
@@ -209,6 +217,7 @@ impl Transcript {
             "compactions": { "attempts": attempts, "with_summary": with_summary },
             "loop_guard_warnings": loop_guard,
             "edit_rejections": edit_rejections,
+            "edits_attempted": self.edits_attempted(),
             "time_limit_hit": time_limit_hit,
             "turn_end_kind": self.turn_end_kind(),
             "delegations": delegations,
@@ -269,6 +278,7 @@ not json
         assert_eq!(b["compactions"]["with_summary"], 1);
         assert_eq!(b["loop_guard_warnings"], 1);
         assert_eq!(b["edit_rejections"], 1);
+        assert_eq!(b["edits_attempted"], 1);
         assert_eq!(b["time_limit_hit"], false);
         assert_eq!(b["turn_end_kind"], "complete");
         assert_eq!(b["delegations"], 1);

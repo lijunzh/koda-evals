@@ -7,6 +7,7 @@
 mod build;
 mod check;
 mod keys;
+mod klog;
 mod proc;
 mod project;
 mod report;
