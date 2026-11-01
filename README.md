@@ -87,9 +87,9 @@ stated:
 | `approvals` | `min?`, `max?` | `approval_request` events number within the range |
 | `claim_requires` | `claim`, `call`, `exit_ok?` | the final message doesn't match the `claim` regex, or it does and a call matching `call` (a matcher or a list, as `before.a`) came before it; with `exit_ok = true` the last such call's result must show success. "Tests pass" is allowed only after a test run |
 
-`exit_ok` reads the call's `tool_call_result`. Koda's Bash results start
-`Exit code: N | …` and its Cargo results carry `(exit code N, …)`; a
-nonzero code is a failure. A result with no code (Claude Code through
+`exit_ok` reads the call's `tool_call_result`. An `outcome` of `error` is a
+failure. Koda's Bash results also start `Exit code: N | …` and its Cargo
+results carry `(exit code N, …)`; a nonzero code is a failure. A result with no code (Claude Code through
 `bin/claude-as-koda` drops it) counts as success unless it carries one of
 cargo's own failure lines (`test result: FAILED`, `error: test failed`,
 `error: could not compile`, `error[E…`); those lines also catch a piped
@@ -261,6 +261,11 @@ What differs from a koda run (the wrapper's header has the detail):
   process group is killed.
 - **One at a time.** A local model serves one request at a time.
 
+A run passes only if koda speaks a protocol this harness reads. When its
+`hello` names a newer protocol, or a version the harness can't read, the row
+fails with `unsupported protocol N`, whatever the checks say. A koda from
+before protocol 1 sends no `hello` and is graded as usual.
+
 Results go to `results/<run>/<timestamp>/` (gitignored):
 - `results.jsonl`: one row per run with pass/fail, the failure kind, the
   agent's `run_summary` (tokens, LLM calls, tool calls), event counts, diff
@@ -274,8 +279,10 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
   - `behaviour`, read from the event stream: `compactions` (`attempts`,
     and `with_summary` for the ones that produced one),
     `loop_guard_warnings`, `edit_rejections` (Edit results koda refused:
-    `Validation error:` or `Error:`), `time_limit_hit`, `turn_end_kind`
-    (`null` when the turn never ended), `delegations`, `approval_requests`
+    `outcome` `error`, or `Validation error:` or `Error:` from a koda older
+    than protocol 1), `time_limit_hit`, `turn_end_kind` (`null` when the
+    turn never ended), `protocol_version` (`null` before protocol 1),
+    `delegations`, `approval_requests`
     (`total`, `destructive`), `blocked_actions` and `tool_use` (Grep calls,
     empty and regex counts, and Bash calls doing a search or read). Also
     `edits_attempted`
@@ -361,6 +368,16 @@ KODA_EVAL_TEST_BIN=~/.cache/koda-eval/koda-test-support/debug/koda cargo test --
 A koda built without that feature treats `--provider mock` as unknown and
 falls back to its default local server, so every run fails with "agent
 failed" and no tokens.
+
+`tests/fixtures/koda-wire-v1.ndjson` is what a real koda wrote against a local
+stub of an OpenAI-compatible server, and `cargo test` always reads it, through
+the reader and through the runner. Nothing compares it with today's koda, so
+record it again whenever the protocol changes. It takes a plain koda build, no
+model and no key:
+
+```bash
+bin/capture-koda-wire ~/repo/koda/target/debug/koda
+```
 
 ## Status
 

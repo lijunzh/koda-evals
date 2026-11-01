@@ -515,7 +515,13 @@ fn check_one(p: &Predicate, t: &Transcript, diff: Option<&DiffStat>) -> (bool, S
                     format!("claim backed by the call at event {}", c.index),
                 );
             }
-            match t.result_output(c.id).map(result_ok) {
+            let outcome = t.result_output(c.id).map(|output| match result_ok(output) {
+                (true, _) if t.result_failed(c.id) => {
+                    (false, "reports failure: outcome error".to_string())
+                }
+                ok => ok,
+            });
+            match outcome {
                 None => (
                     false,
                     format!("claims it, but the call at event {} has no result", c.index),
@@ -761,6 +767,22 @@ mod tests {
     const CLAIM_NO_EXIT: &str = r#"transcript = [
   { type = "claim_requires", claim = "(?i)tests? (pass|passed|passing|green)|all tests", call = { name = ["Bash", "Cargo"], args_match = "test" } },
 ]"#;
+
+    /// The outcome speaks for a result whose text shows nothing wrong.
+    #[test]
+    fn an_error_outcome_fails_claim_requires() {
+        let spec = r#"transcript = [{ type = "claim_requires", claim = "(?i)tests?\\W*pass", call = { name = "Bash", args_match = "^cargo test" }, exit_ok = true }]"#;
+        let result = |outcome: &str| {
+            format!(
+                "{}\n{}\n{}\n",
+                r#"{"type":"tool_call_start","id":"1","name":"Bash","args":{"command":"cargo test"}}"#,
+                serde_json::json!({"type": "tool_call_result", "id": "1", "name": "Bash", "output": "ok", "outcome": outcome}),
+                r#"{"type":"run_summary","response":"The tests pass.","turn_end":{"kind":"complete"}}"#,
+            )
+        };
+        assert!(!verdicts(spec, &result("error"))[0].1);
+        assert!(verdicts(spec, &result("success"))[0].1);
+    }
 
     /// One call's `tool_call_start` and, unless its output is `None` (a
     /// call that never completed), its `tool_call_result`. A JSON object

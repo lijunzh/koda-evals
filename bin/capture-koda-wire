@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""Record what a real koda writes, for the contract test.
+
+koda is a black box here, so the only proof that this reader matches it is its
+actual output. This runs the given `koda` against a local stub of an
+OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-v1.ndjson.
+Nothing leaves the machine: no model, no API key.
+
+    bin/capture-koda-wire ~/repo/koda/target/debug/koda
+
+The capture is one scripted turn with a retry, tool results of both
+outcomes, a question, a rejected destructive command, a sub-agent that has one
+blocked, the loop guard and a compaction. Only the temp directory is rewritten,
+to /work.
+"""
+
+import http.server
+import json
+import pathlib
+import subprocess
+import sys
+import tempfile
+import threading
+
+FIXTURE = pathlib.Path(__file__).parent.parent / "tests/fixtures/koda-wire-v1.ndjson"
+WINDOW = "12000"
+LOOP_REPEATS = 5
+FILES = 40
+
+
+def usage(prompt, completion):
+    return {"choices": [], "usage": {"prompt_tokens": prompt, "completion_tokens": completion}}
+
+
+def tool_call(call_id, name, **args):
+    call = {
+        "index": 0,
+        "id": call_id,
+        "type": "function",
+        "function": {"name": name, "arguments": json.dumps(args)},
+    }
+    return [
+        {"choices": [{"delta": {"tool_calls": [call]}}]},
+        {"choices": [{"delta": {}, "finish_reason": "tool_calls"}]},
+        usage(100, 10),
+    ]
+
+
+def text(reply):
+    return [
+        {"choices": [{"delta": {"content": reply}}]},
+        {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+        usage(200, 20),
+    ]
+
+
+def plain(message):
+    return {
+        "choices": [{"message": message, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 30, "completion_tokens": 3},
+    }
+
+
+def child_turn(request):
+    """A sub-agent tries a destructive command, reads one file, then answers."""
+    done = sum(m["role"] == "tool" for m in request["messages"])
+    if done == 2:
+        return plain({"role": "assistant", "content": "found"})
+    name, args = [
+        ("Bash", {"command": "rm -rf notes"}),
+        ("Read", {"file_path": "notes_0.txt"}),
+    ][done]
+    call = {
+        "id": f"child-{done}",
+        "type": "function",
+        "function": {"name": name, "arguments": json.dumps(args)},
+    }
+    return plain({"role": "assistant", "tool_calls": [call]})
+
+
+def full_turn():
+    script = [
+        None,  # a 429, so the first call retries
+        tool_call("read-ok", "Read", file_path="notes_0.txt"),
+        tool_call("edit-bad", "Edit", file_path="notes_0.txt", replacements=[
+            {"old_str": "no such text", "new_str": "x"},
+        ]),
+        tool_call("bash-fails", "Bash", command="false"),
+        tool_call("ask", "AskUser", question="Which file?"),
+        tool_call("rm", "Bash", command="rm -rf target"),
+        tool_call("agent", "InvokeAgent", agent_name="explore", prompt="find the note"),
+    ]
+    return script + [
+        tool_call(f"same-{n}", "Bash", command="true") for n in range(LOOP_REPEATS)
+    ]
+
+
+class Stub:
+    """The model's side of the turn, one reply per streaming call."""
+
+    def __init__(self):
+        self.script = full_turn()
+        self.reads = 0
+        self.summarized = False
+
+    def stream(self):
+        """The next streaming reply, or `None` for the 429."""
+        if self.script:
+            return self.script.pop(0)
+        if self.summarized:
+            return text("Done.")
+        self.reads += 1
+        return tool_call(
+            f"fill-{self.reads}", "Read", file_path=f"notes_{self.reads % FILES}.txt"
+        )
+
+    def complete(self, request):
+        """Sub-agents and summaries don't stream."""
+        if self.script or self.reads == 0:
+            return child_turn(request)
+        self.summarized = True
+        return plain({"role": "assistant", "content": "<summary>Read notes.</summary>"})
+
+
+def serve(stub):
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            size = int(self.headers["content-length"])
+            request = json.loads(self.rfile.read(size))
+            if not self.path.endswith("/chat/completions"):
+                self.reply(404, "text/plain", "")
+                return
+            if not request.get("stream"):
+                self.reply(200, "application/json", json.dumps(stub.complete(request)))
+                return
+            chunks = stub.stream()
+            if chunks is None:
+                self.reply(429, "text/plain", "slow down")
+                return
+            body = "".join(f"data: {json.dumps(c)}\n\n" for c in chunks)
+            self.reply(200, "text/event-stream", body + "data: [DONE]\n\n")
+
+        def do_GET(self):
+            self.reply(404, "text/plain", "")
+
+        def reply(self, status, kind, body):
+            data = body.encode()
+            self.send_response(status)
+            self.send_header("content-type", kind)
+            self.send_header("content-length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *_):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    koda = sys.argv[1]
+    server = serve(Stub())
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp).resolve()
+        project = root / "project"
+        project.mkdir()
+        for n in range(FILES):
+            line = f"note {n}: nothing to see in this file\n"
+            (project / f"notes_{n}.txt").write_text(line * 400)
+        # The harness's command line, plus the small window.
+        out = subprocess.run(
+            [
+                koda, "-p", "Fix the parser",
+                "--output-format", "stream-json", "--mode", "auto",
+                "--provider", "lmstudio", "--model", "stub",
+                "--base-url", f"http://127.0.0.1:{server.server_address[1]}",
+                "--project-root", str(project),
+                "--max-context-tokens", WINDOW,
+            ],
+            cwd=project,
+            env={"PATH": "/usr/bin:/bin", "HOME": str(root), "XDG_CONFIG_HOME": str(root)},
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    server.shutdown()
+    if out.returncode != 0:
+        sys.exit(f"koda exited {out.returncode}\n{out.stderr}\n{out.stdout[-2000:]}")
+    FIXTURE.write_text(out.stdout.replace(str(root), "/work"))
+    print(f"wrote {FIXTURE.name} ({out.stdout.count(chr(10))} lines)")
+
+
+if __name__ == "__main__":
+    main()
