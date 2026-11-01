@@ -1,0 +1,15 @@
+# Can a fresh session triage a compacting row from its artifacts alone? Runs at
+# the harness's default log level. Approved by Lijun 2026-11-01.
+name = "e2-haiku-triage-32k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "main"
+ref = "f634ea4b9d924385adefe1858317bf1127c0d927"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }

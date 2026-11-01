@@ -1,0 +1,15 @@
+# The E2 row rerun on the compaction fixes. Does a second compaction keep the
+# request? Approved by Lijun 2026-11-01.
+name = "e2-haiku-fix-32k"
+repeats = 1
+tasks = ["compact-reasoning-summary"]
+
+[[variants]]
+name = "fix"
+ref = "137d1eb5f5d37ea76b4ad47ee8d05cb0da149362"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "32768" }
