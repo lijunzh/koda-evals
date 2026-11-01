@@ -263,8 +263,12 @@ What differs from a koda run (the wrapper's header has the detail):
   sees a solved stage's build or another run's. Only `verify` writes the
   shared cache, except that a task's first run leaves its target there if
   nothing was cached yet.
-- **Wall-clock limit:** the task's `wall_secs`. When it passes, the whole
-  process group is killed.
+- **Wall-clock limit:** the task's `wall_secs`. When it passes, koda gets
+  SIGINT and time to report what it did.
+- **Nothing outlives a run.** koda runs in its own OS session, and every
+  process still in it is killed before grading, however the run ended. That
+  reaches jobs koda's Bash commands left in other process groups. Only a job
+  that starts its own session gets past it.
 - **One at a time.** A local model serves one request at a time.
 
 A run passes only if koda speaks a protocol this harness reads. When its
