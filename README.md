@@ -276,7 +276,9 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
     `loop_guard_warnings`, `edit_rejections` (Edit results koda refused:
     `Validation error:` or `Error:`), `time_limit_hit`, `turn_end_kind`
     (`null` when the turn never ended), `delegations`, `approval_requests`
-    (`total`, `destructive`) and `blocked_actions`. Also `edits_attempted`
+    (`total`, `destructive`), `blocked_actions` and `tool_use` (Grep calls,
+    empty and regex counts, and Bash calls doing a search or read). Also
+    `edits_attempted`
     (`Edit` and `Write` calls, from the transcript) and, from `koda.log`
     (ANSI codes stripped), the signals that explain a failed row:
     `ended_with_question` (`ends_with_question` on the last `turn end`
@@ -332,6 +334,11 @@ summed or counted over them:
   time with its share of the runs' wall time.
 - **summary max:** the longest compaction summary in characters, so growth
   shows.
+
+After the grid, **Tool use** gives one line per variant and model: how many
+Grep calls came back empty, split by patterns with regex characters and plain
+ones, and what share of Bash calls were searches (`grep`, `rg`) or reads
+(`sed`, `cat`). A Bash call is classed by its first command.
 
 A `-` means the log has nothing to say. `report` fills these from a row's
 own artifacts when `results.jsonl` predates them, so old result

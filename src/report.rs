@@ -52,6 +52,8 @@ struct Row {
     compaction_tokens: Option<u64>,
     compaction_ms: Option<u64>,
     summary_chars_max: Option<u64>,
+    /// Grep and Bash use; `None` on rows with neither signal nor transcript.
+    tool_use: Option<ToolUse>,
 }
 
 /// The configuration identity a row carries.
@@ -65,7 +67,7 @@ struct Config {
 
 use crate::klog;
 use crate::task::CLUSTERS;
-use crate::transcript::{DELEGATION_TOOLS, Transcript};
+use crate::transcript::{DELEGATION_TOOLS, ToolUse, Transcript};
 
 fn non_cached_tokens(usage: &Value) -> Option<u64> {
     match (
@@ -131,6 +133,7 @@ fn parse_rows(text: &str, dir: Option<&Path>) -> Result<Vec<Row>> {
             compaction_tokens: behaviour["compaction_tokens"].as_u64(),
             compaction_ms: behaviour["compaction_ms"].as_u64(),
             summary_chars_max: behaviour["summary_chars_max"].as_u64(),
+            tool_use: serde_json::from_value(behaviour["tool_use"].clone()).ok(),
         });
     }
     Ok(rows)
@@ -157,6 +160,7 @@ fn backfill(row: &mut Value, dir: &Path) {
             "edits_attempted".into(),
             transcript.edits_attempted().into(),
         );
+        found.insert("tool_use".into(), serde_json::json!(transcript.tool_use()));
     }
     if let Some(behaviour) = row["behaviour"].as_object_mut() {
         for (key, value) in found {
@@ -379,6 +383,51 @@ fn trouble_cells(rows: &[Row], task: &str) -> [String; 6] {
         compaction_time,
         fmt_num(summary_max),
     ]
+}
+
+/// `k (p%)` of `n`; `-` with nothing to divide by.
+fn share(k: u64, n: u64) -> String {
+    if n == 0 {
+        "-".into()
+    } else {
+        format!("{} ({:.0}%)", fmt_num(Some(k)), 100.0 * k as f64 / n as f64)
+    }
+}
+
+/// `k/n (p%)`; `-` with nothing to divide by.
+fn fraction(k: u64, n: u64) -> String {
+    if n == 0 {
+        "-".into()
+    } else {
+        format!("{k}/{n} ({:.0}%)", 100.0 * k as f64 / n as f64)
+    }
+}
+
+/// One variant × model's Grep and Bash use, over its rows. `None` when no
+/// row carries the signal.
+fn tool_use_line(rows: &[Row], variant: &str, model: &str) -> Option<String> {
+    let mut used = None;
+    for r in rows
+        .iter()
+        .filter(|r| r.variant == variant && r.model == model)
+    {
+        if let Some(u) = &r.tool_use {
+            used.get_or_insert_with(ToolUse::default).add(u);
+        }
+    }
+    let u = used?;
+    let plain_calls = u.grep_calls - u.grep_regex_calls;
+    let plain_empty = u.grep_empty - u.grep_regex_empty;
+    Some(format!(
+        "| {variant} | {model} | {} | {} | {} | {} | {} | {} | {} |",
+        fmt_num(Some(u.grep_calls)),
+        share(u.grep_empty, u.grep_calls),
+        fraction(u.grep_regex_empty, u.grep_regex_calls),
+        fraction(plain_empty, plain_calls),
+        fmt_num(Some(u.bash_calls)),
+        share(u.bash_search, u.bash_calls),
+        share(u.bash_read, u.bash_calls),
+    ))
 }
 
 /// Distinct values in first-seen order, joined with `/`.
@@ -617,6 +666,25 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         out,
         "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit. Asked is the runs that ended on a question to the user, which count as complete; no edits is the runs that never called Edit or Write. Peak context is the fullest run's largest request, with its share of the window when the run file pins one; a leading `~` marks koda's estimate, which runs well under the real figure, used when the log has no provider count. Compaction tokens (prompt + completion) and time are summed over the task's runs, the time with its share of their wall time. Summary max is the longest compaction summary in characters. `-` means the run's log has nothing to say."
     );
+
+    let lines: Vec<String> = cells
+        .iter()
+        .filter_map(|(v, m)| tool_use_line(rows, v, m))
+        .collect();
+    if !lines.is_empty() {
+        let _ = writeln!(out, "\n## Tool use\n");
+        let _ = writeln!(
+            out,
+            "| variant | model | Grep calls | empty | regex empty | plain empty | Bash calls | shell search | shell read |\n|---|---|---|---|---|---|---|---|---|"
+        );
+        for line in lines {
+            let _ = writeln!(out, "{line}");
+        }
+        let _ = writeln!(
+            out,
+            "\nCounted over every run, sub-agents included. Empty is Grep calls that found nothing; regex empty is those whose pattern has regex characters, and plain empty is the rest, so the gap between them shows searches that should have found something. Shell search is Bash calls starting with `grep` or `rg`, and shell read those starting with `sed` or `cat`, as shares of Bash calls. A Bash call is classed by its first command."
+        );
+    }
     out
 }
 
@@ -695,6 +763,7 @@ mod tests {
             compaction_tokens: None,
             compaction_ms: None,
             summary_chars_max: None,
+            tool_use: None,
         }
     }
 
@@ -818,6 +887,7 @@ mod tests {
         let rows = parse_rows(text, Some(dir.path())).unwrap();
         assert_eq!(rows[0].ended_with_question, Some(true));
         assert_eq!(rows[0].edits_attempted, Some(1));
+        assert_eq!(rows[0].tool_use, Some(ToolUse::default()));
         assert_eq!(rows[0].peak_context_tokens, Some(32_000));
         assert_eq!(rows[0].peak_context_percent, Some(50.0));
         assert_eq!(rows[0].peak_context_estimated, Some(false));
@@ -826,6 +896,33 @@ mod tests {
         // No artifacts on disk: nothing to say.
         assert_eq!(rows[1].ended_with_question, None);
         assert_eq!(rows[1].edits_attempted, None);
+        assert_eq!(rows[1].tool_use, None);
+    }
+
+    #[test]
+    fn tool_use_sums_over_a_cell_and_keeps_regex_and_plain_apart() {
+        let text = r#"{"task":"a","variant":"v","model":"m","pass":true,"behaviour":{"tool_use":{"grep_calls":10,"grep_empty":6,"grep_regex_calls":5,"grep_regex_empty":5,"bash_calls":4,"bash_search":2,"bash_read":0}}}
+{"task":"b","variant":"v","model":"m","pass":true,"behaviour":{"tool_use":{"grep_calls":10,"grep_empty":0,"grep_regex_calls":0,"grep_regex_empty":0,"bash_calls":6,"bash_search":1,"bash_read":1}}}
+{"task":"c","variant":"v","model":"m","pass":true,"behaviour":{}}
+{"task":"a","variant":"old","model":"m","pass":true,"behaviour":{}}
+"#;
+        let rows = parse_rows(text, None).unwrap();
+        let md = render(&rows, &Value::Null, "x");
+        assert!(md.contains("## Tool use"), "{md}");
+        assert!(
+            md.contains(
+                "| v | m | 20 | 6 (30%) | 5/5 (100%) | 1/15 (7%) | 10 | 3 (30%) | 1 (10%) |"
+            ),
+            "{md}"
+        );
+        // No signal for this cell: no line, not a row of dashes.
+        assert!(!md.contains("| old | m | 0"), "{md}");
+    }
+
+    #[test]
+    fn no_tool_use_signal_means_no_section() {
+        let rows = vec![row("t", "v", Some(true), 1)];
+        assert!(!render(&rows, &Value::Null, "x").contains("## Tool use"));
     }
 
     #[test]
