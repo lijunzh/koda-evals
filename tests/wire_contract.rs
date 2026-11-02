@@ -193,6 +193,82 @@ fn a_cleanup_that_cant_be_checked_stops_the_run_ungraded() {
 }
 
 #[test]
+fn a_failed_cleanup_stops_parallel_workers_before_they_grade() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let run_file = project(root, Path::new(CAPTURED));
+    let run = std::fs::read_to_string(&run_file).unwrap();
+    std::fs::write(&run_file, format!("repeats = 4\n{run}")).unwrap();
+
+    // The first `koda` finishes at once, and the `ps` that cleans up after it
+    // fails. The second is still running then, and its own cleanup succeeds.
+    let (lock, fast, failed) = (root.join("lock"), root.join("fast"), root.join("failed"));
+    let koda = format!(
+        "#!/bin/sh\n\
+         if [ \"$1\" = --version ]; then echo 'koda 9.9.9'; exit 0; fi\n\
+         if mkdir '{}' 2>/dev/null; then touch '{}'; else sleep 2; fi\n\
+         cat '{CAPTURED}'\n",
+        lock.display(),
+        fast.display(),
+    );
+    std::fs::write(root.join("koda"), koda).unwrap();
+
+    let bin = root.join("flaky-ps");
+    std::fs::create_dir(&bin).unwrap();
+    let path = std::env::var("PATH").unwrap();
+    let ps = format!(
+        "#!/bin/sh\n\
+         if [ -e '{}' ] && mkdir '{}' 2>/dev/null; then\n\
+         echo 'not allowed' >&2\n\
+         exit 1\n\
+         fi\n\
+         PATH='{path}' exec ps \"$@\"\n",
+        fast.display(),
+        failed.display(),
+    );
+    let stub = bin.join("ps");
+    std::fs::write(&stub, ps).unwrap();
+    std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let out = koda_eval(root, &run_file)
+        .args(["--jobs", "2"])
+        .env("PATH", format!("{}:{path}", bin.display()))
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success(), "{stderr}");
+    assert!(stderr.contains("stopping the run"), "{stderr}");
+    assert!(!stderr.contains("[3/4]"), "a queued run started: {stderr}");
+
+    let runs: Vec<_> = std::fs::read_dir(root.join("results/wire"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    let rows = std::fs::read_to_string(runs[0].join("results.jsonl")).unwrap();
+    let rows: Vec<Value> = rows
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(rows.len(), 2, "{rows:#?}");
+    for row in &rows {
+        assert_eq!(row["pass"], Value::Null, "{row:#}");
+        assert_eq!(row["check"], Value::Null, "{row:#}");
+    }
+    let errors: Vec<_> = rows
+        .iter()
+        .map(|r| r["harness_error"].to_string())
+        .collect();
+    assert!(
+        errors.iter().any(|e| e.contains("not allowed")),
+        "{errors:?}"
+    );
+    assert!(
+        errors.iter().any(|e| e.contains("not graded")),
+        "{errors:?}"
+    );
+}
+
+#[test]
 fn a_capture_of_real_koda_scores_through_the_runner() {
     let run = score(Path::new(CAPTURED));
     let row = &run.row;

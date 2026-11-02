@@ -14,6 +14,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
@@ -233,18 +234,21 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         if !opts.keep_work {
             let _ = std::fs::remove_dir_all(&job.work);
         }
-        if row["cleanup_failed"] == true {
-            bail!("stopping the run: {}", row["harness_error"]);
-        }
         Ok(())
     };
+    // Set by the first failed cleanup. What that run left may still be
+    // running, so nothing starts or is graded after it.
+    let stop = AtomicBool::new(false);
 
     if opts.jobs <= 1 {
         for job in &jobs {
             eprint!("[{}/{total}] {} {} ... ", job.n, job.task.id(), job.slot);
-            let row = job.execute(opts, &inherited);
+            let row = job.execute(opts, &inherited, &stop);
             eprintln!("{}", describe(&row));
             finish(job, row)?;
+            if stop.load(Ordering::SeqCst) {
+                break;
+            }
         }
     } else {
         // A pool of `jobs` workers pulling from one queue; the main thread
@@ -258,10 +262,10 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         std::thread::scope(|scope| -> Result<()> {
             for _ in 0..workers {
                 let tx = tx.clone();
-                let (jobs, next, inherited) = (&jobs, &next, &inherited);
+                let (jobs, next, inherited, stop) = (&jobs, &next, &inherited, &stop);
                 scope.spawn(move || {
-                    loop {
-                        let i = next.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    while !stop.load(Ordering::SeqCst) {
+                        let i = next.fetch_add(1, Ordering::SeqCst);
                         let Some(job) = jobs.get(i) else { break };
                         eprintln!(
                             "[{}/{total}] {} {} ... started",
@@ -269,7 +273,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                             job.task.id(),
                             job.slot
                         );
-                        let row = job.execute(opts, inherited);
+                        let row = job.execute(opts, inherited, stop);
                         if tx.send((i, row)).is_err() {
                             break;
                         }
@@ -290,6 +294,9 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
             }
             Ok(())
         })?;
+    }
+    if stop.load(Ordering::SeqCst) {
+        bail!("stopping the run: a cleanup failed, see harness_error in results.jsonl");
     }
 
     for ((variant, model), (passed, ran)) in &tally {
@@ -318,7 +325,7 @@ impl Job<'_> {
     /// Run it and return its results row. A harness failure (not the
     /// agent's) becomes a row with `pass: null`, so it stays out of the
     /// pass counts but is not lost.
-    fn execute(&self, opts: &Options, keys: &BTreeMap<String, String>) -> Value {
+    fn execute(&self, opts: &Options, keys: &BTreeMap<String, String>, stop: &AtomicBool) -> Value {
         let one = RunOne {
             task: self.task,
             variant: &self.variant.name,
@@ -331,15 +338,20 @@ impl Job<'_> {
             keys,
             wall_secs: self.wall_secs,
             jobs: opts.jobs,
+            stop,
         };
         match one.run() {
             Ok(row) => row,
-            Err(e) => json!({
-                "task": self.task.id(), "variant": self.variant.name,
-                "model": self.model.name, "repeat": self.repeat,
-                "pass": null, "harness_error": format!("{e:#}"),
-                "cleanup_failed": e.is::<proc::CleanupFailed>(),
-            }),
+            Err(e) => {
+                if e.is::<proc::CleanupFailed>() {
+                    stop.store(true, Ordering::SeqCst);
+                }
+                json!({
+                    "task": self.task.id(), "variant": self.variant.name,
+                    "model": self.model.name, "repeat": self.repeat,
+                    "pass": null, "harness_error": format!("{e:#}"),
+                })
+            }
         }
     }
 }
@@ -384,6 +396,8 @@ struct RunOne<'a> {
     wall_secs: u64,
     /// Runs executed at once, for the configuration identity.
     jobs: usize,
+    /// Set when any run's cleanup failed.
+    stop: &'a AtomicBool,
 }
 
 impl RunOne<'_> {
@@ -438,6 +452,9 @@ impl RunOne<'_> {
 
         let transcript = Transcript::read(&transcript_path)?;
         let diff = project::capture_diff(&project, &self.art.join("diff.patch"))?;
+        if self.stop.load(Ordering::SeqCst) {
+            bail!("not graded: another run's cleanup failed");
+        }
         let hidden = if task.has_hidden() {
             Some(match project::inject_hidden(task, &project) {
                 Ok(()) => check::run(task, &project, &target, &self.art.join("check.log"))?,
