@@ -1,0 +1,15 @@
+# The flat Edit fix on Haiku: the 31 tasks tagged `suite` once, at Koda's
+# default window, on main after lijunzh/koda#1487. Compare with
+# results/haiku-wire-check/20261101T230644Z. Approved by Lijun 2026-11-01.
+name = "haiku-edit-check"
+repeats = 1
+tags = ["suite"]
+
+[[variants]]
+name = "main"
+ref = "fa838520dfb531ced1349fa6f5b818e28a174fb3"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
