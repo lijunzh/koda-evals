@@ -269,9 +269,12 @@ What differs from a koda run (the wrapper's header has the detail):
   and every process still in it is killed before grading, however the run
   ended. That reaches jobs koda's Bash commands left in other process groups.
   If the session can't be shown to be empty, the row gets a `harness_error`,
-  isn't graded, and the run stops. This is best effort, not containment: a job
-  that starts its own session gets past it, and so could one forked at the
-  wrong moment.
+  isn't graded, and the run stops. With `--jobs`, nothing else starts, and runs
+  already going finish their model calls but aren't graded. A run already being
+  graded finishes and keeps its `check`, with `pass: null` and a
+  `harness_error`, so no report counts it. This is best effort, not
+  containment: a job that starts its own session gets past it, and so could one
+  forked at the wrong moment.
 - **One at a time.** A local model serves one request at a time.
 
 A run passes only if koda speaks a protocol this harness reads. When its
