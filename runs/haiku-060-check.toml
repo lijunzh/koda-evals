@@ -1,0 +1,17 @@
+# Release check before 0.6.0: the 31 tasks tagged `suite` three times, at
+# Koda's default window, on `main` at the merge of lijunzh/koda#1503. Covers
+# the ACP and /undo removals, the sub-agent changes and the new retry path.
+# Compare with results/haiku-edit-check/20261102T020956Z. Approved by Lijun
+# 2026-11-02, about $4.
+name = "haiku-060-check"
+repeats = 3
+tags = ["suite"]
+
+[[variants]]
+name = "main"
+ref = "afb7716d02a5551ef262b3522303d37561569174"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
