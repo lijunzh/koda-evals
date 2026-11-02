@@ -1,0 +1,21 @@
+# Can long tasks share the GPU and context cache? Two investigation tasks that
+# already run near their 20-minute limit, at `jobs` 1 and 2. Only if
+# parallel-ornith-jobs* shows a real gain and the probe's long case stays
+# clean. Expect `jobs = 1` to stay right here. Unload only the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 --parallel 4 -y
+#   ./target/release/koda-eval run runs/parallel-long-jobs1.toml
+name = "parallel-long-jobs1"
+repeats = 2
+jobs = 1
+tasks = ["bash-readonly-fail-closed", "provider-flag-base-url"]
+
+[[variants]]
+name = "main"
+ref = "afb7716d02a5551ef262b3522303d37561569174"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

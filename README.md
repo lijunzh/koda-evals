@@ -205,6 +205,12 @@ env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on ev
 # engine = "mlx"                                # when provider@host isn't the engine
 ```
 
+**`jobs`** sets how many runs execute at once, default 1, and `--jobs N`
+overrides it. Wall times are contended above 1. A local model's slots share one
+GPU and, by default, one context cache, so check what the engine can do first
+with `bin/lms-parallel-probe`, which sends requests directly and takes no run
+file.
+
 **The suite is the `suite` tag:** 31 tasks, what `runs/haiku-suite.toml` and
 `runs/ornith-suite-128k.toml` select. Measurement tasks don't carry it, and a
 run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
