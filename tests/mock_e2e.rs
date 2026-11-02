@@ -42,7 +42,7 @@ fn a_fix_passes_and_giving_up_fails() {
         &root.join("tasks/kata-largest"),
     );
 
-    let fixes = r#"[{"tool":"Read","args":{"file_path":"src/lib.rs"}},{"tool":"Edit","args":{"file_path":"src/lib.rs","replacements":[{"old_str":"pub fn largest<T>(","new_str":"pub fn largest<T: PartialOrd>("}]}},{"text":"Added the PartialOrd bound."}]"#;
+    let fixes = r#"[{"tool":"Read","args":{"file_path":"src/lib.rs"}},{"tool":"Edit","args":{"file_path":"src/lib.rs","old_str":"pub fn largest<T>(","new_str":"pub fn largest<T: PartialOrd>("}},{"text":"Added the PartialOrd bound."}]"#;
     let gives_up = r#"[{"text":"I can't fix this."}]"#;
     let run_file = root.join("e2e.toml");
     std::fs::write(
