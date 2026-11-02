@@ -1,15 +1,9 @@
 # CLAUDE.md
 
-Guidance for agents working in this repo. The README covers how it works.
-
-## Design docs
-
-The design, goals and work sequence live in the maintainer's private notes,
-not in this repo or in GitHub issues. On the maintainer's machine:
-`~/repo/notes/10-projects/Koda/Koda - Eval Harness and Rust Tooling Design (Oct 2026).md`,
-with status and open decisions in `Koda.md` next to it. That folder is an
-Obsidian vault with its own `CLAUDE.md`; follow it when you write there. Don't
-copy the notes into commits or public docs.
+Guidance for agents working in this repo. Read [README.md](README.md) for the
+contract and [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks, and task
+acceptance. Discuss design changes in GitHub issues or PRs; private maintainer
+notes are not needed and must not be copied into commits or public docs.
 
 ## Rules
 
@@ -27,7 +21,9 @@ copy the notes into commits or public docs.
 - **No API keys in run files, results or logs.** Keys reach a run as
   environment variables, from the harness's environment or koda's keystore.
   Log variable names at most, never values.
-- **`results/` is not committed.** Conclusions go into the vault notes.
+- **`results/` is not committed.** Share redacted summaries and minimal
+  reproductions in issues or PRs; keep raw logs and conversation databases local.
 - **Style:** edition 2024, the toolchain pinned in `rust-toolchain.toml`,
-  `cargo clippy --all-targets -- -D warnings` clean, `cargo fmt`. Keep it small:
-  this is a tool for one maintainer.
+  `cargo clippy --locked --all-targets -- -D warnings` clean, `cargo fmt`.
+  Keep changes small and focused. Default checks and CI make no model calls;
+  official model validation is coordinated by the maintainer.

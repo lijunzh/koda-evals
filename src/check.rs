@@ -136,6 +136,7 @@ pub fn run(task: &Task, project: &Path, target_dir: &Path, log: &Path) -> Result
         .context("task has no check command")?;
     let out = File::create(log)?;
     let mut cmd = Command::new("sh");
+    keep_task_env(&mut cmd);
     cmd.args(["-c", command])
         .current_dir(project)
         .env("CARGO_TARGET_DIR", target_dir)
@@ -147,6 +148,34 @@ pub fn run(task: &Task, project: &Path, target_dir: &Path, log: &Path) -> Result
     let text = String::from_utf8_lossy(&std::fs::read(log)?).into_owned();
     Ok(outcome(done.exit, done.timed_out, &text))
 }
+
+/// Give `cmd` only what a build needs from the harness's environment. A task's
+/// command and hidden tests may be someone else's code, and API keys can sit in
+/// that environment. This keeps keys out; it isn't a sandbox, since the command
+/// still runs as the user with `HOME` set.
+fn keep_task_env(cmd: &mut Command) {
+    cmd.env_clear();
+    for name in TASK_ENV {
+        if let Some(value) = std::env::var_os(name) {
+            cmd.env(name, value);
+        }
+    }
+}
+
+const TASK_ENV: [&str; 12] = [
+    "PATH",
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "TMPDIR",
+    "LANG",
+    "LC_ALL",
+    "CARGO_HOME",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
+    "DEVELOPER_DIR",
+    "SDKROOT",
+];
 
 /// The outcome of a check whose command never ran, e.g. because the agent
 /// deleted the file the hidden tests go into.
