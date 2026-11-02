@@ -341,6 +341,13 @@ impl Job<'_> {
             stop,
         };
         match one.run() {
+            // Grading can't be interrupted, so what a failed cleanup left may
+            // have run alongside it. Keep the evidence, but not the score.
+            Ok(mut row) if stop.load(Ordering::SeqCst) => {
+                row["pass"] = Value::Null;
+                row["harness_error"] = json!("not trusted: a cleanup failed during this run");
+                row
+            }
             Ok(row) => row,
             Err(e) => {
                 if e.is::<proc::CleanupFailed>() {

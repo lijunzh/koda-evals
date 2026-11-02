@@ -156,6 +156,41 @@ fn a_run_from_before_the_protocol_keeps_its_pass() {
     assert_eq!(run.row["behaviour"]["protocol_version"], Value::Null);
 }
 
+/// A `PATH` whose `ps` fails once, the first time it runs after `trigger`
+/// exists.
+fn flaky_ps(root: &Path, trigger: &Path) -> String {
+    let bin = root.join("flaky-ps");
+    std::fs::create_dir(&bin).unwrap();
+    let path = std::env::var("PATH").unwrap();
+    let ps = format!(
+        "#!/bin/sh\n\
+         if [ -e '{}' ] && mkdir '{}' 2>/dev/null; then\n\
+         echo 'not allowed' >&2\n\
+         exit 1\n\
+         fi\n\
+         PATH='{path}' exec ps \"$@\"\n",
+        trigger.display(),
+        root.join("failed").display(),
+    );
+    let stub = bin.join("ps");
+    std::fs::write(&stub, ps).unwrap();
+    std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+    format!("{}:{path}", bin.display())
+}
+
+/// The rows a run saved.
+fn saved_rows(root: &Path) -> Vec<Value> {
+    let runs: Vec<_> = std::fs::read_dir(root.join("results/wire"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    std::fs::read_to_string(runs[0].join("results.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect()
+}
+
 #[test]
 fn a_cleanup_that_cant_be_checked_stops_the_run_ungraded() {
     let tmp = tempfile::tempdir().unwrap();
@@ -202,7 +237,7 @@ fn a_failed_cleanup_stops_parallel_workers_before_they_grade() {
 
     // The first `koda` finishes at once, and the `ps` that cleans up after it
     // fails. The second is still running then, and its own cleanup succeeds.
-    let (lock, fast, failed) = (root.join("lock"), root.join("fast"), root.join("failed"));
+    let (lock, fast) = (root.join("lock"), root.join("fast"));
     let koda = format!(
         "#!/bin/sh\n\
          if [ \"$1\" = --version ]; then echo 'koda 9.9.9'; exit 0; fi\n\
@@ -213,26 +248,11 @@ fn a_failed_cleanup_stops_parallel_workers_before_they_grade() {
     );
     std::fs::write(root.join("koda"), koda).unwrap();
 
-    let bin = root.join("flaky-ps");
-    std::fs::create_dir(&bin).unwrap();
-    let path = std::env::var("PATH").unwrap();
-    let ps = format!(
-        "#!/bin/sh\n\
-         if [ -e '{}' ] && mkdir '{}' 2>/dev/null; then\n\
-         echo 'not allowed' >&2\n\
-         exit 1\n\
-         fi\n\
-         PATH='{path}' exec ps \"$@\"\n",
-        fast.display(),
-        failed.display(),
-    );
-    let stub = bin.join("ps");
-    std::fs::write(&stub, ps).unwrap();
-    std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let path = flaky_ps(root, &fast);
 
     let out = koda_eval(root, &run_file)
         .args(["--jobs", "2"])
-        .env("PATH", format!("{}:{path}", bin.display()))
+        .env("PATH", path)
         .output()
         .unwrap();
     let stderr = String::from_utf8_lossy(&out.stderr);
@@ -240,15 +260,7 @@ fn a_failed_cleanup_stops_parallel_workers_before_they_grade() {
     assert!(stderr.contains("stopping the run"), "{stderr}");
     assert!(!stderr.contains("[3/4]"), "a queued run started: {stderr}");
 
-    let runs: Vec<_> = std::fs::read_dir(root.join("results/wire"))
-        .unwrap()
-        .map(|e| e.unwrap().path())
-        .collect();
-    let rows = std::fs::read_to_string(runs[0].join("results.jsonl")).unwrap();
-    let rows: Vec<Value> = rows
-        .lines()
-        .map(|line| serde_json::from_str(line).unwrap())
-        .collect();
+    let rows = saved_rows(root);
     assert_eq!(rows.len(), 2, "{rows:#?}");
     for row in &rows {
         assert_eq!(row["pass"], Value::Null, "{row:#}");
@@ -266,6 +278,63 @@ fn a_failed_cleanup_stops_parallel_workers_before_they_grade() {
         errors.iter().any(|e| e.contains("not graded")),
         "{errors:?}"
     );
+}
+
+#[test]
+fn a_run_graded_while_a_cleanup_fails_is_not_scored() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let run_file = project(root, Path::new(CAPTURED));
+    let run = std::fs::read_to_string(&run_file).unwrap();
+    std::fs::write(&run_file, format!("repeats = 2\n{run}")).unwrap();
+
+    // One run reaches grading and marks it. Only then does the other `koda`
+    // exit, so its cleanup fails while the first run is being graded.
+    let (lock, grading) = (root.join("lock"), root.join("grading"));
+    let task = TASK.replace(
+        "[check]\n",
+        &format!(
+            "[check]\n\
+             hidden = [{{ file = \"README.md\", test = \"hidden/test.rs\" }}]\n\
+             command = \"touch '{}'; sleep 2; echo 'test eval_hidden::a ... ok'\"\n\
+             timeout_secs = 30\n",
+            grading.display(),
+        ),
+    );
+    std::fs::write(root.join("tasks/wire/task.toml"), task).unwrap();
+    std::fs::write(root.join("tasks/wire/hidden/test.rs"), "").unwrap();
+
+    let koda = format!(
+        "#!/bin/sh\n\
+         if [ \"$1\" = --version ]; then echo 'koda 9.9.9'; exit 0; fi\n\
+         if ! mkdir '{}' 2>/dev/null; then\n\
+         n=0; while [ ! -e '{}' ] && [ $n -lt 100 ]; do sleep 0.1; n=$((n + 1)); done\n\
+         fi\n\
+         cat '{CAPTURED}'\n",
+        lock.display(),
+        grading.display(),
+    );
+    std::fs::write(root.join("koda"), koda).unwrap();
+    let path = flaky_ps(root, &grading);
+
+    let out = koda_eval(root, &run_file)
+        .args(["--jobs", "2"])
+        .env("PATH", path)
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success(), "{stderr}");
+
+    let rows = saved_rows(root);
+    assert_eq!(rows.len(), 2, "{stderr}\n{rows:#?}");
+    let graded = rows
+        .iter()
+        .find(|r| r["check"] != Value::Null)
+        .unwrap_or_else(|| panic!("no graded row: {rows:#?}"));
+    assert_eq!(graded["check"]["hidden"]["hidden_ok"], 1, "{graded:#}");
+    assert_eq!(graded["pass"], Value::Null, "{graded:#}");
+    let error = graded["harness_error"].as_str().unwrap();
+    assert!(error.contains("not trusted"), "{error}");
 }
 
 #[test]
