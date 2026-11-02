@@ -9,6 +9,23 @@ API) on the same tasks, so changes to koda are decided by measurement.
 `koda -p … --output-format stream-json`. It never links koda's crates, so any
 two koda builds can be compared.
 
+## Getting started
+
+Use macOS or Linux with Git, Python 3, a C compiler, and Rust installed through
+rustup. The Rust toolchain is pinned in `rust-toolchain.toml`.
+
+```bash
+git clone https://github.com/lijunzh/koda-evals.git
+cd koda-evals
+cargo run --locked -- list
+cargo run --locked -- verify kata-largest
+```
+
+This checks one task without a Koda checkout, model server, or API key.
+Contributions are welcome: [CONTRIBUTING.md](CONTRIBUTING.md) covers the local
+checks, task acceptance, and how to share results. CI runs formatting, clippy,
+tests, and task-catalog validation on Linux and macOS without model calls.
+
 ## Commands
 
 ```bash
@@ -30,6 +47,10 @@ History tasks and `ref` variants come from a koda checkout: `--koda-repo`
   starts at the commit before the fix.
 - **Katas** (`fixture` / `solution`): a small Cargo project. `solution/` is
   copied over `fixture/` to get a correct answer.
+
+The tests and solutions here are public. Hidden tests are withheld from each
+trial's initial project; scores measure a public regression suite rather than
+an unpublished holdout.
 
 ```toml
 id = "kata-largest"
@@ -207,12 +228,14 @@ The run log names the variables it passed, never their values.
 
 ## Screening on the Claude subscription
 
-A new task passes two gates. **Stage one** runs it through Claude Code on the
-Claude subscription (`runs/claude-validate.toml`), which rules out the obvious
-for free: broken hidden tests, impossible predicates, unfair prompts. **Stage
-two** runs what passed through Sonnet via the API, which is the real validation
-and the reference, and needs Lijun's explicit go-ahead each time. Stage one
-draws on his Claude quota, so it needs his go-ahead too.
+Before a task joins the canonical suite, the maintainer coordinates two model
+validation gates after `verify`. Contributors can submit a task with its
+`verify` evidence; model calls are not a contribution or CI requirement.
+**Stage one** runs it through Claude Code on the maintainer's subscription
+(`runs/claude-validate.toml`), to catch broken hidden tests, impossible
+predicates, and unfair prompts. **Stage two** runs what passed through Sonnet
+via the API for the reference measurement. Both stages require the
+maintainer's approval to use the subscription quota or API budget.
 
 `bin/claude-as-koda` makes this work: the harness runs it like a koda binary,
 and it runs `claude -p` and translates the stream into koda's events. What
@@ -407,5 +430,10 @@ trust and agents, the configuration identity and behaviour signals on every
 row, the report grouped by cluster. Task metadata (`cluster`, `depth`,
 `judgement`, `grade`).
 
-**Next:** the behaviour tasks (judgement cluster), each with a should and a
-should-not row, and the suite's growth to about 25 tasks.
+**Current:** the canonical suite has 31 tasks selected by the `suite` tag.
+New tasks need fail-first verification and maintainer validation before they
+join that baseline.
+
+## License
+
+[MIT](LICENSE).

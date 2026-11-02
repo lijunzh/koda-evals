@@ -1,2 +1,5 @@
 target/
 results/
+.env
+.env.*
+!.env.example
