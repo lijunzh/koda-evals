@@ -224,7 +224,10 @@ it as environment variables, from two sources:
    (`~/.config/koda/db/koda.db`), so a key saved with koda's `/key` command
    works without exporting it anywhere. `--keystore <path>` points elsewhere.
 
-The run log names the variables it passed, never their values.
+The run log names the variables it passed, never their values. A task's check
+command gets neither source: only a short list of build variables reaches it.
+That isn't a sandbox; see
+[Running someone else's task](CONTRIBUTING.md#running-someone-elses-task).
 
 ## Screening on the Claude subscription
 

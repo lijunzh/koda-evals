@@ -80,6 +80,10 @@ explicit, since they affect comparisons with earlier results.
    Maintainers decide canonical `suite` membership and coordinate model
    validation. Changing suite membership or grading starts a new baseline.
 
+**The suite is frozen for now.** Koda is being improved against the current 31
+tasks, so a new task may wait, and it won't join `suite` until that work is
+done. Fixes for a broken task or harness bug are welcome now.
+
 You can submit a contribution without paid model runs. If you include your
 own measurements, identify the task set, Koda commit, model/provider, context
 limit, wall limit, repeats, and parallelism. Separate harness failures from
@@ -89,6 +93,18 @@ maintainer; CI does not run them.
 Tests and solutions in this repository are public. They are withheld from a
 trial's initial project, rather than a private benchmark holdout. Treat scores
 as public regression measurements.
+
+## Running someone else's task
+
+Read a task before you run it. `verify` and `run` execute its check command,
+hidden tests and any build script on your machine, with your user's access and
+no sandbox. Your API keys and other environment variables are kept from the
+check command, but it can still read your files, including Koda's keystore. CI
+is safe from this because it only runs `list`, not a task.
+
+`run` also starts an agent on the task's prompt with your API keys, so a task
+written to mislead the agent is another reason to read it first. For a task you
+don't trust, use a disposable machine or container with no credentials.
 
 ## Sharing evidence
 

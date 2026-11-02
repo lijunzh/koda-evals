@@ -338,6 +338,31 @@ fn a_run_graded_while_a_cleanup_fails_is_not_scored() {
 }
 
 #[test]
+fn a_task_command_never_sees_the_keys_in_the_harness_environment() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    let run_file = project(root, Path::new(CAPTURED));
+    let task = TASK.replace(
+        "[check]\n",
+        "[check]\n\
+         hidden = [{ file = \"README.md\", test = \"hidden/test.rs\" }]\n\
+         command = \"[ -z \\\"$ANTHROPIC_API_KEY\\\" ] && echo 'test eval_hidden::a ... ok'\"\n\
+         timeout_secs = 30\n",
+    );
+    std::fs::write(root.join("tasks/wire/task.toml"), task).unwrap();
+    std::fs::write(root.join("tasks/wire/hidden/test.rs"), "").unwrap();
+
+    let out = koda_eval(root, &run_file)
+        .env("ANTHROPIC_API_KEY", "sk-ant-not-a-real-key")
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    let rows = saved_rows(root);
+    assert_eq!(rows[0]["pass"], true, "{:#}", rows[0]);
+}
+
+#[test]
 fn a_capture_of_real_koda_scores_through_the_runner() {
     let run = score(Path::new(CAPTURED));
     let row = &run.row;
