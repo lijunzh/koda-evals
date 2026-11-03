@@ -21,7 +21,7 @@ use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::project::{self, Stage};
+use crate::project::{self, Memory, Stage};
 use crate::task::{self, Task};
 use crate::transcript::Transcript;
 use crate::{build, check, keys, klog, proc, util};
@@ -42,12 +42,35 @@ pub struct RunFile {
     /// that nobody is waiting on gets longer than an interactive one.
     #[serde(default)]
     pub wall_secs: Option<u64>,
+    /// The project's instructions file. `"checkout"` (the default) keeps
+    /// whatever the task's project has; `"none"` removes it; a path,
+    /// relative to this repo, puts that file in its place as `CLAUDE.md`.
+    /// See `project::MEMORY_FILES` for what counts.
+    #[serde(default)]
+    pub memory: Option<String>,
     pub variants: Vec<Variant>,
     pub models: Vec<Model>,
 }
 
 fn one() -> u32 {
     1
+}
+
+/// The run file's `memory`, read: what the projects get, and the label the
+/// rows and the report carry (`checkout`, `none`, or the file's path).
+fn resolve_memory(value: Option<&str>, root: &Path) -> Result<(Memory, String)> {
+    match value.unwrap_or("checkout") {
+        "checkout" => Ok((Memory::Checkout, "checkout".into())),
+        "none" => Ok((Memory::Without, "none".into())),
+        path => {
+            let text = std::fs::read_to_string(root.join(path))
+                .with_context(|| format!("memory: read {path}"))?;
+            if text.trim().is_empty() {
+                bail!("memory: {path} is empty; use \"none\" for no instructions");
+            }
+            Ok((Memory::Pinned(text), path.to_string()))
+        }
+    }
 }
 
 /// A koda to measure: either a prebuilt binary or a git ref in the koda
@@ -108,6 +131,17 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
     let run: RunFile =
         toml::from_str(&text).with_context(|| format!("parse {}", run_path.display()))?;
     validate(&run)?;
+    let (memory, memory_label) = resolve_memory(run.memory.as_deref(), &opts.root)?;
+    // Koda reads its global memory from `$HOME`, not from the run's
+    // `XDG_CONFIG_HOME`, so this file would reach every run unseen.
+    let global = util::home().join(".config/koda/memory.md");
+    if global.exists() {
+        bail!(
+            "{} exists, and every run's koda would load it as global memory; \
+             move it aside while the run goes",
+            global.display()
+        );
+    }
 
     let all = task::load_all(&opts.root.join("tasks"))?;
     let tasks = task::select(&all, &run.tasks, &run.tags)?;
@@ -183,6 +217,12 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         // with rustup's default.
         "rustc": command_line(Command::new("rustc").arg("--version").current_dir(util::home())).ok(),
         "jobs": opts.jobs,
+        "memory": memory_label,
+        // The pinned file itself, since it can change after the run.
+        "memory_text": match &memory {
+            Memory::Pinned(text) => Some(text),
+            _ => None,
+        },
         "run_file": text,
     });
     std::fs::write(out.join("meta.json"), serde_json::to_string_pretty(&meta)?)?;
@@ -212,6 +252,8 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                         art,
                         work,
                         wall_secs: run.wall_secs.unwrap_or(task.spec.limits.wall_secs),
+                        memory: &memory,
+                        memory_label: &memory_label,
                     });
                 }
             }
@@ -319,6 +361,8 @@ struct Job<'a> {
     /// The effective wall-clock limit: the run file's override, else the
     /// task's own.
     wall_secs: u64,
+    memory: &'a Memory,
+    memory_label: &'a str,
 }
 
 impl Job<'_> {
@@ -338,6 +382,8 @@ impl Job<'_> {
             keys,
             wall_secs: self.wall_secs,
             jobs: opts.jobs,
+            memory: self.memory,
+            memory_label: self.memory_label,
             stop,
         };
         match one.run() {
@@ -403,6 +449,9 @@ struct RunOne<'a> {
     wall_secs: u64,
     /// Runs executed at once, for the configuration identity.
     jobs: usize,
+    /// The project's instructions, and their label for the row.
+    memory: &'a Memory,
+    memory_label: &'a str,
     /// Set when any run's cleanup failed.
     stop: &'a AtomicBool,
 }
@@ -416,7 +465,7 @@ impl RunOne<'_> {
         let shared = util::cache_dir().join("target").join(task.id());
         let target = self.work.join("target");
         project::seed_target(&shared, &target)?;
-        project::materialize(task, Stage::Start, self.koda_repo, &project)?;
+        project::materialize_with(task, Stage::Start, self.koda_repo, &project, self.memory)?;
 
         let transcript_path = self.art.join("transcript.ndjson");
         let trust = task.spec.run.trust.as_str();
@@ -512,6 +561,7 @@ impl RunOne<'_> {
                 "wall_secs": self.wall_secs,
                 "trust": trust,
                 "jobs": self.jobs,
+                "memory": self.memory_label,
                 "cluster": task.spec.cluster,
                 "grade": task.spec.grade,
             },
@@ -781,6 +831,43 @@ provider = "anthropic"
         )
         .unwrap();
         assert_eq!(run.wall_secs, Some(3600));
+    }
+
+    #[test]
+    fn memory_is_the_checkout_unless_the_run_file_says_otherwise() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("memory")).unwrap();
+        std::fs::write(dir.path().join("memory/short.md"), "Build with cargo.\n").unwrap();
+        std::fs::write(dir.path().join("memory/blank.md"), "\n").unwrap();
+
+        let resolve = |v| resolve_memory(v, dir.path());
+        assert_eq!(
+            resolve(None).unwrap(),
+            (Memory::Checkout, "checkout".into())
+        );
+        assert_eq!(
+            resolve(Some("checkout")).unwrap(),
+            (Memory::Checkout, "checkout".into())
+        );
+        assert_eq!(
+            resolve(Some("none")).unwrap(),
+            (Memory::Without, "none".into())
+        );
+        assert_eq!(
+            resolve(Some("memory/short.md")).unwrap(),
+            (
+                Memory::Pinned("Build with cargo.\n".into()),
+                "memory/short.md".into()
+            )
+        );
+        assert!(resolve(Some("memory/missing.md")).is_err());
+        assert!(resolve(Some("memory/blank.md")).is_err());
+
+        let run: RunFile = toml::from_str(
+            "name = \"x\"\nmemory = \"none\"\n[[variants]]\nname = \"v\"\n[[models]]\nname = \"m\"\nprovider = \"mock\"\n",
+        )
+        .unwrap();
+        assert_eq!(run.memory.as_deref(), Some("none"));
     }
 
     #[test]
