@@ -6,7 +6,8 @@
 #
 # Each agent keeps its own defaults, since the question is what a user gets.
 # Koda sends no effort, so Sonnet 5.5's API default of `high` applies.
-# What Claude Code sends for Sonnet isn't captured yet.
+# Claude Code 2.1.296 sends `medium` with adaptive thinking (captured against a
+# local stub on 2026-11-03), so on Sonnet the two don't think alike.
 #   ./target/release/koda-eval run runs/parity-sonnet.toml
 name = "parity-sonnet"
 repeats = 1
