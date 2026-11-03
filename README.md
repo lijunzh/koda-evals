@@ -227,18 +227,21 @@ or how one of its tasks is graded, starts a new baseline.
 
 ### `memory`: the project's instructions
 
-`memory` decides which `CLAUDE.md` the agent finds in its project. Koda and
-Claude Code both read it into every request.
+`memory` decides which instructions file the agent finds in its project. Koda,
+Claude Code and Codex all read one into every request.
 
 | `memory` | The project gets |
 |---|---|
 | `"checkout"` (default) | Whatever the task's project has |
 | `"none"` | No instructions file |
-| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md`, for every task |
+| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md` and as `AGENTS.md`, for every task |
 
-For `"none"` and a path, every instructions file Koda or Claude Code reads at
+A pinned file goes in under both names because Koda and Claude Code read
+`CLAUDE.md` and Codex reads `AGENTS.md`. Koda reads only the first of
+`MEMORY.md`, `CLAUDE.md` and `AGENTS.md` it finds, so it doesn't see the text
+twice. For `"none"` and a path, every instructions file any of the three reads at
 the project root is removed first: `MEMORY.md`, `CLAUDE.md`, `AGENTS.md`,
-`CLAUDE.local.md` and `.claude/CLAUDE.md`. The change goes in the project's
+`AGENTS.override.md`, `CLAUDE.local.md` and `.claude/CLAUDE.md`. The change goes in the project's
 start commit, so the diff never shows it. Each row's `config.memory` and the
 report's configuration line name the setting. `meta.json` keeps the text of a
 pinned file, since the file can change after the run.
@@ -268,7 +271,32 @@ scope), so advice there would move their scores.
   long, noisy file.
 - `bin/claude-as-koda` ignores `CLAUDE.md` unless the model's `env` sets
   `CLAUDE_AS_KODA_MEMORY = "project"`. Set both for Claude Code to read the
-  pinned file.
+  pinned file. `bin/codex-as-koda` needs nothing extra: Codex reads `AGENTS.md`.
+
+### Parity runs: Koda against Claude Code and Codex
+
+`runs/parity-haiku.toml`, `runs/parity-ornith.toml` and
+`runs/parity-sonnet.toml` each put Koda and a peer agent on the same model, the
+same 31 `suite` tasks and the same short `memory`. Claude Code is the peer on
+Anthropic models and Codex on the local one. Both agents are variants of one
+run file. Their runs interleave task by task, so drift and `--jobs` contention
+fall on both alike, and the report's disagreement table lists the tasks where
+they differ. Pin the Koda variant's `ref` to the commit being judged before
+running.
+
+What keeps the peers' setup like Koda's:
+
+- **Same instructions.** The pinned file is `CLAUDE.md` for Claude Code and
+  `AGENTS.md` for Codex.
+- **A fresh home.** `claude-as-koda` runs Claude Code in safe mode with an
+  allowlisted environment. `codex-as-koda` sets `CODEX_HOME` under the run's
+  own config directory, so `~/.codex` (config, history, memories, a global
+  `AGENTS.md`) never reaches a run.
+- **Same window.** Codex has no probe for a local model's window, so
+  `codex-as-koda` passes the model's `KODA_MAX_CONTEXT_TOKENS` as Codex's
+  `model_context_window`.
+- **Not the same tokens.** Codex's events have no usage, so its rows show pass
+  and time only.
 
 A `ref` variant is resolved to its commit, unpacked with `git archive`,
 built in release mode and cached at `~/.cache/koda-eval/bin/<sha>/koda`; the

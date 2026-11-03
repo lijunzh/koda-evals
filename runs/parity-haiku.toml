@@ -1,0 +1,27 @@
+# 0.6.0's bar on Haiku: Koda against Claude Code on the same model, the 31
+# `suite` tasks × 3, both reading the short memory/rust-project.md. The two
+# agents' runs interleave task by task, so --jobs 3 contends them equally.
+# Koda's runs are paid API calls; Claude Code's use the subscription and no
+# API key (see bin/claude-as-koda). Each run needs Lijun's yes. Pin `ref` to
+# the release candidate's commit before running.
+#   ./target/release/koda-eval run runs/parity-haiku.toml
+name = "parity-haiku"
+repeats = 3
+tags = ["suite"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "main"
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+# Claude Code reads the project's CLAUDE.md only with this; koda ignores it.
+env = { CLAUDE_AS_KODA_MEMORY = "project" }

@@ -12,6 +12,13 @@
 # Codex runs in its workspace-write sandbox with approvals off, like koda's
 # `--mode auto`. The harness points CARGO_TARGET_DIR outside the project,
 # so that directory and ~/.cargo are added as writable roots for the build.
+#
+# Like koda, each run gets a fresh home. CODEX_HOME goes under the run's own
+# XDG_CONFIG_HOME, so nothing from ~/.codex reaches it: no config, history,
+# memories or global AGENTS.md. The local model needs no login. Codex reads
+# the project's AGENTS.md, which is where the harness puts a pinned `memory`
+# file. Codex has no probe for a local model's window, so the model's
+# KODA_MAX_CONTEXT_TOKENS, which pins koda's, becomes its model_context_window.
 set -u
 export PATH="$HOME/.cargo/bin:$PATH"
 
@@ -28,6 +35,14 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$prompt" ] || { echo "codex-as-koda: no -p prompt" >&2; exit 2; }
 
+if [ -n "${XDG_CONFIG_HOME:-}" ]; then
+  export CODEX_HOME="$XDG_CONFIG_HOME/codex"
+else
+  export CODEX_HOME="$(mktemp -d)/codex"
+fi
+mkdir -p "$CODEX_HOME"
+echo "codex-as-koda: CODEX_HOME=$CODEX_HOME" >&2
+
 # Codex's lmstudio provider reads its base URL from CODEX_OSS_BASE_URL.
 if [ -n "$base_url" ]; then export CODEX_OSS_BASE_URL="$base_url"; fi
 roots="\"$HOME/.cargo\""
@@ -37,4 +52,11 @@ args=(exec --oss --local-provider lmstudio --json --skip-git-repo-check
       -c "sandbox_workspace_write.writable_roots=[$roots]"
       -C "$PWD")
 if [ -n "$model" ]; then args+=(-m "$model"); fi
+window="${KODA_MAX_CONTEXT_TOKENS:-}"
+if [ -n "$window" ]; then
+  case "$window" in
+    *[!0-9]*) echo "codex-as-koda: KODA_MAX_CONTEXT_TOKENS=$window is not a number" >&2; exit 2 ;;
+  esac
+  args+=(-c "model_context_window=$window")
+fi
 exec codex "${args[@]}" "$prompt"
