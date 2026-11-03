@@ -1,0 +1,16 @@
+# Does Sonnet miss the same hidden cases as Haiku and Ornith on
+# bash-classifier-escapes? Three repeats through Claude Code on the
+# subscription, asked for by Lijun 2026-11-02. These rows show the task's
+# ceiling and say nothing about koda, so they don't go in a comparison.
+name = "claude-sonnet-classifier"
+tasks = ["bash-classifier-escapes"]
+repeats = 3
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "sonnet"

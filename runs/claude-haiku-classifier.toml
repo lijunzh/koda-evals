@@ -1,0 +1,16 @@
+# Is Haiku's low score on bash-classifier-escapes the model or koda? The same
+# model through Claude Code on the subscription, six repeats, to set against
+# its 3 of 13 under koda. Sonnet passes 3 of 3 on both agents. Asked for by
+# Lijun 2026-11-02. One task, so it says nothing about the agents in general.
+name = "claude-haiku-classifier"
+tasks = ["bash-classifier-escapes"]
+repeats = 6
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "haiku"

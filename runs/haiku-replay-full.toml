@@ -1,0 +1,16 @@
+# Does sending thinking blocks back close Haiku's gap on
+# bash-classifier-escapes? Default effort (medium), against 3 of 13 before and
+# Claude Code's 5 of 6. Part of the study in the maintainer's notes. Asked for
+# by Lijun 2026-11-02.
+name = "haiku-replay-full"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "replay"
+ref = "ceb3da791d4d512be341c8d4cd9cb5fad8496961"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

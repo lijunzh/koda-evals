@@ -1,0 +1,16 @@
+# Does reading a whole file in one call close the rest of Haiku's gap on
+# bash-classifier-escapes? Builds on thinking replay, which passed 6 of 12
+# against Claude Code's 16 of 18. Default effort (medium). Part of the study in
+# the maintainer's notes. Asked for by Lijun 2026-11-02.
+name = "haiku-read-limit"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "read-limit"
+ref = "ec8fd7efe7a871f36a32b4b749c917cbaebf1fa6"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

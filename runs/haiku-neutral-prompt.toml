@@ -1,0 +1,17 @@
+# Does Koda's behaviour prompt (instructions.md) change how Haiku solves
+# bash-classifier-escapes? Swaps it for one neutral line, on top of thinking
+# replay and whole-file Read (8 of 12), against Claude Code's 16 of 18. Default
+# effort (medium). Experiment branch, not for merging. Part of the study in the
+# maintainer's notes. Asked for by Lijun 2026-11-02.
+name = "haiku-neutral-prompt"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "neutral-prompt"
+ref = "3bf7b71b9f2b5b4f11f03a6d4702b2b7f598e90a"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

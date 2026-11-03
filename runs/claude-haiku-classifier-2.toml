@@ -1,0 +1,16 @@
+# Twelve more Claude Code repeats of the same setup as claude-haiku-classifier,
+# on the subscription. Six runs couldn't separate its 5 of 6 from koda's 6 of 12
+# with thinking replay. Asked for by Lijun 2026-11-02. One task, so it says
+# nothing about the agents in general.
+name = "claude-haiku-classifier-2"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "haiku"

@@ -1,0 +1,17 @@
+# Does sending project memory in the first user message, as Claude Code and
+# Codex do, close Haiku's gap on bash-classifier-escapes? On top of thinking
+# replay and whole-file Read: 8 of 12 with memory in the system prompt, 21 of 24
+# with no memory, Claude Code 16 of 18. Default effort (medium). Part of the
+# study in the maintainer's notes. Asked for by Lijun 2026-11-02.
+name = "haiku-memory-message"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "memory-message"
+ref = "8d8ab71343c7136944b1bb3c17726597fbaa6318"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
