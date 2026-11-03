@@ -1,8 +1,7 @@
 //! Run files (`runs/<name>.toml`) and the runner.
 //!
 //! A run is every task × variant × model × repeat, one at a time by default
-//! (a local model serves one request at a time) or `--jobs N` at once for an
-//! API model. Each one gets a fresh project and a fresh koda config
+//! or several at once, from the run file's `jobs` or `--jobs N`. Each one gets a fresh project and a fresh koda config
 //! directory, runs `koda -p … --output-format stream-json` under a
 //! wall-clock limit, and then the task's hidden tests decide pass or fail.
 //! Runs share nothing: each one's cargo target directory is a clone of the
@@ -48,6 +47,10 @@ pub struct RunFile {
     /// See `project::MEMORY_FILES` for what counts.
     #[serde(default)]
     pub memory: Option<String>,
+    /// Runs to execute at once. `--jobs` overrides it. Wall times in the
+    /// report are contended above 1.
+    #[serde(default)]
+    pub jobs: Option<usize>,
     pub variants: Vec<Variant>,
     pub models: Vec<Model>,
 }
@@ -120,8 +123,8 @@ pub struct Options {
     /// Koda keystore to copy API keys from (see `keys.rs`).
     pub keystore: PathBuf,
     pub keep_work: bool,
-    /// Runs executed at once; 1 is sequential.
-    pub jobs: usize,
+    /// `--jobs`: runs executed at once, over the run file's `jobs`.
+    pub jobs: Option<usize>,
 }
 
 /// Execute `run_path`; returns the results directory.
@@ -142,6 +145,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
             global.display()
         );
     }
+    let concurrency = opts.jobs.or(run.jobs).unwrap_or(1);
 
     let all = task::load_all(&opts.root.join("tasks"))?;
     let tasks = task::select(&all, &run.tasks, &run.tags)?;
@@ -216,7 +220,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         // Task projects have no toolchain pin of their own, so they build
         // with rustup's default.
         "rustc": command_line(Command::new("rustc").arg("--version").current_dir(util::home())).ok(),
-        "jobs": opts.jobs,
+        "jobs": concurrency,
         "memory": memory_label,
         // The pinned file itself, since it can change after the run.
         "memory_text": match &memory {
@@ -254,6 +258,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                         wall_secs: run.wall_secs.unwrap_or(task.spec.limits.wall_secs),
                         memory: &memory,
                         memory_label: &memory_label,
+                        concurrency,
                     });
                 }
             }
@@ -282,7 +287,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
     // running, so nothing starts or is graded after it.
     let stop = AtomicBool::new(false);
 
-    if opts.jobs <= 1 {
+    if concurrency <= 1 {
         for job in &jobs {
             eprint!("[{}/{total}] {} {} ... ", job.n, job.task.id(), job.slot);
             let row = job.execute(opts, &inherited, &stop);
@@ -297,7 +302,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         // records rows as they complete, so results.jsonl is in completion
         // order. Rows carry their own task/variant/model/repeat, and the
         // report never assumes an order.
-        let workers = opts.jobs.min(total);
+        let workers = concurrency.min(total);
         eprintln!("running {total} runs, {workers} at a time");
         let next = std::sync::atomic::AtomicUsize::new(0);
         let (tx, rx) = std::sync::mpsc::channel::<(usize, Value)>();
@@ -363,6 +368,8 @@ struct Job<'a> {
     wall_secs: u64,
     memory: &'a Memory,
     memory_label: &'a str,
+    /// Runs executed at once, recorded on the row.
+    concurrency: usize,
 }
 
 impl Job<'_> {
@@ -381,7 +388,7 @@ impl Job<'_> {
             koda_repo: &opts.koda_repo,
             keys,
             wall_secs: self.wall_secs,
-            jobs: opts.jobs,
+            jobs: self.concurrency,
             memory: self.memory,
             memory_label: self.memory_label,
             stop,
@@ -418,6 +425,9 @@ fn validate(run: &RunFile) -> Result<()> {
     }
     if run.repeats == 0 {
         bail!("run {:?}: repeats must be at least 1", run.name);
+    }
+    if run.jobs == Some(0) {
+        bail!("run {:?}: jobs must be at least 1", run.name);
     }
     let mut names: Vec<&str> = run.variants.iter().map(|v| v.name.as_str()).collect();
     names.sort_unstable();
@@ -802,6 +812,28 @@ base_url = "http://localhost:1234/v1"
         assert_eq!(run.repeats, 1);
         assert!(run.models[0].env.is_empty());
         validate(&run).unwrap();
+    }
+
+    #[test]
+    fn run_file_jobs_is_optional_and_must_be_positive() {
+        let parse = |jobs: &str| -> RunFile {
+            toml::from_str(&format!(
+                r#"
+name = "x"
+{jobs}
+[[variants]]
+name = "main"
+[[models]]
+name = "m"
+provider = "anthropic"
+"#
+            ))
+            .unwrap()
+        };
+        assert_eq!(parse("").jobs, None);
+        assert_eq!(parse("jobs = 3").jobs, Some(3));
+        validate(&parse("jobs = 3")).unwrap();
+        assert!(validate(&parse("jobs = 0")).is_err());
     }
 
     #[test]

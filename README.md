@@ -205,6 +205,20 @@ env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on ev
 # engine = "mlx"                                # when provider@host isn't the engine
 ```
 
+**`jobs`** sets how many runs execute at once, default 1, and `--jobs N`
+overrides it. Wall times are contended above 1. A local model's slots share one
+GPU and, by default, one context cache, so check what the engine can do first
+with `bin/lms-parallel-probe`, which sends requests directly and takes no run
+file.
+
+**Leave `jobs` at 1 for a local model.** On 2026-11-03, Ornith on LM Studio
+with four slots made 93 tokens/s alone. With 2 requests at once it made 117
+(1.26x), and with 4 it made 136 (1.46x). Those were 1K-token prompts. Long
+prompts did worse: two 35K requests gained nothing, and four overflowed the
+shared 131K cache and all failed. Each request runs at half speed or less,
+and a run of long tasks would keep hitting the cache limit. An API model is
+different: `jobs = 3` cut a Haiku pass from 17 minutes to 7.
+
 **The suite is the `suite` tag:** 31 tasks, what `runs/haiku-suite.toml` and
 `runs/ornith-suite-128k.toml` select. Measurement tasks don't carry it, and a
 run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
@@ -355,7 +369,8 @@ What differs from a koda run (the wrapper's header has the detail):
   `harness_error`, so no report counts it. This is best effort, not
   containment: a job that starts its own session gets past it, and so could one
   forked at the wrong moment.
-- **One at a time.** A local model serves one request at a time.
+- **One at a time,** unless `jobs` says otherwise. A local model gains little
+  from more (see `jobs` above).
 
 A run passes only if koda speaks a protocol this harness reads. When its
 `hello` names a newer protocol, or a version the harness can't read, the row
