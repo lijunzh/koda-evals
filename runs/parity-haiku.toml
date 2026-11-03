@@ -4,6 +4,11 @@
 # Koda's runs are paid API calls; Claude Code's use the subscription and no
 # API key (see bin/claude-as-koda). Each run needs Lijun's yes. Pin `ref` to
 # the release candidate's commit before running.
+#
+# Each agent keeps its own defaults, since the question is what a user gets.
+# Both run Haiku at effort `medium`. Koda sends no effort, so Haiku 5.5's API
+# default of `medium` applies. Claude Code 2.1.296 sends `medium` with
+# adaptive thinking (captured against a local stub on 2026-11-02).
 #   ./target/release/koda-eval run runs/parity-haiku.toml
 name = "parity-haiku"
 repeats = 3

@@ -241,7 +241,8 @@ fn cell_stats(rows: &[Row], variant: &str, model: &str) -> CellStats {
 
 /// Passes out of attempts for one task in one cell, as `k/n`; `-` when the
 /// task never ran there.
-fn task_cell(rows: &[Row], task: &str, variant: &str, model: &str) -> String {
+/// Passes and graded runs of one task for one variant and model.
+fn task_counts(rows: &[Row], task: &str, variant: &str, model: &str) -> (u32, u32) {
     let (mut k, mut n) = (0, 0);
     for r in rows
         .iter()
@@ -252,6 +253,11 @@ fn task_cell(rows: &[Row], task: &str, variant: &str, model: &str) -> String {
             k += u32::from(p);
         }
     }
+    (k, n)
+}
+
+fn task_cell(rows: &[Row], task: &str, variant: &str, model: &str) -> String {
+    let (k, n) = task_counts(rows, task, variant, model);
     if n == 0 {
         "-".to_string()
     } else {
@@ -588,6 +594,7 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         let _ = writeln!(out, "One variant; nothing to compare.");
     } else {
         let mut any = false;
+        let mut any_split = false;
         for model in &models {
             let mut lines = Vec::new();
             for task in &tasks {
@@ -602,7 +609,21 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
                         .zip(&results)
                         .map(|(v, r)| format!("{v} {r}"))
                         .collect();
-                    lines.push(format!("| {task} | {} |", parts.join(" · ")));
+                    // One variant passed every run and another none: the
+                    // strongest sign of a difference in the agents, not luck.
+                    let counts: Vec<(u32, u32)> = variants
+                        .iter()
+                        .map(|v| task_counts(rows, task, v, model))
+                        .collect();
+                    let split = counts.iter().any(|&(k, n)| n > 0 && k == n)
+                        && counts.iter().any(|&(k, n)| n > 0 && k == 0);
+                    any_split |= split;
+                    let name = if split {
+                        format!("**{task}**")
+                    } else {
+                        task.to_string()
+                    };
+                    lines.push(format!("| {name} | {} |", parts.join(" · ")));
                 }
             }
             if !lines.is_empty() {
@@ -616,6 +637,12 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         }
         if !any {
             let _ = writeln!(out, "None: every variant passed the same tasks.");
+        }
+        if any_split {
+            let _ = writeln!(
+                out,
+                "Tasks in bold went all or nothing: one variant passed every run and another none. Read those first."
+            );
         }
     }
 
@@ -806,13 +833,31 @@ mod tests {
         let md = render(&rows, &Value::Null, "x");
         assert!(md.contains("| main | m | 1/2 | 50% | 1/2 |"), "{md}");
         assert!(md.contains("| exp | m | 2/2 | 100% | 2/2 |"), "{md}");
-        assert!(md.contains("| b | main 0/1 · exp 1/1 |"), "{md}");
+        assert!(md.contains("| **b** | main 0/1 · exp 1/1 |"), "{md}");
+        assert!(md.contains("went all or nothing"), "{md}");
         assert!(!md.contains("| a | main 1/1 · exp 1/1 |"), "{md}");
         assert!(md.contains("| a | 1/1 | 1/1 | - | - | - |"), "{md}");
         // Rows without a configuration identity: no header line, one
         // unlabelled grid.
         assert!(!md.contains("Configuration:"), "{md}");
         assert!(!md.contains("**unclustered**"), "{md}");
+    }
+
+    #[test]
+    fn only_an_all_or_nothing_task_is_marked() {
+        let mut rows = Vec::new();
+        for pass in [true, true, true] {
+            rows.push(row("split", "koda", Some(!pass), 100));
+            rows.push(row("split", "peer", Some(pass), 100));
+        }
+        for (koda, peer) in [(true, true), (false, true), (false, true)] {
+            rows.push(row("partial", "koda", Some(koda), 100));
+            rows.push(row("partial", "peer", Some(peer), 100));
+        }
+        let md = render(&rows, &Value::Null, "x");
+        assert!(md.contains("| **split** | koda 0/3 · peer 3/3 |"), "{md}");
+        assert!(md.contains("| partial | koda 1/3 · peer 3/3 |"), "{md}");
+        assert!(md.contains("went all or nothing"), "{md}");
     }
 
     #[test]

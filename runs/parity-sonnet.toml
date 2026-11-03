@@ -3,6 +3,10 @@
 # whether a gap on Haiku is the model's or Koda's. Koda's runs are paid API
 # calls; Claude Code's use the subscription. Each run needs Lijun's yes. Pin
 # `ref` to the release candidate's commit before running.
+#
+# Each agent keeps its own defaults, since the question is what a user gets.
+# Koda sends no effort, so Sonnet 5.5's API default of `high` applies.
+# What Claude Code sends for Sonnet isn't captured yet.
 #   ./target/release/koda-eval run runs/parity-sonnet.toml
 name = "parity-sonnet"
 repeats = 1

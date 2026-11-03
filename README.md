@@ -284,6 +284,16 @@ fall on both alike, and the report's disagreement table lists the tasks where
 they differ. Pin the Koda variant's `ref` to the commit being judged before
 running.
 
+**Read it task by task.** Totals hide what matters: Haiku passes nearly every
+suite task, so a gap rarely shows in the pass count. In the disagreement table,
+a task in bold went all or nothing: one agent passed every repeat and the other
+none. Each one is a difference between the agents to explain before calling
+them level. Mean tokens and time sit beside the passes. An agent that passes as
+often at twice the time isn't level either.
+
+**Each agent keeps its defaults**, such as reasoning effort, since the question
+is what a user gets. The run files record what each one sends.
+
 What keeps the peers' setup like Koda's:
 
 - **Same instructions.** The pinned file is `CLAUDE.md` for Claude Code and
@@ -295,8 +305,18 @@ What keeps the peers' setup like Koda's:
 - **Same window.** Codex has no probe for a local model's window, so
   `codex-as-koda` passes the model's `KODA_MAX_CONTEXT_TOKENS` as Codex's
   `model_context_window`.
-- **Not the same tokens.** Codex's events have no usage, so its rows show pass
-  and time only.
+- **Graded the same way.** Both wrappers translate their agent's events into
+  Koda's, so the transcript predicates read every agent alike. Codex's shell
+  commands become `Bash` calls with exit codes. Its file changes and
+  `apply_patch` commands become `Edit`, `Write` or `Delete` calls. Its last
+  message is the final reply. Usage comes from `turn.completed`, counting the
+  whole prompt as Koda does against LM Studio. Both wrappers apply Koda's Bash
+  classifier (`bin/koda_bash_safety.py`) and raise the `approval_request` Koda
+  would have, so `no_destructive_bash` holds a peer to Koda's rule.
+- **Not comparable for Codex:** `behaviour-frugal-reads` grades Read's
+  arguments, and `behaviour-delegate-or-not-control` grades delegation. Codex
+  reads through the shell and has no sub-agents, so leave those two out of the
+  Codex comparison.
 
 A `ref` variant is resolved to its commit, unpacked with `git archive`,
 built in release mode and cached at `~/.cache/koda-eval/bin/<sha>/koda`; the
@@ -462,8 +482,9 @@ two numbers for comparing ways of delegating:
   once, as *k of N*.
 
 The header names the configuration the rows were measured under: engine
-and window per model, trust, wall_secs and jobs. Then the tasks where
-variants disagree, per model, and a per-task grid grouped by cluster. Its
+and window per model, trust, wall_secs, jobs and memory. Then the tasks where
+variants disagree, per model, with the all-or-nothing ones in bold, and a
+per-task grid grouped by cluster. Its
 columns show what went wrong in the task's runs without opening a file,
 summed or counted over them:
 

@@ -4,10 +4,13 @@
 # gains little from more (see the README's `jobs`). About 16 hours. Start
 # only when Lijun says the GPU is free. Unload only the model you loaded.
 # Pin `ref` to the release candidate's commit before running.
-# NOT READY: codex-as-koda passes Codex's own --json events through, which
-# the transcript reader only counts. 16 of the 31 suite tasks are graded on
-# the transcript, so Codex's rows there mean nothing until the wrapper
-# translates its events into koda's, as claude-as-koda does.
+#
+# Each agent keeps its own defaults, since the question is what a user gets.
+# Koda sends LM Studio no reasoning effort, so the model's own default
+# applies. Codex sends its default for a model it has no metadata for, not
+# yet captured. Two tasks can't compare: Codex has no Read tool or
+# sub-agents, so `behaviour-frugal-reads` and
+# `behaviour-delegate-or-not-control` grade calls it can't make.
 #   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
 #   ./target/release/koda-eval run runs/parity-ornith.toml
 name = "parity-ornith"
