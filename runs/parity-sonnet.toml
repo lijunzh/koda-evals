@@ -1,8 +1,8 @@
 # Optional, alongside 0.6.0's bar: Koda against Claude Code on Sonnet, the 31
 # `suite` tasks once, both reading the short memory/rust-project.md. It shows
 # whether a gap on Haiku is the model's or Koda's. Koda's runs are paid API
-# calls; Claude Code's use the subscription. Each run needs Lijun's yes. Pin
-# `ref` to the release candidate's commit before running.
+# calls; Claude Code's use the subscription. Each run needs Lijun's yes.
+# `ref` is pinned to the release candidate.
 #
 # Each agent keeps its own defaults, since the question is what a user gets.
 # Koda sends no effort, so Sonnet 5.5's API default of `high` applies.
@@ -16,7 +16,7 @@ memory = "memory/rust-project.md"
 
 [[variants]]
 name = "koda"
-ref = "main"
+ref = "f9a9aa153e74ff1ad2680dad88b43803a280ad52"  # the 0.6.0 release candidate, lijunzh/koda#1510
 
 [[variants]]
 name = "claude-code"
