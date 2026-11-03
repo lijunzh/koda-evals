@@ -1,0 +1,35 @@
+# 0.6.0's bar on the local model: Koda against Codex on Ornith in LM Studio,
+# the 31 `suite` tasks × 3 at a 128K window, both reading the short
+# memory/rust-project.md (Codex as AGENTS.md). One at a time: a local model
+# gains little from more (see the README's `jobs`). About 16 hours. Start
+# only when Lijun says the GPU is free. Unload only the model you loaded.
+# Pin `ref` to the release candidate's commit before running.
+#
+# Each agent keeps its own defaults, since the question is what a user gets.
+# Koda sends LM Studio no reasoning effort, so the model's own default
+# applies. Codex sends its default for a model it has no metadata for, not
+# yet captured. Two tasks can't compare: Codex has no Read tool or
+# sub-agents, so `behaviour-frugal-reads` and
+# `behaviour-delegate-or-not-control` grade calls it can't make.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/parity-ornith.toml
+name = "parity-ornith"
+repeats = 3
+tags = ["suite"]
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "main"
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+# Koda's window, and Codex's model_context_window through the wrapper.
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

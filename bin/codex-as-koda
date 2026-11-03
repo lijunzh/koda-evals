@@ -1,40 +1,310 @@
-#!/bin/zsh
-# Run Codex CLI in place of koda, so the harness can grade the same tasks
-# with the same local model and engine through a different agent. The
-# harness calls `<bin> --version`, then
-#   <bin> -p <prompt> --output-format stream-json --mode auto \
-#         --provider <p> --project-root <dir> [--model <m>] [--base-url <u>]
-# with the project directory as cwd. Everything but the prompt, model and
-# base URL is koda-specific and ignored. Codex's `--json` events go to
-# stdout, where the harness keeps them as the transcript; there is no
-# `run_summary` line, so the report shows pass/fail and wall time only.
-#
-# Codex runs in its workspace-write sandbox with approvals off, like koda's
-# `--mode auto`. The harness points CARGO_TARGET_DIR outside the project,
-# so that directory and ~/.cargo are added as writable roots for the build.
-set -u
-export PATH="$HOME/.cargo/bin:$PATH"
+#!/usr/bin/env python3
+"""Run Codex CLI in place of koda, and translate its events into koda's.
 
-prompt="" model="" base_url=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --version) codex --version; exit $? ;;
-    -p) prompt="$2"; shift 2 ;;
-    --model) model="$2"; shift 2 ;;
-    --base-url) base_url="$2"; shift 2 ;;
-    --output-format|--mode|--provider|--project-root) shift 2 ;;
-    *) shift ;;
-  esac
-done
-[ -n "$prompt" ] || { echo "codex-as-koda: no -p prompt" >&2; exit 2; }
+The harness calls `<bin> --version`, then
 
-# Codex's lmstudio provider reads its base URL from CODEX_OSS_BASE_URL.
-if [ -n "$base_url" ]; then export CODEX_OSS_BASE_URL="$base_url"; fi
-roots="\"$HOME/.cargo\""
-if [ -n "${CARGO_TARGET_DIR:-}" ]; then roots="$roots, \"$CARGO_TARGET_DIR\""; fi
-args=(exec --oss --local-provider lmstudio --json --skip-git-repo-check
-      -s workspace-write -c approval_policy=never
-      -c "sandbox_workspace_write.writable_roots=[$roots]"
-      -C "$PWD")
-if [ -n "$model" ]; then args+=(-m "$model"); fi
-exec codex "${args[@]}" "$prompt"
+  <bin> -p <prompt> --output-format stream-json --mode auto \\
+        --provider <p> --project-root <dir> [--model <m>] [--base-url <u>]
+
+with the project directory as cwd. Everything but the prompt, mode, model and
+base URL is koda-specific and ignored. Codex runs `codex exec --oss` against
+LM Studio. It's in its workspace-write sandbox with approvals off, like koda's
+`--mode auto`. The harness points CARGO_TARGET_DIR outside the project, so that
+directory and ~/.cargo are added as writable roots for the build.
+
+**Same start as koda.** Each run gets a fresh home: CODEX_HOME goes under the
+run's own XDG_CONFIG_HOME, so nothing from ~/.codex reaches it, no config,
+history, memories or global AGENTS.md. The local model needs no login. Codex
+reads the project's AGENTS.md, which is where the harness puts a pinned
+`memory` file. Codex has no probe for a local model's window, so the model's
+KODA_MAX_CONTEXT_TOKENS, which pins koda's, becomes its model_context_window.
+
+**Koda's events out.** The transcript predicates read koda's event stream, so
+Codex's `--json` events are translated, the way `bin/claude-as-koda` does for
+Claude Code:
+
+- A `command_execution` is a `Bash` call. Its command is unwrapped from Codex's
+  `/bin/zsh -lc "..."`, and its result starts `Exit code: N |` as koda's does.
+  A command koda's classifier calls destructive also gets the
+  `approval_request` koda would have raised (koda would have refused it; Codex
+  runs it), so `no_destructive_bash` grades both alike.
+- A `file_change` is one `Edit`, `Write` or `Delete` call per changed file, by
+  its kind. So is an `apply_patch` Codex runs as a shell command, by its
+  `*** Update File:` (`Add`, `Delete`) lines: it's Codex's edit tool, not a
+  command, and its patch body would otherwise trip the classifier.
+- The last `agent_message` is the final reply. Usage comes from
+  `turn.completed`. `prompt_tokens` is the whole prompt, cached part included,
+  as koda counts it against LM Studio.
+
+Codex has no Read, Grep or sub-agent tools; it reads and searches through the
+shell. Predicates on those tools' calls (`behaviour-frugal-reads`'s Read
+arguments, `behaviour-delegate-or-not-control`'s delegation) can't be met, so
+those tasks don't compare. Codex's raw events go to stderr, which the harness
+keeps as `stderr.log`.
+
+`--translate <file>` translates a recorded stream instead of running anything.
+"""
+
+import json
+import os
+import re
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+
+# bin/koda_bash_safety.py, beside this script.
+from koda_bash_safety import is_destructive
+
+SHELL_WRAP = ("/bin/zsh", "/bin/bash", "/bin/sh", "zsh", "bash", "sh")
+FILE_TOOLS = {"add": "Write", "update": "Edit", "delete": "Delete"}
+PATCH_FILE = re.compile(r"^\*\*\* (Add|Update|Delete) File: (.+)$", re.M)
+
+
+def patch_changes(command):
+    """The files an `apply_patch` command changes, as `file_change` changes;
+    `None` when the command isn't one."""
+    if not command.lstrip().startswith("apply_patch"):
+        return None
+    return [{"kind": kind.lower(), "path": path.strip()}
+            for kind, path in PATCH_FILE.findall(command)]
+
+
+def unwrap(command):
+    """`/bin/zsh -lc "cargo test"` -> `cargo test`; anything else as is."""
+    try:
+        words = shlex.split(command)
+    except ValueError:
+        return command
+    if len(words) == 3 and words[0] in SHELL_WRAP and words[1] in ("-lc", "-c"):
+        return words[2]
+    return command
+
+
+class Translator:
+    """Codex's `--json` events in, koda's event stream out."""
+
+    def __init__(self, mode, cwd, out):
+        self.mode, self.out = mode, out
+        self.cwd = os.path.realpath(cwd)
+        self.thread = None
+        self.tool_calls = {}
+        self.started = set()  # item ids already announced
+        self.last_text = ""
+        self.usage = None
+        self.completed = False
+        self.errors = []
+
+    def emit(self, event):
+        self.out.write(json.dumps(event, ensure_ascii=False) + "\n")
+        self.out.flush()
+
+    def rel(self, path):
+        real = os.path.realpath(path) if os.path.isabs(path) else path
+        return os.path.relpath(real, self.cwd) if real.startswith(self.cwd + "/") else path
+
+    def call(self, id_, name, args):
+        self.tool_calls[name] = self.tool_calls.get(name, 0) + 1
+        self.emit({"type": "tool_call_start", "id": id_, "name": name, "args": args,
+                   "is_sub_agent": False})
+        effect = None
+        if name == "Bash" and is_destructive(args["command"]):
+            effect = "Destructive"
+        elif self.mode == "safe" and name in ("Edit", "Write", "Delete"):
+            effect = "LocalMutation"
+        if effect:
+            detail = args.get("command") or args.get("file_path", "")
+            self.emit({"type": "approval_request", "id": "ap" + id_, "tool_name": name,
+                       "detail": detail, "preview": None, "effect": effect})
+
+    @staticmethod
+    def changes(item):
+        """The files an item changes, or `None` for a plain command."""
+        if item.get("type") == "file_change":
+            return item.get("changes") or []
+        return patch_changes(unwrap(item.get("command", "")))
+
+    def started_item(self, item):
+        id_, kind = item.get("id", ""), item.get("type")
+        if kind not in ("command_execution", "file_change") or id_ in self.started:
+            return
+        self.started.add(id_)
+        changes = self.changes(item)
+        if changes is None:
+            self.call(id_, "Bash", {"command": unwrap(item.get("command", ""))})
+            return
+        for n, change in enumerate(changes):
+            name = FILE_TOOLS.get(change.get("kind"), "Edit")
+            self.call(f"{id_}.{n}", name, {"file_path": self.rel(change.get("path", ""))})
+
+    def completed_item(self, item):
+        id_, kind = item.get("id", ""), item.get("type")
+        if kind in ("command_execution", "file_change"):
+            # A command can complete without a start event; announce it first.
+            self.started_item(item)
+        changes = self.changes(item) if kind in ("command_execution", "file_change") else None
+        if changes is not None:
+            failed = item.get("status") == "failed" or item.get("exit_code") not in (None, 0)
+            for n, change in enumerate(changes):
+                name = FILE_TOOLS.get(change.get("kind"), "Edit")
+                detail = (item.get("aggregated_output") or "the patch failed").strip()
+                output = f"Error: {detail}" if failed else f"{change.get('kind', 'update')} applied"
+                self.emit({"type": "tool_call_result", "id": f"{id_}.{n}", "name": name,
+                           "output": output})
+        elif kind == "command_execution":
+            code = item.get("exit_code")
+            output = item.get("aggregated_output") or ""
+            lines = output.count("\n") + (1 if output and not output.endswith("\n") else 0)
+            head = f"Exit code: {code if code is not None else -1} | output: {lines} lines"
+            self.emit({"type": "tool_call_result", "id": id_, "name": "Bash",
+                       "output": f"{head}\n{output}"})
+        elif kind == "agent_message" and item.get("text"):
+            self.last_text = item["text"]
+            self.emit({"type": "text_delta", "text": item["text"]})
+            self.emit({"type": "text_done"})
+        elif kind == "error":
+            self.emit({"type": "warn", "message": item.get("message", "")})
+
+    def event(self, event):
+        kind = event.get("type")
+        if kind == "thread.started":
+            self.thread = event.get("thread_id")
+            self.emit({"type": "turn_start", "turn_id": self.thread})
+        elif kind == "item.started":
+            self.started_item(event.get("item") or {})
+        elif kind == "item.completed":
+            self.completed_item(event.get("item") or {})
+        elif kind == "turn.completed":
+            self.completed = True
+            self.usage = event.get("usage") or {}
+        elif kind == "turn.failed":
+            self.errors.append((event.get("error") or {}).get("message", "turn failed"))
+        elif kind == "error":
+            self.emit({"type": "warn", "message": event.get("message", "")})
+
+    def koda_usage(self):
+        u = self.usage or {}
+        return {
+            "api_calls": 0,
+            "prompt_tokens": u.get("input_tokens", 0),
+            "completion_tokens": u.get("output_tokens", 0),
+            "cache_read_tokens": u.get("cached_input_tokens", 0),
+            "cache_creation_tokens": u.get("cache_write_input_tokens", 0),
+            "thinking_tokens": u.get("reasoning_output_tokens", 0),
+        }
+
+    def finish(self, exit_code, cancelled=False):
+        """Koda's last two events, once the stream has ended."""
+        ok = exit_code == 0 and self.completed and not self.errors and not cancelled
+        end = {"kind": "cancelled" if cancelled else "complete" if ok else "error"}
+        self.emit({"type": "turn_end", "turn_id": self.thread, "reason": end})
+        usage = self.koda_usage()
+        self.emit({
+            "type": "run_summary",
+            "success": ok,
+            "response": self.last_text,
+            "error": "; ".join(self.errors) or (None if ok else f"codex exited {exit_code}"),
+            "turn_end": end,
+            "tool_calls": self.tool_calls,
+            "sub_agent_tool_calls": {},
+            "usage": usage,
+            "usage_by_agent": {"main": usage},
+            "provider": "codex",
+            "session_id": self.thread,
+        })
+
+
+def parse_args(argv):
+    opts = {"prompt": "", "model": "", "mode": "auto", "base_url": "", "translate": None,
+            "version": False}
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--version":
+            opts["version"] = True
+        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate"):
+            opts[{"-p": "prompt", "--base-url": "base_url"}.get(arg, arg[2:])] = argv[i + 1]
+            i += 1
+        elif arg in ("--output-format", "--provider", "--project-root"):
+            i += 1
+        i += 1
+    return opts
+
+
+def codex_home():
+    config = os.environ.get("XDG_CONFIG_HOME")
+    home = os.path.join(config, "codex") if config else os.path.join(tempfile.mkdtemp(), "codex")
+    os.makedirs(home, exist_ok=True)
+    return home
+
+
+def main():
+    opts = parse_args(sys.argv[1:])
+    env = dict(os.environ)
+    home = env.get("HOME", os.path.expanduser("~"))
+    env["PATH"] = f"{home}/.local/bin:{home}/.cargo/bin:{env.get('PATH', '/usr/bin:/bin')}"
+    codex = shutil.which("codex", path=env["PATH"]) or "codex"
+
+    if opts["version"]:
+        out = subprocess.run([codex, "--version"], env=env, capture_output=True, text=True)
+        print(out.stdout.strip())
+        return out.returncode
+
+    if opts["translate"]:
+        translator = Translator(opts["mode"], os.getcwd(), sys.stdout)
+        with open(opts["translate"]) as stream:
+            for line in stream:
+                translator.event(json.loads(line))
+        translator.finish(0)
+        return 0
+
+    if not opts["prompt"]:
+        print("codex-as-koda: no -p prompt", file=sys.stderr)
+        return 2
+
+    env["CODEX_HOME"] = codex_home()
+    print(f"codex-as-koda: CODEX_HOME={env['CODEX_HOME']}", file=sys.stderr)
+    # Codex's lmstudio provider reads its base URL from CODEX_OSS_BASE_URL.
+    if opts["base_url"]:
+        env["CODEX_OSS_BASE_URL"] = opts["base_url"]
+    roots = [f"{home}/.cargo"] + ([env["CARGO_TARGET_DIR"]] if env.get("CARGO_TARGET_DIR") else [])
+    args = [codex, "exec", "--oss", "--local-provider", "lmstudio", "--json",
+            "--skip-git-repo-check", "-s", "workspace-write", "-c", "approval_policy=never",
+            "-c", f"sandbox_workspace_write.writable_roots={json.dumps(roots)}",
+            "-C", os.getcwd()]
+    if opts["model"]:
+        args += ["-m", opts["model"]]
+    window = env.get("KODA_MAX_CONTEXT_TOKENS", "")
+    if window:
+        if not window.isdigit():
+            print(f"codex-as-koda: KODA_MAX_CONTEXT_TOKENS={window} is not a number",
+                  file=sys.stderr)
+            return 2
+        args += ["-c", f"model_context_window={window}"]
+    args.append(opts["prompt"])
+
+    translator = Translator(opts["mode"], os.getcwd(), sys.stdout)
+    child = subprocess.Popen(args, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             text=True)
+    cancelled = False
+    try:
+        for line in child.stdout:
+            sys.stderr.write(line)
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            translator.event(event)
+    except KeyboardInterrupt:
+        # The harness's time limit: koda reports what it did, so this does too.
+        cancelled = True
+        child.send_signal(signal.SIGINT)
+    code = child.wait()
+    translator.finish(code, cancelled)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
