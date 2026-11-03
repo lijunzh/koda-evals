@@ -1,0 +1,23 @@
+# The new baseline for routine runs on the local fast seat: the 31 `suite`
+# tasks × 3 with the short memory/rust-project.md in place of each
+# checkout's CLAUDE.md, on the same Koda and window as ornith-060-check
+# (`afb7716`, 128K, 81 of 93 on the checkout's file), so only `memory`
+# differs. About 8 hours. Start only when Lijun says the GPU is free. Unload
+# only the model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/ornith-suite-short-memory.toml --jobs 1
+name = "ornith-suite-short-memory"
+repeats = 3
+tags = ["suite"]
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "main"
+ref = "afb7716d02a5551ef262b3522303d37561569174"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }
