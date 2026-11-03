@@ -1,0 +1,18 @@
+# Does project memory (CLAUDE.md) change how Haiku solves
+# bash-classifier-escapes? Leaves it out of the system prompt, on top of thinking
+# replay and whole-file Read (8 of 12), against Claude Code's 16 of 18, whose
+# eval wrapper loads none. Default effort (medium). Experiment branch, not for
+# merging. Part of the study in the maintainer's notes. Asked for by Lijun
+# 2026-11-02.
+name = "haiku-no-memory"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "no-memory"
+ref = "202d0f5c42c6730a1ee55598e4cd1a496e1b9886"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

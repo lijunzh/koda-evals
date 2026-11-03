@@ -1,0 +1,21 @@
+# Release check before 0.6.0 on the local fast seat: the 31 tasks tagged
+# `suite` three times, on `main` at the merge of lijunzh/koda#1503, at the
+# 128K window. Compare with results/ornith-v051-128k/20261031T175439Z, which
+# had 32 tasks. 6 to 9 hours; approved by Lijun 2026-11-02. Unload only the
+# model you loaded.
+#   lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
+#   ./target/release/koda-eval run runs/ornith-060-check.toml --jobs 1
+name = "ornith-060-check"
+repeats = 3
+tags = ["suite"]
+
+[[variants]]
+name = "main"
+ref = "afb7716d02a5551ef262b3522303d37561569174"
+
+[[models]]
+name = "ornith"
+provider = "lm-studio"
+base_url = "http://localhost:1234/v1"
+model = "ornith"
+env = { KODA_MAX_CONTEXT_TOKENS = "131072" }

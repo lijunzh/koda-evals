@@ -1,0 +1,17 @@
+# Is effort why Haiku passes bash-classifier-escapes 5 of 6 through Claude Code
+# and 3 of 13 under Koda? Haiku defaults to medium, and Koda sends no effort.
+# The same task at high, six repeats, on an experiment branch of Koda. Asked
+# for by Lijun 2026-11-02, about $2.
+name = "haiku-effort-high"
+tasks = ["bash-classifier-escapes"]
+repeats = 6
+
+[[variants]]
+name = "effort-high"
+ref = "ecd2b05dbf29c4e87730d940c0ffdabf0c9375a5"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_REASONING_EFFORT = "high" }
