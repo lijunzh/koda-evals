@@ -2,8 +2,8 @@
 # `suite` tasks × 3, both reading the short memory/rust-project.md. The two
 # agents' runs interleave task by task, so --jobs 3 contends them equally.
 # Koda's runs are paid API calls; Claude Code's use the subscription and no
-# API key (see bin/claude-as-koda). Each run needs Lijun's yes. Pin `ref` to
-# the release candidate's commit before running.
+# API key (see bin/claude-as-koda). Each run needs Lijun's yes. `ref` is
+# pinned to the release candidate.
 #
 # Each agent keeps its own defaults, since the question is what a user gets.
 # Both run Haiku at effort `medium`. Koda sends no effort, so Haiku 5.5's API
@@ -18,7 +18,7 @@ memory = "memory/rust-project.md"
 
 [[variants]]
 name = "koda"
-ref = "main"
+ref = "f9a9aa153e74ff1ad2680dad88b43803a280ad52"  # the 0.6.0 release candidate, lijunzh/koda#1510
 
 [[variants]]
 name = "claude-code"

@@ -14,8 +14,11 @@ directory and ~/.cargo are added as writable roots for the build.
 
 **Same start as koda.** Each run gets a fresh home: CODEX_HOME goes under the
 run's own XDG_CONFIG_HOME, so nothing from ~/.codex reaches it, no config,
-history, memories or global AGENTS.md. The local model needs no login. Codex
-reads the project's AGENTS.md, which is where the harness puts a pinned
+history, memories or global AGENTS.md. The local model needs no login, but a
+fresh home defaults to the `openai` provider, and Codex 0.166 then refuses the
+`--oss` turn ("This chat uses lmstudio, but your current provider is openai"),
+so `model_provider=lmstudio` is set too.
+Codex reads the project's AGENTS.md, which is where the harness puts a pinned
 `memory` file. Codex has no probe for a local model's window, so the model's
 KODA_MAX_CONTEXT_TOKENS, which pins koda's, becomes its model_context_window.
 
@@ -270,7 +273,8 @@ def main():
     if opts["base_url"]:
         env["CODEX_OSS_BASE_URL"] = opts["base_url"]
     roots = [f"{home}/.cargo"] + ([env["CARGO_TARGET_DIR"]] if env.get("CARGO_TARGET_DIR") else [])
-    args = [codex, "exec", "--oss", "--local-provider", "lmstudio", "--json",
+    args = [codex, "exec", "--oss", "--local-provider", "lmstudio",
+            "-c", "model_provider=lmstudio", "--json",
             "--skip-git-repo-check", "-s", "workspace-write", "-c", "approval_policy=never",
             "-c", f"sandbox_workspace_write.writable_roots={json.dumps(roots)}",
             "-C", os.getcwd()]

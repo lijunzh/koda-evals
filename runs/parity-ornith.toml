@@ -3,7 +3,7 @@
 # memory/rust-project.md (Codex as AGENTS.md). One at a time: a local model
 # gains little from more (see the README's `jobs`). About 16 hours. Start
 # only when Lijun says the GPU is free. Unload only the model you loaded.
-# Pin `ref` to the release candidate's commit before running.
+# `ref` is pinned to the release candidate.
 #
 # Each agent keeps its own defaults, since the question is what a user gets.
 # Koda sends LM Studio no reasoning effort, so the model's own default
@@ -20,7 +20,7 @@ memory = "memory/rust-project.md"
 
 [[variants]]
 name = "koda"
-ref = "main"
+ref = "f9a9aa153e74ff1ad2680dad88b43803a280ad52"  # the 0.6.0 release candidate, lijunzh/koda#1510
 
 [[variants]]
 name = "codex"

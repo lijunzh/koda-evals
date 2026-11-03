@@ -1,0 +1,38 @@
+# Why did Koda go 0 of 3 on bash-classifier-escapes in parity-haiku while
+# Claude Code went 3 of 3? Every Koda run classified `env` by the command it
+# wraps, so `env PATH=/tmp ls /` stayed read-only; every Claude Code run kept
+# `env` that runs a command off read-only, as the prompt asks. Three arms, 12
+# repeats each, on the short memory file as in the parity runs:
+# - koda-rc: the release candidate the parity runs used (#1510), whose tool
+#   list comes in a different order in every process.
+# - koda-fixed: the same plus a fixed tool order (fix/stable-tool-order).
+# - claude-code: the peer, on the subscription.
+# If both Koda arms pass at Claude Code's rate, the 0 of 3 was noise. If only
+# the fixed one does, tool order matters and parity-haiku reruns on the new RC.
+# Koda's arms are paid API calls, under a dollar each. Asked for by Lijun
+# 2026-11-03. One task, so it says nothing about the agents in general.
+#   ./target/release/koda-eval run runs/haiku-env-three-arms.toml
+name = "haiku-env-three-arms"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda-rc"
+ref = "f9a9aa153e74ff1ad2680dad88b43803a280ad52"
+
+[[variants]]
+name = "koda-fixed"
+ref = "b2baaf581119707400aeccdea670aa12ef4d7406"
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+# Claude Code reads the project's CLAUDE.md only with this; koda ignores it.
+env = { CLAUDE_AS_KODA_MEMORY = "project" }
