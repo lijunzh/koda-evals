@@ -8,7 +8,8 @@
 # Each agent keeps its own defaults, since the question is what a user gets.
 # Both run Haiku at effort `medium`. Koda sends no effort, so Haiku 5.5's API
 # default of `medium` applies. Claude Code 2.1.296 sends `medium` with
-# adaptive thinking (captured against a local stub on 2026-11-02).
+# adaptive thinking (captured against a local stub on 2026-11-02). From
+# lijunzh/koda#1516 on, Koda sends that `medium` itself, the same level.
 #   ./target/release/koda-eval run runs/parity-haiku.toml
 name = "parity-haiku"
 repeats = 3
