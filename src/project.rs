@@ -22,9 +22,43 @@ pub enum Stage {
     Solved,
 }
 
+/// The instructions file a run's project starts with: the run file's
+/// `memory`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Memory {
+    /// Whatever the checkout or fixture has.
+    Checkout,
+    /// None at all.
+    Without,
+    /// This text as `CLAUDE.md`, in place of whatever the checkout has.
+    Pinned(String),
+}
+
+/// The files at a project's root that Koda or Claude Code read as the
+/// project's instructions. The task checkouts have none deeper down.
+pub const MEMORY_FILES: &[&str] = &[
+    "MEMORY.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "CLAUDE.local.md",
+    ".claude/CLAUDE.md",
+];
+
 /// Write the task's project for `stage` into `dest` (which must not exist)
 /// and commit it, so the agent's changes show up as a diff.
 pub fn materialize(task: &Task, stage: Stage, koda_repo: &Path, dest: &Path) -> Result<()> {
+    materialize_with(task, stage, koda_repo, dest, &Memory::Checkout)
+}
+
+/// [`materialize`], with `memory` as the project's instructions. The change
+/// is in the start commit, so it stays out of the diff.
+pub fn materialize_with(
+    task: &Task,
+    stage: Stage,
+    koda_repo: &Path,
+    dest: &Path,
+    memory: &Memory,
+) -> Result<()> {
     if dest.exists() {
         bail!("{} already exists", dest.display());
     }
@@ -47,6 +81,18 @@ pub fn materialize(task: &Task, stage: Stage, koda_repo: &Path, dest: &Path) -> 
         let to = dest.join("agents");
         std::fs::create_dir_all(&to)?;
         copy_dir(&agents, &to).with_context(|| format!("copy agents from {}", agents.display()))?;
+    }
+    if *memory != Memory::Checkout {
+        for name in MEMORY_FILES {
+            let path = dest.join(name);
+            if path.is_file() {
+                std::fs::remove_file(&path)
+                    .with_context(|| format!("remove {}", path.display()))?;
+            }
+        }
+    }
+    if let Memory::Pinned(text) = memory {
+        std::fs::write(dest.join("CLAUDE.md"), text).context("write the pinned CLAUDE.md")?;
     }
     stamp(dest)?;
     git(dest, &["init", "-q", "-b", "main"])?;
@@ -274,6 +320,54 @@ mod tests {
         assert!(module.contains("#[cfg(test)]\nmod eval_hidden {"));
         assert!(module.contains("use super::*;"));
         assert!(module.contains("fn a() {}\n\n#[test]\nfn b() {}\n\n}\n"));
+    }
+
+    #[test]
+    fn memory_is_kept_removed_or_pinned_in_the_start_commit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task_dir = tmp.path().join("k");
+        for (rel, text) in [
+            ("fixture/src/lib.rs", "pub fn f() -> u8 { 1 }\n"),
+            ("fixture/CLAUDE.md", "long checkout file\n"),
+            ("fixture/AGENTS.md", "agents file\n"),
+            ("fixture/.claude/CLAUDE.md", "nested\n"),
+            ("solution/src/lib.rs", "pub fn f() -> u8 { 2 }\n"),
+            ("hidden/t.rs", "#[test]\nfn two() { assert_eq!(f(), 2); }\n"),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(
+            task_dir.join("task.toml"),
+            "id = \"k\"\nprompt = \"p\"\n[repo]\nfixture = \"fixture\"\nsolution = \"solution\"\n\
+             [check]\nhidden = [{ file = \"src/lib.rs\", test = \"hidden/t.rs\" }]\ncommand = \"true\"\n",
+        )
+        .unwrap();
+        let task = Task::load(&task_dir).unwrap();
+        let read = |dir: &Path, name: &str| std::fs::read_to_string(dir.join(name)).ok();
+
+        let kept = tmp.path().join("kept");
+        materialize_with(&task, Stage::Start, tmp.path(), &kept, &Memory::Checkout).unwrap();
+        assert_eq!(
+            read(&kept, "CLAUDE.md").as_deref(),
+            Some("long checkout file\n")
+        );
+
+        let without = tmp.path().join("without");
+        materialize_with(&task, Stage::Start, tmp.path(), &without, &Memory::Without).unwrap();
+        for name in MEMORY_FILES {
+            assert_eq!(read(&without, name), None, "{name}");
+        }
+
+        let pinned = tmp.path().join("pinned");
+        let memory = Memory::Pinned("short file\n".into());
+        materialize_with(&task, Stage::Start, tmp.path(), &pinned, &memory).unwrap();
+        assert_eq!(read(&pinned, "CLAUDE.md").as_deref(), Some("short file\n"));
+        assert_eq!(read(&pinned, "AGENTS.md"), None);
+        assert_eq!(read(&pinned, ".claude/CLAUDE.md"), None);
+        // In the start commit, so the agent's diff doesn't show it.
+        assert_eq!(git(&pinned, &["status", "--porcelain"]).unwrap(), "");
     }
 
     #[test]

@@ -1,0 +1,18 @@
+# The reference for the new baseline: the 31 `suite` tasks once on Sonnet
+# with the short memory/rust-project.md, on the same Koda as the Haiku and
+# Ornith runs (`afb7716`). It separates a model's misses from Koda's on the
+# short file. Paid: each run needs Lijun's yes.
+#   ./target/release/koda-eval run runs/sonnet-suite-short-memory.toml --jobs 3
+name = "sonnet-suite-short-memory"
+repeats = 1
+tags = ["suite"]
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "main"
+ref = "afb7716d02a5551ef262b3522303d37561569174"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "claude-sonnet-5-5"

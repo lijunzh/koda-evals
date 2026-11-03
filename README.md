@@ -181,6 +181,7 @@ and the repeats:
 name = "local-smoke"
 tags = ["kata"]
 repeats = 3
+memory = "memory/rust-project.md"   # the project's CLAUDE.md; see below
 
 [[variants]]
 name = "main"
@@ -209,6 +210,51 @@ env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on ev
 run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
 tasks included, so don't use that for a score. Changing what the suite holds,
 or how one of its tasks is graded, starts a new baseline.
+
+### `memory`: the project's instructions
+
+`memory` decides which `CLAUDE.md` the agent finds in its project. Koda and
+Claude Code both read it into every request.
+
+| `memory` | The project gets |
+|---|---|
+| `"checkout"` (default) | Whatever the task's project has |
+| `"none"` | No instructions file |
+| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md`, for every task |
+
+For `"none"` and a path, every instructions file Koda or Claude Code reads at
+the project root is removed first: `MEMORY.md`, `CLAUDE.md`, `AGENTS.md`,
+`CLAUDE.local.md` and `.claude/CLAUDE.md`. The change goes in the project's
+start commit, so the diff never shows it. Each row's `config.memory` and the
+report's configuration line name the setting. `meta.json` keeps the text of a
+pinned file, since the file can change after the run.
+
+**Why it exists.** With `"checkout"`, a history task brings Koda's own
+`CLAUDE.md` from the day of the bug: 6K to 30K characters, with a file tree,
+CI details and notes on the maintainer's workflow. Katas and behaviour tasks
+have none. That file is part of what gets measured, and it costs small models.
+On `bash-classifier-escapes`, whose checkout has a 24K file, Haiku passed about
+half its runs with the file loaded and about 9 in 10 without it. That held under
+both Koda and Claude Code. Sonnet passed 12 of 12 with the file. A score on
+`"checkout"` partly measures how a model copes with that file.
+
+**`memory/rust-project.md`** is the short file for routine runs. It holds
+build and test commands and where tests live, which is true of every task,
+katas included. It gives facts, not advice on how to behave. The behaviour
+tasks grade exactly that (testing before claiming success, asking, keeping to
+scope), so advice there would move their scores.
+
+**How to use it.**
+
+- Set `memory` at the top of the run file. A run without it is `"checkout"`, as
+  before.
+- Compare only rows with the same `memory`. Switching starts a new baseline for
+  every model.
+- Keep `"checkout"` runs as a benchmark of how well a small model copes with a
+  long, noisy file.
+- `bin/claude-as-koda` ignores `CLAUDE.md` unless the model's `env` sets
+  `CLAUDE_AS_KODA_MEMORY = "project"`. Set both for Claude Code to read the
+  pinned file.
 
 A `ref` variant is resolved to its commit, unpacked with `git archive`,
 built in release mode and cached at `~/.cache/koda-eval/bin/<sha>/koda`; the
@@ -253,9 +299,12 @@ than `none`, the wrapper kills the run and exits 3.
 
 What differs from a koda run (the wrapper's header has the detail):
 
-- **No project instructions.** `--safe-mode` and an empty `--setting-sources`
-  drop `CLAUDE.md`, settings, skills, plugins, hooks, MCP and auto memory. Koda
-  does load a project's `CLAUDE.md`, so a history task is slightly harder here.
+- **No project instructions, unless asked.** `--safe-mode` and an empty
+  `--setting-sources` drop `CLAUDE.md`, settings, skills, plugins, hooks, MCP and
+  auto memory. Koda does load a project's `CLAUDE.md`. With
+  `CLAUDE_AS_KODA_MEMORY = "project"` in the model's `env`, the wrapper loads the
+  project's `CLAUDE.md` and still nothing else: no auto memory, user settings or
+  skills.
 - **`auto` and `safe` both run `dontAsk`,** so nothing can wait on a prompt.
   Bash is in Claude Code's OS sandbox (writes to the project, the cargo target
   directory and `~/.cargo`; network to crates.io only), and the file tools are
@@ -278,7 +327,12 @@ What differs from a koda run (the wrapper's header has the detail):
 - **Fresh project:** a fixture copy, or `git archive` of a koda commit, as a
   new single-commit repo. Never a clone, so the real fix isn't in `git log`.
 - **Fresh koda config:** `XDG_CONFIG_HOME` points to an empty directory. The
-  run gets its own database and no global memory, skills or stored keys.
+  run gets its own database and no skills or stored keys.
+- **Project instructions from the run file:** `memory`, by default whatever the
+  checkout has.
+- **No global memory.** Koda reads `~/.config/koda/memory.md` from `$HOME`, not
+  from the config directory, so every run would load it. `run` refuses to start
+  while that file exists.
 - **Trust mode from the task** (`[run] trust`, default `auto`), inside
   koda's kernel sandbox. A task's `agents_dir` is in the project's start
   commit.

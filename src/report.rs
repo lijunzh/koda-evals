@@ -63,6 +63,8 @@ struct Config {
     window: Option<u64>,
     wall_secs: Option<u64>,
     trust: Option<String>,
+    /// `null` on rows from before the run file had `memory`.
+    memory: Option<String>,
 }
 
 use crate::klog;
@@ -121,6 +123,7 @@ fn parse_rows(text: &str, dir: Option<&Path>) -> Result<Vec<Row>> {
                 window: config["window"].as_u64(),
                 wall_secs: config["wall_secs"].as_u64(),
                 trust: config["trust"].as_str().map(str::to_string),
+                memory: config["memory"].as_str().map(str::to_string),
             },
             compactions: behaviour["compactions"]["attempts"].as_u64(),
             edit_rejections: behaviour["edit_rejections"].as_u64(),
@@ -481,8 +484,15 @@ fn configuration(rows: &[Row], jobs: u64) -> String {
             .map(|r| r.config.trust.clone().unwrap_or_else(|| "?".into())),
     );
     let wall = distinct(with.iter().filter_map(|r| r.config.wall_secs));
+    // Older rows don't say, so only rows that do are shown.
+    let memory = distinct(with.iter().filter_map(|r| r.config.memory.clone()));
+    let memory = if memory.is_empty() {
+        String::new()
+    } else {
+        format!(" · memory {memory}")
+    };
     format!(
-        "Configuration: {} · trust {trust} · wall_secs {wall} · jobs {jobs}\n\n",
+        "Configuration: {} · trust {trust} · wall_secs {wall} · jobs {jobs}{memory}\n\n",
         per_model.join("; ")
     )
 }
@@ -803,6 +813,19 @@ mod tests {
         // unlabelled grid.
         assert!(!md.contains("Configuration:"), "{md}");
         assert!(!md.contains("**unclustered**"), "{md}");
+    }
+
+    #[test]
+    fn memory_shows_in_the_header_when_rows_carry_it() {
+        let text = r#"{"task":"a","variant":"v","model":"m","pass":true,"config":{"engine":"anthropic","trust":"auto","wall_secs":300,"memory":"memory/rust-short.md"}}
+{"task":"b","variant":"v","model":"m","pass":true,"config":{"engine":"anthropic","trust":"auto","wall_secs":300}}
+"#;
+        let rows = parse_rows(text, None).unwrap();
+        let md = render(&rows, &Value::Null, "x");
+        assert!(
+            md.contains("wall_secs 300 · jobs 1 · memory memory/rust-short.md\n"),
+            "{md}"
+        );
     }
 
     #[test]

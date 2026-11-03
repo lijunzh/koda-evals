@@ -1,0 +1,19 @@
+# The new baseline for routine runs: the 31 `suite` tasks × 3 with the short
+# memory/rust-project.md in place of each checkout's CLAUDE.md, on the same
+# Koda as haiku-060-check (`afb7716`, 91 of 93 on the checkout's file), so
+# only `memory` differs. About 50 minutes at --jobs 3. Paid: each run needs
+# Lijun's yes.
+#   ./target/release/koda-eval run runs/haiku-suite-short-memory.toml --jobs 3
+name = "haiku-suite-short-memory"
+repeats = 3
+tags = ["suite"]
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "main"
+ref = "afb7716d02a5551ef262b3522303d37561569174"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
