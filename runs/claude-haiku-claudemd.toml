@@ -1,0 +1,20 @@
+# Does the project's CLAUDE.md lower Haiku's score on bash-classifier-escapes
+# under Claude Code too? The wrapper normally loads none, and that setup passed
+# 16 of 18; koda with the same CLAUDE.md as project memory passed 7 to 8 of 12,
+# and 21 of 24 without it. Twelve repeats on the subscription with
+# CLAUDE_AS_KODA_MEMORY=project, which loads CLAUDE.md the way Claude Code does
+# and nothing else from the machine. Asked for by Lijun 2026-11-03. One task, so
+# it says nothing about the agents in general.
+name = "claude-haiku-claudemd"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "claude-code-claudemd"
+bin = "~/repo/koda-evals-claudemd-wt/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "haiku"
+env = { CLAUDE_AS_KODA_MEMORY = "project" }

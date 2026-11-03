@@ -27,6 +27,14 @@ read CLAUDE.md with sed. That is comparable, not an advantage: koda loads a
 project's CLAUDE.md as project memory on every run (koda-core memory.rs), so
 Claude Code gets it only when it looks, koda always.
 
+CLAUDE_AS_KODA_MEMORY=project loads the project's CLAUDE.md the way Claude
+Code does, as a system-reminder in the first user message, and nothing else:
+it drops --safe-mode, loads only project settings and turns auto memory off.
+Captured on 2.1.296 against a stub: the system prompt is the same as under
+--safe-mode, and no user skills, plugins or memory reach the request. Project
+settings, agents and skills would load too; the koda checkout has none. The
+variable is read here and never reaches the child.
+
 Trust. Both modes run `dontAsk`: the listed tools are allowed, anything else
 is denied, and nothing waits for a prompt. Bash runs in Claude Code's OS
 sandbox: writes only to the project, the cargo target directory and ~/.cargo,
@@ -151,7 +159,7 @@ def child_env():
     return env, sorted(env), sorted(set(os.environ) - set(env))
 
 
-def sandbox_settings(env):
+def sandbox_settings(env, extra=None):
     writable = [f"{env['HOME']}/.cargo"]
     if env.get("CARGO_TARGET_DIR"):
         target = env["CARGO_TARGET_DIR"]
@@ -174,7 +182,8 @@ def sandbox_settings(env):
                 "allowUnsandboxedCommands": False,
                 "filesystem": {"allowWrite": writable},
                 "network": {"allowedDomains": CRATES_HOSTS},
-            }
+            },
+            **(extra or {}),
         }
     )
 
@@ -429,14 +438,26 @@ def main():
     print(f"claude-as-koda: child env names: {' '.join(kept)}", file=sys.stderr)
     print(f"claude-as-koda: dropped {len(dropped)} env names: {' '.join(dropped)}", file=sys.stderr)
 
+    memory = os.environ.get("CLAUDE_AS_KODA_MEMORY", "")
+    if memory not in ("", "project"):
+        print(f"claude-as-koda: unknown CLAUDE_AS_KODA_MEMORY {memory!r}", file=sys.stderr)
+        return 2
+    if memory == "project":
+        print("claude-as-koda: loading project CLAUDE.md", file=sys.stderr)
+        isolation = ["--setting-sources", "project"]
+        extra = {"autoMemoryEnabled": False}
+    else:
+        isolation = ["--safe-mode", "--setting-sources", ""]
+        extra = None
+
     args = [claude, "-p", opts["prompt"],
             "--output-format", "stream-json", "--verbose", "--forward-subagent-text",
-            "--safe-mode", "--setting-sources", "", "--disable-slash-commands",
+            *isolation, "--disable-slash-commands",
             "--strict-mcp-config", "--no-session-persistence",
             "--permission-mode", "dontAsk",
             "--tools", ",".join(TOOLS),
             "--allowedTools", " ".join(allow_rules(os.getcwd())),
-            "--settings", sandbox_settings(env)]
+            "--settings", sandbox_settings(env, extra)]
     if opts["model"]:
         args += ["--model", opts["model"]]
 
