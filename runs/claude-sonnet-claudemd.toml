@@ -1,0 +1,19 @@
+# Is the drop with CLAUDE.md a small-model problem? Sonnet through Claude Code
+# with the project's CLAUDE.md loaded, the same setup as claude-haiku-claudemd
+# (Haiku 6 of 12 with it, 16 of 18 without). Sonnet passed 3 of 3 without it
+# and 3 of 3 under koda 0.4.0, which loads it. Twelve repeats on the
+# subscription. Asked for by Lijun 2026-11-03. One task, so it says nothing
+# about the agents in general.
+name = "claude-sonnet-claudemd"
+tasks = ["bash-classifier-escapes"]
+repeats = 12
+
+[[variants]]
+name = "claude-code-claudemd"
+bin = "~/repo/koda-evals-claudemd-wt/bin/claude-as-koda"
+
+[[models]]
+name = "sonnet"
+provider = "anthropic"
+model = "sonnet"
+env = { CLAUDE_AS_KODA_MEMORY = "project" }
