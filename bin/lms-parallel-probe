@@ -82,6 +82,13 @@ def call(base_url, model, tokens, max_tokens, timeout):
                 if not line.startswith("data:") or line.endswith("[DONE]"):
                     continue
                 chunk = json.loads(line[len("data:") :])
+                # LM Studio reports a failure inside a 200 stream, such as
+                # "Context size has been exceeded" when slots overflow the
+                # shared cache, so the HTTP status alone misses it.
+                if chunk.get("error"):
+                    error = chunk["error"]
+                    row["error"] = error.get("message", str(error)) if isinstance(error, dict) else str(error)
+                    break
                 usage = chunk.get("usage")
                 if usage:
                     row["prompt_tokens"] = usage.get("prompt_tokens", 0)
@@ -93,6 +100,8 @@ def call(base_url, model, tokens, max_tokens, timeout):
                         row["finish_reason"] = choice["finish_reason"]
     except (OSError, ValueError, urllib.error.HTTPError) as err:
         row["error"] = f"{type(err).__name__}: {err}"
+    if row["error"] is None and row["finish_reason"] is None:
+        row["error"] = "stream ended without a finish reason"
     row["elapsed_s"] = time.monotonic() - started
     return row
 
