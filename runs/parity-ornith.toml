@@ -20,7 +20,7 @@ memory = "memory/rust-project.md"
 
 [[variants]]
 name = "koda"
-ref = "f9a9aa153e74ff1ad2680dad88b43803a280ad52"  # the 0.6.0 release candidate, lijunzh/koda#1510
+ref = "522daac5ab7e76d15cc46b4bccafd31702c99e2f"  # the 0.6.0 release candidate, after the tool fixes (lijunzh/koda#1511-#1514)
 
 [[variants]]
 name = "codex"

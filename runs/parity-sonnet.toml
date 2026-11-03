@@ -6,7 +6,10 @@
 #
 # Each agent keeps its own defaults, since the question is what a user gets.
 # Koda sends no effort, so Sonnet 5.5's API default of `high` applies.
-# What Claude Code sends for Sonnet isn't captured yet.
+# Claude Code 2.1.296 sends `medium` with adaptive thinking (captured against a
+# local stub on 2026-11-03), so on Sonnet the two don't think alike at the
+# pinned ref. From lijunzh/koda#1516 on, Koda sends `medium` too: repin before
+# a Sonnet run to compare like for like.
 #   ./target/release/koda-eval run runs/parity-sonnet.toml
 name = "parity-sonnet"
 repeats = 1
@@ -16,7 +19,7 @@ memory = "memory/rust-project.md"
 
 [[variants]]
 name = "koda"
-ref = "f9a9aa153e74ff1ad2680dad88b43803a280ad52"  # the 0.6.0 release candidate, lijunzh/koda#1510
+ref = "522daac5ab7e76d15cc46b4bccafd31702c99e2f"  # the 0.6.0 release candidate, after the tool fixes (lijunzh/koda#1511-#1514)
 
 [[variants]]
 name = "claude-code"
