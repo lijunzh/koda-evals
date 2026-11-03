@@ -108,6 +108,9 @@ fn codex_gets_a_fresh_home_the_window_and_the_server() {
         "--json",
         "workspace-write",
         "approval_policy=never",
+        // A fresh CODEX_HOME defaults to the openai provider, and Codex then
+        // refuses an --oss turn.
+        "model_provider=lmstudio",
     ] {
         assert!(args.contains(&flag), "missing {flag}: {args:?}");
     }
