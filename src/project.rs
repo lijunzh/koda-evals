@@ -233,7 +233,7 @@ fn git(dir: &Path, args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
-#[derive(Debug, Default, PartialEq, serde::Serialize)]
+#[derive(Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct DiffStat {
     pub files: u32,
     pub insertions: u32,

@@ -21,7 +21,7 @@ use crate::task::{Anchor, CallMatch, CallMatches, Predicate, Task};
 use crate::transcript::{DELEGATION_TOOLS, EDIT_TOOLS, ToolCall, Transcript};
 
 /// The hidden-test command's outcome.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, serde::Deserialize)]
 pub struct HiddenOutcome {
     pub exit: Option<i32>,
     pub timed_out: bool,

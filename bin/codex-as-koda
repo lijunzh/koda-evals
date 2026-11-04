@@ -45,7 +45,11 @@ arguments, `behaviour-delegate-or-not-control`'s delegation) can't be met, so
 those tasks don't compare. Codex's raw events go to stderr, which the harness
 keeps as `stderr.log`.
 
-`--translate <file>` translates a recorded stream instead of running anything.
+`--translate <file>` translates a recorded stream instead of running anything:
+the `stderr.log` of a run, to regrade it after a translation fix. Give it the
+run's `--mode`, and `--exit <code>` and `--cancelled` when Codex exited
+nonzero or was stopped at the time limit, so its ending reads as the live
+run's did.
 """
 
 import json
@@ -64,15 +68,21 @@ from koda_bash_safety import is_destructive
 SHELL_WRAP = ("/bin/zsh", "/bin/bash", "/bin/sh", "zsh", "bash", "sh")
 FILE_TOOLS = {"add": "Write", "update": "Edit", "delete": "Delete"}
 PATCH_FILE = re.compile(r"^\*\*\* (Add|Update|Delete) File: (.+)$", re.M)
+# `apply_patch` run as a command: at the start of a line, or after `&&`, `||`,
+# `;` or `|`. Ornith also writes the patch to a file first, then runs
+# `apply_patch < file` on a later line, or prefixes a `cd dir &&`.
+APPLY_PATCH = re.compile(r"(?:^|[;&|])\s*apply_patch\b", re.M)
 
 
 def patch_changes(command):
     """The files an `apply_patch` command changes, as `file_change` changes;
-    `None` when the command isn't one."""
-    if not command.lstrip().startswith("apply_patch"):
+    `None` when the command doesn't run one, or its patch isn't in the
+    command."""
+    if not APPLY_PATCH.search(command):
         return None
-    return [{"kind": kind.lower(), "path": path.strip()}
-            for kind, path in PATCH_FILE.findall(command)]
+    changes = [{"kind": kind.lower(), "path": path.strip()}
+               for kind, path in PATCH_FILE.findall(command)]
+    return changes or None
 
 
 def unwrap(command):
@@ -221,13 +231,15 @@ class Translator:
 
 def parse_args(argv):
     opts = {"prompt": "", "model": "", "mode": "auto", "base_url": "", "translate": None,
-            "version": False}
+            "version": False, "exit": "0", "cancelled": False}
     i = 0
     while i < len(argv):
         arg = argv[i]
         if arg == "--version":
             opts["version"] = True
-        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate"):
+        elif arg == "--cancelled":
+            opts["cancelled"] = True
+        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit"):
             opts[{"-p": "prompt", "--base-url": "base_url"}.get(arg, arg[2:])] = argv[i + 1]
             i += 1
         elif arg in ("--output-format", "--provider", "--project-root"):
@@ -257,10 +269,14 @@ def main():
 
     if opts["translate"]:
         translator = Translator(opts["mode"], os.getcwd(), sys.stdout)
-        with open(opts["translate"]) as stream:
+        with open(opts["translate"], errors="replace") as stream:
             for line in stream:
-                translator.event(json.loads(line))
-        translator.finish(0)
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue  # stderr's own lines, around the events
+                translator.event(event)
+        translator.finish(int(opts["exit"]), opts["cancelled"])
         return 0
 
     if not opts["prompt"]:

@@ -244,3 +244,71 @@ fn the_committed_translation_is_current() {
         "regenerate with bin/codex-as-koda --translate tests/fixtures/codex-stream.ndjson"
     );
 }
+
+/// Translate `events` (one Codex event per line) with `extra` arguments.
+fn translate(codex_events: &[Value], extra: &[&str]) -> Vec<Value> {
+    let tmp = tempfile::tempdir().unwrap();
+    let stream = tmp.path().join("stderr.log");
+    let mut text =
+        String::from("codex-as-koda: CODEX_HOME=/x\nReading additional input from stdin...\n");
+    for e in codex_events {
+        text.push_str(&format!("{e}\n"));
+    }
+    std::fs::write(&stream, text).unwrap();
+    let out = Command::new(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bin/codex-as-koda"))
+        .arg("--translate")
+        .arg(&stream)
+        .args(extra)
+        .current_dir(tmp.path())
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    events(&out)
+}
+
+fn command(id: &str, command: &str) -> Value {
+    serde_json::json!({"type": "item.completed", "item": {"id": id, "type": "command_execution",
+        "command": command, "aggregated_output": "Success.", "exit_code": 0, "status": "completed"}})
+}
+
+#[test]
+fn apply_patch_after_other_commands_is_still_an_edit() {
+    let patch = "*** Begin Patch\n*** Update File: src/lib.rs\n@@\n-a\n+b\n*** End Patch\n";
+    let ev = translate(
+        &[
+            // Ornith writes the patch to a file, then applies it on a later line.
+            command(
+                "item_1",
+                &format!("cat > /tmp/fix.patch << 'EOF'\n{patch}EOF\napply_patch < /tmp/fix.patch"),
+            ),
+            command(
+                "item_2",
+                &format!("cd /work/project && apply_patch \"{patch}\""),
+            ),
+            // Naming it isn't running it.
+            command("item_3", "echo apply_patch is Codex's edit tool"),
+        ],
+        &[],
+    );
+    let names: Vec<&str> = of_type(&ev, "tool_call_start")
+        .iter()
+        .map(|e| e["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["Edit", "Edit", "Bash"], "{ev:?}");
+    // The patch body written by `cat` isn't classified as a command.
+    assert!(of_type(&ev, "approval_request").is_empty(), "{ev:?}");
+}
+
+#[test]
+fn a_translated_run_ends_as_the_live_one_did() {
+    let message = serde_json::json!({"type": "item.completed",
+        "item": {"id": "item_1", "type": "agent_message", "text": "Still looking."}});
+    let ev = translate(&[message], &["--exit", "1", "--cancelled"]);
+    let end = of_type(&ev, "turn_end");
+    assert_eq!(end[0]["reason"]["kind"], "cancelled", "{ev:?}");
+    assert_eq!(ev.last().unwrap()["error"], "codex exited 1");
+}
