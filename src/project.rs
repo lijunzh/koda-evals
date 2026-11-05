@@ -46,9 +46,10 @@ pub const MEMORY_FILES: &[&str] = &[
     ".claude/CLAUDE.md",
 ];
 
-/// Where a pinned file goes. Koda and Claude Code read `CLAUDE.md`, and Codex
-/// reads `AGENTS.md`. Koda takes the first of `MEMORY.md`, `CLAUDE.md` and
-/// `AGENTS.md` it finds, so it still reads the text once.
+/// Where a pinned file goes. Claude Code reads `CLAUDE.md`, and Codex, Qwen
+/// Code and Koda read `AGENTS.md`. Each reads one file per folder (Koda falls
+/// back to `CLAUDE.md`, an older Koda took it first), so each reads the text
+/// once.
 pub const PINNED_AS: &[&str] = &["CLAUDE.md", "AGENTS.md"];
 
 /// Write the task's project for `stage` into `dest` (which must not exist)

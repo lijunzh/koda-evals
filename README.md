@@ -236,10 +236,11 @@ Claude Code and Codex all read one into every request.
 | `"none"` | No instructions file |
 | a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md` and as `AGENTS.md`, for every task |
 
-A pinned file goes in under both names because Koda and Claude Code read
-`CLAUDE.md` and Codex reads `AGENTS.md`. Koda reads only the first of
-`MEMORY.md`, `CLAUDE.md` and `AGENTS.md` it finds, so it doesn't see the text
-twice. For `"none"` and a path, every instructions file any of the three reads at
+A pinned file goes in under both names because Claude Code reads `CLAUDE.md`,
+and Codex, Qwen Code and Koda read `AGENTS.md`. Each reads one file per
+folder, so none sees the text twice: Koda takes `AGENTS.md` and falls back to
+`CLAUDE.md` (an older Koda took `CLAUDE.md` first), and Claude Code reads
+`AGENTS.md` only where there's no `CLAUDE.md`. For `"none"` and a path, every instructions file any of the three reads at
 the project root is removed first: `MEMORY.md`, `CLAUDE.md`, `AGENTS.md`,
 `AGENTS.override.md`, `CLAUDE.local.md` and `.claude/CLAUDE.md`. The change goes in the project's
 start commit, so the diff never shows it. Each row's `config.memory` and the

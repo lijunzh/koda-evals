@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Guidance for agents working in this repo. Read [README.md](README.md) for the
 contract and [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks, and task
