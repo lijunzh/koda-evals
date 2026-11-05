@@ -34,7 +34,11 @@ fn translate(extra: &[&str]) -> Vec<Value> {
         .args(extra)
         .output()
         .unwrap();
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     events(&out)
 }
 
@@ -158,7 +162,10 @@ fn fake_home() -> tempfile::TempDir {
 fn outside(home: &Path) -> PathBuf {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
     std::fs::create_dir_all(&dir).unwrap();
-    dir.join(format!("qwen-sandbox-probe-{}", home.file_name().unwrap().to_string_lossy()))
+    dir.join(format!(
+        "qwen-sandbox-probe-{}",
+        home.file_name().unwrap().to_string_lossy()
+    ))
 }
 
 #[cfg(target_os = "macos")]
@@ -183,9 +190,20 @@ fn qwen_gets_its_settings_a_clean_env_and_a_sandbox() {
     let h = home.path();
     let out = run(
         h,
-        &["-p", "-fix it", "--model", "qwen38", "--base-url", "http://localhost:9/v1"],
+        &[
+            "-p",
+            "-fix it",
+            "--model",
+            "qwen38",
+            "--base-url",
+            "http://localhost:9/v1",
+        ],
     );
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert_eq!(events(&out).last().unwrap()["success"], true);
 
     let settings: Value = serde_json::from_str(
@@ -216,8 +234,18 @@ fn qwen_gets_its_settings_a_clean_env_and_a_sandbox() {
     assert!(env.contains(&format!("QWEN_HOME={}", h.join("config/qwen").display())));
     assert!(!env.contains(".local/bin"), "PATH reaches ~/.local/bin");
     // Codex is a stub, and writes outside the allowed roots fail.
-    assert_eq!(std::fs::read_to_string(h.join("config/codex-exit")).unwrap().trim(), "127");
-    assert_ne!(std::fs::read_to_string(h.join("config/outside-exit")).unwrap().trim(), "0");
+    assert_eq!(
+        std::fs::read_to_string(h.join("config/codex-exit"))
+            .unwrap()
+            .trim(),
+        "127"
+    );
+    assert_ne!(
+        std::fs::read_to_string(h.join("config/outside-exit"))
+            .unwrap()
+            .trim(),
+        "0"
+    );
     assert!(!outside(h).exists());
     // Qwen Code's own events are kept, on stderr.
     assert!(String::from_utf8_lossy(&out.stderr).contains("\"subtype\":\"init\""));
