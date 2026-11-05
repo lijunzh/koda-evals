@@ -1,0 +1,433 @@
+#!/usr/bin/env python3
+"""Run Qwen Code in place of koda, and translate its events into koda's.
+
+The harness calls `<bin> --version`, then
+
+  <bin> -p <prompt> --output-format stream-json --mode <auto|safe> \\
+        --provider <p> --project-root <dir> [--model <m>] [--base-url <u>]
+
+with the project directory as cwd. Everything but the prompt, mode, model and
+base URL is koda-specific and ignored. Qwen Code (`qwen`, the Homebrew release,
+not a source build) runs headless against an OpenAI-compatible server, LM
+Studio by default, with approvals off (`--approval-mode yolo`), like koda's
+`--mode auto`.
+
+**Same start as koda.** Each run gets a fresh QWEN_HOME under the run's own
+XDG_CONFIG_HOME, so nothing from ~/.qwen reaches it: no settings, memory,
+skills, extensions or sessions. The settings written there select the model
+and nothing else; every other setting is Qwen Code's default, since the
+question is what a user gets. Two model settings come from the run file's
+`env`, the way koda reads them:
+- KODA_MAX_CONTEXT_TOKENS becomes the model's `contextWindowSize`. Qwen Code
+  doesn't probe a local server for its window.
+- KODA_REASONING_EFFORT is sent as `reasoning_effort` (through `extra_body`),
+  the field koda sends. Without it nothing is sent and the server's default
+  applies.
+Qwen Code reads AGENTS.md as its context file, which is where the harness puts
+a pinned `memory` file. Telemetry and usage statistics are off.
+
+**Only Qwen.** Qwen Code ships `claude-code` and `codex` agents that hand a
+task to those CLIs, and both are installed on the eval machine. The child's
+PATH leaves out ~/.local/bin and starts with stubs for `claude`,
+`claude-agent-acp` and `codex` that fail, so a delegation can only reach Qwen
+Code's own agents on the same model. The environment is built from an
+allowlist, so the API keys the harness copies from koda's keystore never
+reach it.
+
+**Sandbox.** yolo runs every shell command, and a shell-safety task's prompt
+names `rm -rf /`. So the child runs under `sandbox-exec` with a profile that
+allows writes only to the project, the cargo target directory and its parent,
+~/.cargo, the run's config directory (which holds QWEN_HOME) and the temp
+directories. Reads and network are open, as in koda's sandbox. Qwen Code's own
+`--sandbox` would also allow ~/.cache, which holds every other eval run.
+Commands koda's classifier calls destructive still get the `approval_request`
+koda would raise (koda would refuse them; here the sandbox stops their writes
+outside the project), so `no_destructive_bash` grades both alike. Web tools are
+left out so a history task can't fetch its own fix.
+
+**Koda's events out.** Qwen Code's stream-json is Claude Code's format, so this
+follows `bin/claude-as-koda`. Tools map to koda's names: read_file is Read (its
+0-based `offset` becomes `start_line`), edit is Edit, write_file Write,
+run_shell_command Bash, grep_search Grep, glob Glob, list_directory List, agent
+InvokeAgent, todo_write TodoWrite, ask_user_question AskUser. A deferred tool
+called through `tool_call` is translated as the tool it names. Usage comes from
+the `result` event. A failed command's result carries an `Exit Code: N` line,
+which becomes the `Exit code: N |` head koda's Bash results have; a successful
+one carries only its output, as through `bin/claude-as-koda`. Qwen Code's raw events go to stderr, which the harness
+keeps as `stderr.log`, so a run can be translated again.
+
+The time limit arrives as SIGINT to the process group; Qwen Code gets it too,
+and the run ends `cancelled`, as koda's does.
+
+`--translate <file>` translates a recorded stream instead of running anything;
+`--exit <code>` and `--cancelled` give it how the recorded run ended.
+"""
+
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+
+# bin/koda_bash_safety.py, beside this script.
+from koda_bash_safety import is_destructive
+
+ALLOWED_ENV = {
+    "HOME", "USER", "LOGNAME", "TERM", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE",
+    "CARGO_TARGET_DIR", "CARGO_HOME", "RUSTUP_HOME", "XDG_CONFIG_HOME",
+}
+SYSTEM_PATH = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
+STUBS = ["claude", "claude-agent-acp", "codex"]
+EXCLUDED_TOOLS = ["web_fetch", "web_search"]
+API_KEY_ENV = "QWEN_AS_KODA_API_KEY"
+EXIT_CODE = re.compile(r"^Exit Code: (\S+)$", re.M)
+DEFAULT_BASE_URL = "http://localhost:1234/v1"
+
+TOOL_NAMES = {
+    "read_file": "Read", "edit": "Edit", "write_file": "Write",
+    "run_shell_command": "Bash", "grep_search": "Grep", "glob": "Glob",
+    "list_directory": "List", "agent": "InvokeAgent", "todo_write": "TodoWrite",
+    "ask_user_question": "AskUser", "web_fetch": "WebFetch", "web_search": "WebSearch",
+}
+
+
+def text_of(content):
+    if isinstance(content, str):
+        return content
+    return "\n".join(b.get("text", "") for b in content or [] if isinstance(b, dict))
+
+
+class Translator:
+    """Qwen Code's stream-json in, koda's event stream out."""
+
+    def __init__(self, mode, cwd, out):
+        self.mode, self.out = mode, out
+        self.cwd = os.path.realpath(cwd)
+        self.calls = {}  # tool_use id -> koda tool name
+        self.tool_calls, self.sub_calls = {}, {}
+        self.messages = {}  # message id -> is_sub_agent
+        self.result = None
+        self.session = self.model = None
+        self.last_text = ""
+        self.errors = []
+
+    def emit(self, event):
+        self.out.write(json.dumps(event, ensure_ascii=False) + "\n")
+        self.out.flush()
+
+    def rel(self, path):
+        if not isinstance(path, str):
+            return path
+        real = os.path.realpath(path) if os.path.isabs(path) else path
+        return os.path.relpath(real, self.cwd) if real.startswith(self.cwd + "/") else path
+
+    def args(self, name, raw):
+        args = dict(raw)
+        args.pop("record_as_artifact", None)
+        if "file_path" in args:
+            args["file_path"] = self.rel(args["file_path"])
+        if name == "Read":
+            offset, limit = args.pop("offset", None), args.pop("limit", None)
+            if offset is not None:
+                args["start_line"] = offset + 1
+            if limit is not None:
+                args["num_lines"] = limit
+        elif name == "Edit":
+            args["replacements"] = [
+                {"old_str": args.pop("old_string", ""), "new_str": args.pop("new_string", "")}
+            ]
+        elif name == "Grep" and "path" in args:
+            args["file_path"] = self.rel(args.pop("path"))
+        elif name in ("Glob", "List") and "path" in args:
+            args["path"] = self.rel(args["path"])
+        elif name == "InvokeAgent":
+            args["agent_name"] = args.pop("subagent_type", "general-purpose")
+        return args
+
+    def tool_use(self, block, sub):
+        raw_name, raw_args = block.get("name", ""), block.get("input") or {}
+        if raw_name == "tool_call" and isinstance(raw_args.get("name"), str):
+            raw_name, raw_args = raw_args["name"], raw_args.get("arguments") or {}
+        name = TOOL_NAMES.get(raw_name, raw_name)
+        id_ = block.get("id", "")
+        self.calls[id_] = name
+        counts = self.sub_calls if sub else self.tool_calls
+        counts[name] = counts.get(name, 0) + 1
+        args = self.args(name, raw_args if isinstance(raw_args, dict) else {})
+        self.emit({"type": "tool_call_start", "id": id_, "name": name, "args": args,
+                   "is_sub_agent": sub})
+        effect = None
+        if name == "Bash" and is_destructive(args.get("command", "")):
+            effect = "Destructive"
+        elif self.mode == "safe" and name in ("Edit", "Write"):
+            effect = "LocalMutation"
+        if effect:
+            detail = args.get("command") or args.get("file_path", "")
+            self.emit({"type": "approval_request", "id": "ap" + id_, "tool_name": name,
+                       "detail": detail, "preview": None, "effect": effect})
+        if name == "AskUser":
+            self.emit({"type": "ask_user_request", "id": id_, "question": args})
+
+    def tool_result(self, block):
+        id_ = block.get("tool_use_id")
+        name = self.calls.get(id_, "")
+        output = text_of(block.get("content"))
+        if block.get("is_error") and name in ("Edit", "Write") and not output.startswith("Error:"):
+            output = "Error: " + output
+        if name == "Bash":
+            # A failed command's result is a block of `Key: value` lines;
+            # koda's starts `Exit code: N |`, which the predicates read.
+            code = EXIT_CODE.search(output)
+            if code and code.group(1).isdigit():
+                output = f"Exit code: {code.group(1)} | {output}"
+        self.emit({"type": "tool_call_result", "id": id_, "name": name, "output": output})
+
+    def assistant(self, event):
+        message = event.get("message") or {}
+        sub = event.get("parent_tool_use_id") is not None
+        self.messages[message.get("id")] = sub
+        for block in message.get("content") or []:
+            kind = block.get("type")
+            if kind == "tool_use":
+                self.tool_use(block, sub)
+            elif kind == "text" and block.get("text"):
+                if sub:
+                    self.emit({"type": "sub_agent_text", "text": block["text"]})
+                else:
+                    self.last_text = block["text"]
+                    self.emit({"type": "text_delta", "text": block["text"]})
+                    self.emit({"type": "text_done"})
+
+    def event(self, event):
+        kind = event.get("type")
+        if kind == "system" and event.get("subtype") == "init":
+            self.session, self.model = event.get("session_id"), event.get("model")
+            # Qwen Code's own root, so a recorded stream translates the same
+            # from anywhere.
+            if event.get("cwd"):
+                self.cwd = os.path.realpath(event["cwd"])
+            self.emit({"type": "turn_start", "turn_id": self.session})
+        elif kind == "assistant":
+            self.assistant(event)
+        elif kind == "user":
+            content = (event.get("message") or {}).get("content")
+            for block in content if isinstance(content, list) else []:
+                if block.get("type") == "tool_result":
+                    self.tool_result(block)
+        elif kind == "result":
+            self.result = event
+            if event.get("is_error"):
+                self.errors.append(text_of(event.get("result")) or event.get("subtype", "error"))
+
+    def usage(self):
+        u = (self.result or {}).get("usage") or {}
+        total = {
+            "api_calls": len(self.messages),
+            "prompt_tokens": u.get("input_tokens", 0),
+            "completion_tokens": u.get("output_tokens", 0),
+            "cache_read_tokens": u.get("cache_read_input_tokens", 0),
+            "cache_creation_tokens": u.get("cache_creation_input_tokens", 0),
+            "thinking_tokens": (u.get("output_tokens_details") or {}).get("thinking_tokens", 0),
+        }
+        return total
+
+    def finish(self, exit_code, cancelled=False):
+        """Koda's last two events, once the stream has ended."""
+        result = self.result or {}
+        ok = (exit_code == 0 and not cancelled and bool(self.result)
+              and result.get("subtype") == "success" and not result.get("is_error"))
+        end = {"kind": "cancelled" if cancelled else "complete" if ok else "error"}
+        self.emit({"type": "turn_end", "turn_id": self.session, "reason": end})
+        usage = self.usage()
+        response = text_of(result.get("result")) if ok else ""
+        self.emit({
+            "type": "run_summary",
+            "success": ok,
+            "response": response or self.last_text,
+            "error": "; ".join(self.errors) or (None if ok else f"qwen exited {exit_code}"),
+            "turn_end": end,
+            "tool_calls": self.tool_calls,
+            "sub_agent_tool_calls": self.sub_calls,
+            "usage": usage,
+            "usage_by_agent": {"main": usage},
+            "provider": "qwen-code",
+            "model": self.model,
+            "session_id": self.session,
+            "elapsed_ms": result.get("duration_ms"),
+        })
+
+
+def parse_args(argv):
+    opts = {"prompt": "", "model": "", "mode": "auto", "base_url": "", "translate": None,
+            "exit": "0", "cancelled": False, "version": False}
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--version":
+            opts["version"] = True
+        elif arg == "--cancelled":
+            opts["cancelled"] = True
+        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit"):
+            opts[{"-p": "prompt", "--base-url": "base_url"}.get(arg, arg[2:])] = argv[i + 1]
+            i += 1
+        elif arg in ("--output-format", "--provider", "--project-root"):
+            i += 1
+        i += 1
+    return opts
+
+
+def settings(model, base_url, env):
+    """Qwen Code's settings.json for this run: the model, and nothing else."""
+    generation = {"timeout": 3_600_000}
+    window = env.get("KODA_MAX_CONTEXT_TOKENS", "")
+    if window:
+        if not window.isdigit():
+            raise ValueError(f"KODA_MAX_CONTEXT_TOKENS={window} is not a number")
+        generation["contextWindowSize"] = int(window)
+    effort = env.get("KODA_REASONING_EFFORT", "")
+    if effort:
+        generation["extra_body"] = {"reasoning_effort": effort}
+    return {
+        "security": {"auth": {"selectedType": "openai"}},
+        "privacy": {"usageStatisticsEnabled": False},
+        "telemetry": {"enabled": False},
+        "context": {"fileName": ["AGENTS.md"]},
+        "model": {"name": model},
+        "modelProviders": {"openai": [{
+            "id": model,
+            "envKey": API_KEY_ENV,
+            "baseUrl": base_url,
+            "generationConfig": generation,
+        }]},
+    }
+
+
+def sandbox_profile(writable):
+    """A seatbelt profile that allows everything but writes outside `writable`."""
+    paths = "\n".join(f"    (subpath {json.dumps(p)})" for p in sorted(set(writable)))
+    return f"""(version 1)
+(allow default)
+(deny file-write*)
+(allow file-write*
+{paths}
+    (literal "/dev/null")
+    (literal "/dev/stdout")
+    (literal "/dev/stderr")
+    (literal "/dev/ptmx")
+    (literal "/dev/dtracehelper")
+    (regex #"^/dev/ttys[0-9]*$")
+    (regex #"^/dev/fd/[0-9]+$")
+)
+"""
+
+
+def writable_roots(env, cwd, config):
+    roots = [cwd, os.path.realpath(cwd), config, os.path.realpath(config),
+             "/private/tmp", "/private/var/folders"]
+    cargo = env.get("CARGO_HOME") or os.path.join(env["HOME"], ".cargo")
+    roots.append(os.path.realpath(cargo))
+    target = env.get("CARGO_TARGET_DIR")
+    if target:
+        # Cargo makes a missing target directory as a randomly named sibling
+        # and renames it into place, so its parent must be writable too.
+        os.makedirs(target, exist_ok=True)
+        real = os.path.realpath(target)
+        roots += [real, os.path.dirname(real)]
+    if env.get("TMPDIR"):
+        roots.append(os.path.realpath(env["TMPDIR"]))
+    return roots
+
+
+def child_env(config):
+    env = {k: v for k, v in os.environ.items() if k in ALLOWED_ENV}
+    env.setdefault("HOME", os.path.expanduser("~"))
+    stubs = os.path.join(config, "qwen-as-koda-stubs")
+    os.makedirs(stubs, exist_ok=True)
+    for name in STUBS:
+        path = os.path.join(stubs, name)
+        with open(path, "w") as f:
+            f.write(f"#!/bin/sh\necho '{name}: not available in this eval' >&2\nexit 127\n")
+        os.chmod(path, 0o755)
+    env["PATH"] = ":".join([stubs, os.path.join(env["HOME"], ".cargo/bin"), *SYSTEM_PATH])
+    env["QWEN_HOME"] = os.path.join(config, "qwen")
+    env[API_KEY_ENV] = os.environ.get(API_KEY_ENV, "lm-studio")
+    env["QWEN_CODE_SKIP_UPDATE_CHECK_ONCE"] = "1"
+    return env
+
+
+def main():
+    opts = parse_args(sys.argv[1:])
+    if opts["translate"]:
+        translator = Translator(opts["mode"], os.getcwd(), sys.stdout)
+        with open(opts["translate"]) as stream:
+            for line in stream:
+                try:
+                    translator.event(json.loads(line))
+                except ValueError:
+                    continue
+        translator.finish(int(opts["exit"]), opts["cancelled"])
+        return 0
+
+    config = os.environ.get("XDG_CONFIG_HOME") or tempfile.mkdtemp()
+    env = child_env(config)
+    qwen = shutil.which("qwen", path=env["PATH"]) or "qwen"
+
+    if opts["version"]:
+        out = subprocess.run([qwen, "--version"], env=env, capture_output=True, text=True)
+        print(f"qwen-as-koda qwen-code {out.stdout.strip()}")
+        return out.returncode
+
+    if not opts["prompt"]:
+        print("qwen-as-koda: no -p prompt", file=sys.stderr)
+        return 2
+    if not opts["model"]:
+        print("qwen-as-koda: no --model", file=sys.stderr)
+        return 2
+
+    try:
+        conf = settings(opts["model"], opts["base_url"] or DEFAULT_BASE_URL, os.environ)
+    except ValueError as err:
+        print(f"qwen-as-koda: {err}", file=sys.stderr)
+        return 2
+    os.makedirs(env["QWEN_HOME"], exist_ok=True)
+    with open(os.path.join(env["QWEN_HOME"], "settings.json"), "w") as f:
+        json.dump(conf, f, indent=2)
+    profile = os.path.join(config, "qwen-as-koda.sb")
+    with open(profile, "w") as f:
+        f.write(sandbox_profile(writable_roots(env, os.getcwd(), config)))
+    print(f"qwen-as-koda: QWEN_HOME={env['QWEN_HOME']} env names: {' '.join(sorted(env))}",
+          file=sys.stderr)
+
+    args = ["sandbox-exec", "-f", profile, qwen,
+            "--output-format", "stream-json", "--approval-mode", "yolo",
+            "--exclude-tools", ",".join(EXCLUDED_TOOLS),
+            # `=` keeps a prompt that starts with "-" from reading as a flag;
+            # a positional prompt after `--` isn't read at all (0.26.7).
+            f"--prompt={opts['prompt']}"]
+
+    translator = Translator(opts["mode"], os.getcwd(), sys.stdout)
+    child = subprocess.Popen(args, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             text=True)
+    cancelled = False
+    try:
+        for line in child.stdout:
+            sys.stderr.write(line)
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            translator.event(event)
+    except KeyboardInterrupt:
+        # The harness's time limit: koda reports what it did, so this does too.
+        cancelled = True
+        child.send_signal(signal.SIGINT)
+    code = child.wait()
+    translator.finish(code, cancelled)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
