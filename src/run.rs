@@ -538,23 +538,7 @@ impl RunOne<'_> {
             let _ = std::fs::rename(&target, &shared);
         }
 
-        // When koda itself failed (no model call, a provider error, a
-        // crash), say so instead of blaming the untouched code.
-        let agent_failed =
-            agent.timed_out || agent.exit != Some(0) || transcript.turn_end_kind() == Some("error");
-        // A protocol this reader doesn't know leaves the checks unreadable,
-        // so a pass from them means nothing.
-        let unsupported = transcript.unsupported_protocol();
-        let pass = check.passed() && unsupported.is_none();
-        let failure = if unsupported.is_some() {
-            unsupported
-        } else if pass {
-            None
-        } else if agent_failed && !agent.timed_out {
-            Some("agent failed".to_string())
-        } else {
-            Some(check.failure_kind())
-        };
+        let (pass, failure) = verdict(&check, &transcript, agent.exit, agent.timed_out);
 
         Ok(json!({
             "task": task.id(),
@@ -605,6 +589,33 @@ impl RunOne<'_> {
         }
         behaviour
     }
+}
+
+/// A graded run's pass and failure reason, from its check and how the agent
+/// ended. Shared with `regrade`, so a regraded row reads like a fresh one.
+pub(crate) fn verdict(
+    check: &check::CheckOutcome,
+    transcript: &Transcript,
+    exit: Option<i32>,
+    timed_out: bool,
+) -> (bool, Option<String>) {
+    // When koda itself failed (no model call, a provider error, a
+    // crash), say so instead of blaming the untouched code.
+    let agent_failed = timed_out || exit != Some(0) || transcript.turn_end_kind() == Some("error");
+    // A protocol this reader doesn't know leaves the checks unreadable,
+    // so a pass from them means nothing.
+    let unsupported = transcript.unsupported_protocol();
+    let pass = check.passed() && unsupported.is_none();
+    let failure = if unsupported.is_some() {
+        unsupported
+    } else if pass {
+        None
+    } else if agent_failed && !timed_out {
+        Some("agent failed".to_string())
+    } else {
+        Some(check.failure_kind())
+    };
+    (pass, failure)
 }
 
 /// The engine a model runs on: an explicit `engine`, else the provider

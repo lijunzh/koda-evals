@@ -33,6 +33,7 @@ cargo run -- list                    # tasks with cluster, grade and tags
 cargo run -- verify [TASK...]        # fail-first check (all tasks by default)
 cargo run -- run runs/<name>.toml    # run a run file, then print its report
 cargo run -- report <name|dir>       # the report again: a run name (latest) or a results dir
+cargo run -- regrade <name|dir>      # grade saved transcripts again, then the report
 ```
 
 History tasks and `ref` variants come from a koda checkout: `--koda-repo`
@@ -512,6 +513,26 @@ own artifacts when `results.jsonl` predates them, so old result
 directories show the same columns (`results.jsonl` is not rewritten). Raw
 counts sit next to every percentage: with about ten tasks and three
 repeats, a gap of a few points is noise.
+
+### `regrade`: after a grading fix
+
+A fix to a transcript predicate, or to a wrapper's translation of an agent's
+events, changes no run, so `regrade` grades the saved transcripts again
+instead of rerunning them. It checks each row's `transcript.ndjson` against
+the task's current predicates, and keeps the stored hidden-test outcome,
+since the project those tests ran in is gone. Then it rewrites the report.
+A row whose verdict changes keeps the old one under `regraded`.
+
+For a wrapper fix, translate the agent's saved stream first. Codex's raw
+events are in the run's `stderr.log`. Translate it from the run's original
+project directory, with the run's trust mode and Codex's exit:
+
+```bash
+bin/codex-as-koda --translate <run>/stderr.log --mode safe --exit 1 --cancelled
+```
+
+Without the fix, that reproduces the saved transcript byte for byte. Keep
+the old one as `transcript.orig.ndjson`.
 
 ## Tests
 
