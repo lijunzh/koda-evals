@@ -199,12 +199,23 @@ ref = "exp/auto-cargo-check"
 
 [[models]]
 name = "local"
-provider = "lm-studio"
-base_url = "http://localhost:1234/v1"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
 model = "<model id>"
 env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on every row
 # engine = "mlx"                                # when provider@host isn't the engine
 ```
+
+**Serve a local GGUF model with llama-server,** through `bin/serve-gguf
+<model id>` (`bin/serve-gguf list` shows the ids it knows, `stop` stops it).
+It starts llama.cpp's `llama-server` on port 8080 with the model's own chat
+template and every layer on the GPU, and waits until the model answers. On
+2026-11-06 the same Qwen3.8-Flash-Next file ran the same 26 tasks in 2h04m
+there, against 3h37m on LM Studio. Koda waited 2.2 s for the first token per
+1K new prompt tokens instead of 10.6 s, because llama-server reuses the cached
+prompt between calls, and output was 38 tokens/s against 30. Older run files
+still name `lm-studio` on port 1234, which is what they ran on; MLX models
+stay on their own servers.
 
 **`jobs`** sets how many runs execute at once, default 1, and `--jobs N`
 overrides it. Wall times are contended above 1. A local model's slots share one

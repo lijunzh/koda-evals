@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Serve a local GGUF model with llama.cpp's llama-server for a run, the way
+# `lms load` did with LM Studio. Since 2026-11-06 local GGUF runs use
+# llama-server: on the same Qwen3.8-Flash-Next file and the same 26 tasks it
+# finished in 2h04m against LM Studio's 3h37m, waiting 2.2 s per 1K new prompt
+# tokens for the first token against 10.6 s, because it reuses the cached
+# prompt prefix between calls.
+#
+# Usage:
+#   bin/serve-gguf <name> [context]   start <name>, wait until it answers
+#   bin/serve-gguf stop               stop the server this script started
+#   bin/serve-gguf list               the names it knows
+#
+# <name> is the model id run files use (`model = "<name>"`), served at
+# http://localhost:8080/v1, so a run file says:
+#   provider = "llama-cpp"
+#   base_url = "http://localhost:8080/v1"
+# The context defaults to what that model's runs have used; pin the same
+# window with KODA_MAX_CONTEXT_TOKENS in the run file. One model at a time:
+# starting a model stops the one before. Logs go to
+# results/llama-server-<name>-<utc>.log (results/ is gitignored).
+set -u
+cd "$(dirname "$0")/.."
+
+PORT="${LLAMA_PORT:-8080}"
+MODELS="${LMSTUDIO_MODELS:-$HOME/.lmstudio/models}"
+PIDFILE="results/llama-server.pid"
+
+# name | GGUF under $MODELS (first shard for split files) | default context
+table() {
+  cat <<EOF
+flashnext|unsloth/Qwen3.8-Flash-Next-GGUF/Qwen3.8-Flash-Next-UD-Q4_K_XL-00001-of-00004.gguf|262144
+qwen38|lmstudio-community/Qwen3.8-27B-GGUF/Qwen3.8-27B-Q4_K_M.gguf|262144
+ornith|ornith-ai/Ornith-1.5-35B-A3B-GGUF/Ornith-1.5-35B-Q4_K_M.gguf|131072
+recursivesi/flint|lmstudio-community/flint-GGUF/flint-Q4_K_M.gguf|131072
+EOF
+}
+
+stop() {
+  if [ -f "$PIDFILE" ]; then
+    kill "$(cat "$PIDFILE")" 2>/dev/null && echo "serve-gguf: stopped pid $(cat "$PIDFILE")"
+    rm -f "$PIDFILE"
+  fi
+}
+
+case "${1:-}" in
+  ""|-h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  list) table | cut -d'|' -f1,3 | tr '|' ' '; exit 0 ;;
+  stop) stop; exit 0 ;;
+esac
+
+name="$1"
+row="$(table | awk -F'|' -v n="$name" '$1 == n')"
+[ -n "$row" ] || { echo "serve-gguf: unknown model $name (try: bin/serve-gguf list)" >&2; exit 2; }
+gguf="$MODELS/$(echo "$row" | cut -d'|' -f2)"
+ctx="${2:-$(echo "$row" | cut -d'|' -f3)}"
+[ -f "$gguf" ] || { echo "serve-gguf: no file $gguf" >&2; exit 2; }
+command -v llama-server >/dev/null || { echo "serve-gguf: llama-server not on PATH (brew install llama.cpp)" >&2; exit 2; }
+
+stop
+mkdir -p results
+if curl -s --max-time 2 "http://localhost:$PORT/health" >/dev/null 2>&1; then
+  echo "serve-gguf: something else is serving on port $PORT; stop it first" >&2
+  exit 1
+fi
+log="results/llama-server-${name//\//-}-$(date -u +%Y%m%dT%H%M%SZ).log"
+# --jinja: the model's own chat template, which also splits reasoning into
+# reasoning_content. -ngl 999: every layer on the GPU.
+nohup llama-server -m "$gguf" --jinja -c "$ctx" -ngl 999 \
+  --port "$PORT" --alias "$name" >"$log" 2>&1 &
+echo $! >"$PIDFILE"
+echo "serve-gguf: $name, context $ctx, pid $!, log $log"
+
+for _ in $(seq 1 600); do
+  if curl -sf --max-time 2 "http://localhost:$PORT/health" >/dev/null 2>&1; then
+    echo "serve-gguf: ready at http://localhost:$PORT/v1"
+    exit 0
+  fi
+  kill -0 "$(cat "$PIDFILE")" 2>/dev/null || { echo "serve-gguf: llama-server exited; see $log" >&2; rm -f "$PIDFILE"; exit 1; }
+  sleep 1
+done
+echo "serve-gguf: not ready after 10 minutes; see $log" >&2
+exit 1
