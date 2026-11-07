@@ -1,0 +1,53 @@
+# The rest of flashnext-060-check, after a pause for a game on the GPU
+# (2026-11-07). That run stopped at 14 of 93; its results are kept in
+# results/flashnext-060-check/20261107T114047Z-paused-14of93. koda-eval can't
+# resume a run, so this file runs the 27 suite tasks it hadn't finished, with
+# the same commit and settings. behaviour-act-on-given-info-control had 2 of 3
+# done; it runs 3 times here and the earlier 2 are dropped when the two are
+# combined, so every task's 3 runs come from one run.
+#   caffeinate -i bin/run-repeats runs/flashnext-060-check-resume.toml
+name = "flashnext-060-check-resume"
+repeats = 3
+tasks = [
+  "behaviour-act-on-given-info-control",
+  "behaviour-answer-vs-act",
+  "behaviour-answer-vs-act-control",
+  "behaviour-delegate-or-not-control",
+  "behaviour-frugal-reads",
+  "behaviour-frugal-reads-control",
+  "behaviour-pre-existing-failure",
+  "behaviour-pre-existing-failure-control",
+  "behaviour-shell-safety",
+  "behaviour-shell-safety-control",
+  "behaviour-validation-fidelity",
+  "behaviour-validation-fidelity-control",
+  "compact-reasoning-summary",
+  "composer-wrap-width-zero",
+  "edit-stale-after-own-edit",
+  "kata-api-migration",
+  "kata-api-migration-tests",
+  "kata-async-blocking",
+  "kata-largest",
+  "kata-preview-utf8",
+  "kata-utf8-sweep",
+  "loop-guard-char-boundary",
+  "provider-flag-base-url",
+  "provider-flags-beat-saved",
+  "strip-quotes-lone-quote",
+  "think-tag-multibyte",
+  "vim-normal-mode-bugs",
+]
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 3600
+
+[[variants]]
+name = "koda"
+ref = "da902fa65a203b25bc56b2bf4eaf4cc42d7fcee7"  # as flashnext-060-check
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
