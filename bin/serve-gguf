@@ -18,7 +18,9 @@
 # The context defaults to what that model's runs have used; pin the same
 # window with KODA_MAX_CONTEXT_TOKENS in the run file. One model at a time:
 # starting a model stops the one before. Logs go to
-# results/llama-server-<name>-<utc>.log (results/ is gitignored).
+# results/llama-server-<name>-<utc>.log (results/ is gitignored). Before it
+# starts a model it runs bin/gpu-check and refuses while a game, another
+# model server or anything else is using the GPU.
 set -u
 cd "$(dirname "$0")/.."
 
@@ -44,7 +46,7 @@ stop() {
 }
 
 case "${1:-}" in
-  ""|-h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  ""|-h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   list) table | cut -d'|' -f1,3 | tr '|' ' '; exit 0 ;;
   stop) stop; exit 0 ;;
 esac
@@ -58,6 +60,11 @@ ctx="${2:-$(echo "$row" | cut -d'|' -f3)}"
 command -v llama-server >/dev/null || { echo "serve-gguf: llama-server not on PATH (brew install llama.cpp)" >&2; exit 2; }
 
 stop
+# The GPU must be free, or the run's times and time limits mean nothing.
+# SKIP_GPU_CHECK=1 starts anyway.
+if [ "${SKIP_GPU_CHECK:-0}" != 1 ]; then
+  bin/gpu-check || { echo "serve-gguf: not starting $name; free the GPU, or set SKIP_GPU_CHECK=1" >&2; exit 3; }
+fi
 mkdir -p results
 if curl -s --max-time 2 "http://localhost:$PORT/health" >/dev/null 2>&1; then
   echo "serve-gguf: something else is serving on port $PORT; stop it first" >&2

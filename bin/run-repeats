@@ -41,6 +41,8 @@ load() { # configuration name, run file
     bin/serve-gguf "$(field "$2" model)" $ctx
     return
   fi
+  # serve-gguf checks the GPU itself; the LM Studio and oMLX loads check here.
+  [ "${SKIP_GPU_CHECK:-0}" = 1 ] || bin/gpu-check || return 1
   case "$1" in
     ornith) lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
             wait_for http://localhost:1234/v1/models 60 ;;
