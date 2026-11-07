@@ -2,7 +2,9 @@
 # Qwen3.8-Flash-Next on llama-server, the 31 `suite` tasks x 3, with the
 # settings of the screens (screen-flashnext-llamacpp, 24 of 26 once): the
 # 256K window, `xhigh` effort and an hour per task. Koda is the same commit
-# as haiku-060-check. One request at a time.
+# as haiku-060-check (fc2b11e, merged as da902fa with the same tree). One
+# request at a time. Restarted 2026-11-07: the first start overlapped a game
+# on the GPU and was stopped before any run finished.
 #   bin/serve-gguf flashnext
 #   ./target/release/koda-eval run runs/flashnext-060-check.toml
 # or unattended: caffeinate -i bin/run-repeats runs/flashnext-060-check.toml
@@ -15,7 +17,7 @@ wall_secs = 3600
 
 [[variants]]
 name = "koda"
-ref = "fc2b11e"  # main at 5976cba plus lijunzh/koda#1528 (cache-read reporting only)
+ref = "da902fa65a203b25bc56b2bf4eaf4cc42d7fcee7"  # main after lijunzh/koda#1528, the same tree as fc2b11e
 
 [[models]]
 name = "flashnext"
