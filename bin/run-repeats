@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Run the local repeat sets one configuration after another, swapping the
 # loaded model between them, so a free day or night on the Mac Studio covers
-# several configurations without anyone at the keyboard. Each name is a
-# runs/<name>-repeats-128k.toml file; the case table below knows how to load
-# that configuration's model and on which engine (LM Studio on :1234, oMLX
-# on :8123), matching the run file's header. --jobs stays at 1: a local model
-# serves one request at a time. Usage, under caffeinate so the machine stays
-# awake:
-#   caffeinate -i bin/run-repeats ornith flint laguna
+# several configurations without anyone at the keyboard. Each argument is a
+# run file path, or a name for runs/<name>-repeats-128k.toml. The run file's
+# `provider` picks the engine: `llama-cpp` starts its `model` with
+# bin/serve-gguf on :8080 (the default for local GGUF models since
+# 2026-11-06), at the window in KODA_MAX_CONTEXT_TOKENS when the file pins
+# one; the older `lm-studio` files load through the case table below (LM
+# Studio on :1234, oMLX on :8123), matching the run file's header. --jobs
+# stays at 1: a local model serves one request at a time. Usage, under
+# caffeinate so the machine stays awake:
+#   caffeinate -i bin/run-repeats runs/flashnext-060-check.toml ornith
 # Logs to results/run-repeats-<utc>.log (results/ is gitignored).
 set -u
 cd "$(dirname "$0")/.."
@@ -22,11 +25,22 @@ wait_for() { # url, seconds
 }
 
 unload_all() {
+  bin/serve-gguf stop >/dev/null 2>&1 || true
   lms unload --all >/dev/null 2>&1 || true
   omlx stop >/dev/null 2>&1 || true
 }
 
-load() {
+field() { # run file, key: the first `key = "value"` in it
+  sed -n "s/^$2 *= *\"\([^\"]*\)\".*/\1/p" "$1" | head -1
+}
+
+load() { # configuration name, run file
+  if [ "$(field "$2" provider)" = "llama-cpp" ]; then
+    local ctx
+    ctx="$(sed -n 's/.*KODA_MAX_CONTEXT_TOKENS *= *"\([0-9]*\)".*/\1/p' "$2" | head -1)"
+    bin/serve-gguf "$(field "$2" model)" $ctx
+    return
+  fi
   case "$1" in
     ornith) lms load ornith-1.5-35b-a3b --identifier ornith -c 131072 -y
             wait_for http://localhost:1234/v1/models 60 ;;
@@ -39,12 +53,15 @@ load() {
 }
 
 cargo build --release 2>&1 | tail -1 | tee -a "$log"
-for cfg in "$@"; do
-  run="runs/$cfg-repeats-128k.toml"
+for arg in "$@"; do
+  case "$arg" in
+    *.toml) run="$arg"; cfg="$(basename "$arg" .toml)" ;;
+    *) run="runs/$arg-repeats-128k.toml"; cfg="$arg" ;;
+  esac
   [ -f "$run" ] || { say "no $run; skipping"; continue; }
   say "== $cfg: unloading everything, loading"
   unload_all
-  if ! load "$cfg" >>"$log" 2>&1; then say "== $cfg: model did not come up; skipping"; continue; fi
+  if ! load "$cfg" "$run" >>"$log" 2>&1; then say "== $cfg: model did not come up; skipping"; continue; fi
   say "== $cfg: running $run"
   ./target/release/koda-eval run "$run" --jobs 1 >>"$log" 2>&1
   say "== $cfg: finished with exit $?"

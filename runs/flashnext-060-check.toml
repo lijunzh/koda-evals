@@ -1,0 +1,25 @@
+# 0.6.0 release check on the local default (Lijun's yes, 2026-11-07):
+# Qwen3.8-Flash-Next on llama-server, the 31 `suite` tasks x 3, with the
+# settings of the screens (screen-flashnext-llamacpp, 24 of 26 once): the
+# 256K window, `xhigh` effort and an hour per task. Koda is the same commit
+# as haiku-060-check. One request at a time.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-060-check.toml
+# or unattended: caffeinate -i bin/run-repeats runs/flashnext-060-check.toml
+name = "flashnext-060-check"
+repeats = 3
+tags = ["suite"]
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 3600
+
+[[variants]]
+name = "koda"
+ref = "fc2b11e"  # main at 5976cba plus lijunzh/koda#1528 (cache-read reporting only)
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
