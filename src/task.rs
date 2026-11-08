@@ -2,9 +2,10 @@
 //!
 //! A task is a coding problem with a known answer. It names where the
 //! project comes from (an old koda commit, or a fixture directory), the
-//! prompt the agent gets, and hidden tests the agent never sees. The
-//! hidden tests are appended to a source file after the agent finishes,
-//! then the check command decides pass or fail.
+//! prompt the agent gets, and hidden tests the agent never sees. After the
+//! agent finishes, Rust hidden tests are appended to a source file and
+//! hidden files (tests or checkers in any language) are copied in, then the
+//! check command decides pass or fail.
 
 use std::path::{Path, PathBuf};
 
@@ -63,6 +64,10 @@ pub struct RepoSpec {
 pub struct CheckSpec {
     #[serde(default)]
     pub hidden: Vec<HiddenTest>,
+    /// Whole files copied into the project before the check: tests or
+    /// checkers in any language.
+    #[serde(default)]
+    pub hidden_files: Vec<HiddenFile>,
     /// Runs the hidden tests; required when there are any.
     pub command: Option<String>,
     #[serde(default = "default_check_secs")]
@@ -440,6 +445,19 @@ pub struct HiddenTest {
     pub test: String,
 }
 
+/// A file copied into the project after the agent finishes, replacing any
+/// file the agent left at `to`. For tests outside Rust (a Python
+/// `unittest` module) or a checker script; the check counts it only if its
+/// test ids contain `eval_hidden` (see `check::outcome`).
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HiddenFile {
+    /// Relative to the task directory.
+    pub from: String,
+    /// Relative to the project root, inside it.
+    pub to: String,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Limits {
@@ -537,13 +555,14 @@ impl Task {
             ),
         };
 
-        if spec.check.hidden.is_empty() && spec.check.transcript.is_empty() {
+        let has_hidden = !spec.check.hidden.is_empty() || !spec.check.hidden_files.is_empty();
+        if !has_hidden && spec.check.transcript.is_empty() {
             bail!(
                 "{}: [check] needs hidden tests, transcript predicates, or both",
                 path.display()
             );
         }
-        if !spec.check.hidden.is_empty() && spec.check.command.is_none() {
+        if has_hidden && spec.check.command.is_none() {
             bail!("{}: [check] hidden tests need a command", path.display());
         }
         for hidden in &spec.check.hidden {
@@ -554,6 +573,32 @@ impl Task {
                     path.display(),
                     test.display()
                 );
+            }
+        }
+        let mut targets = std::collections::BTreeSet::new();
+        for file in &spec.check.hidden_files {
+            let from = dir.join(&file.from);
+            if !from.is_file() {
+                bail!(
+                    "{}: hidden file {} not found",
+                    path.display(),
+                    from.display()
+                );
+            }
+            let to = Path::new(&file.to);
+            let inside = !file.to.is_empty()
+                && to
+                    .components()
+                    .all(|c| matches!(c, std::path::Component::Normal(_)));
+            if !inside {
+                bail!(
+                    "{}: hidden file target {:?} must be a relative path inside the project",
+                    path.display(),
+                    file.to
+                );
+            }
+            if !targets.insert(to) {
+                bail!("{}: two hidden files go to {:?}", path.display(), file.to);
             }
         }
         for (i, predicate) in spec.check.transcript.iter().enumerate() {
@@ -611,7 +656,7 @@ impl Task {
     }
 
     pub fn has_hidden(&self) -> bool {
-        !self.spec.check.hidden.is_empty()
+        !self.spec.check.hidden.is_empty() || !self.spec.check.hidden_files.is_empty()
     }
 
     pub fn has_predicates(&self) -> bool {
@@ -803,6 +848,66 @@ command = "cargo test eval_hidden"
         );
         let err = Task::load(&dir).unwrap_err();
         assert!(format!("{err:#}").contains("need a command"), "{err:#}");
+    }
+
+    #[test]
+    fn hidden_files_alone_grade_a_task_and_need_a_command() {
+        let tmp = tempfile::tempdir().unwrap();
+        let files = "hidden_files = [{ from = \"hidden/test_eval_hidden.py\", to = \"tests/test_eval_hidden.py\" }]";
+        let dir = with_check(tmp.path(), files, "");
+        write(&dir, "hidden/test_eval_hidden.py", "");
+        let err = Task::load(&dir).unwrap_err();
+        assert!(format!("{err:#}").contains("need a command"), "{err:#}");
+
+        let dir = with_check(
+            &tmp.path().join("b"),
+            &format!("{files}\ncommand = \"python3 -m unittest -v\""),
+            "",
+        );
+        write(&dir, "hidden/test_eval_hidden.py", "");
+        let task = Task::load(&dir).unwrap();
+        assert!(task.has_hidden());
+        assert_eq!(
+            task.spec.check.hidden_files[0].to,
+            "tests/test_eval_hidden.py"
+        );
+    }
+
+    #[test]
+    fn hidden_files_must_exist_and_land_inside_the_project() {
+        let tmp = tempfile::tempdir().unwrap();
+        let load = |n: &str, from: &str, to: &str| {
+            let dir = with_check(
+                &tmp.path().join(n),
+                &format!(
+                    "hidden_files = [{{ from = \"{from}\", to = \"{to}\" }}]\ncommand = \"true\""
+                ),
+                "",
+            );
+            write(&dir, "hidden/check.py", "");
+            format!("{:#}", Task::load(&dir).unwrap_err())
+        };
+        assert!(load("a", "hidden/nope.py", "check.py").contains("not found"));
+        for to in [
+            "",
+            "/tmp/check.py",
+            "../check.py",
+            "a/../../check.py",
+            "./check.py",
+        ] {
+            let err = load("b", "hidden/check.py", to);
+            assert!(err.contains("inside the project"), "{to:?}: {err}");
+        }
+
+        let dir = with_check(
+            &tmp.path().join("c"),
+            "hidden_files = [{ from = \"hidden/check.py\", to = \"c.py\" }, \
+             { from = \"hidden/check.py\", to = \"c.py\" }]\ncommand = \"true\"",
+            "",
+        );
+        write(&dir, "hidden/check.py", "");
+        let err = format!("{:#}", Task::load(&dir).unwrap_err());
+        assert!(err.contains("two hidden files"), "{err}");
     }
 
     #[test]

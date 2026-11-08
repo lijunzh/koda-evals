@@ -46,8 +46,9 @@ History tasks and `ref` variants come from a koda checkout: `--koda-repo`
 
 - **History tasks** (`koda_base` / `koda_fix`): a real koda bug. The agent
   starts at the commit before the fix.
-- **Katas** (`fixture` / `solution`): a small Cargo project. `solution/` is
-  copied over `fixture/` to get a correct answer.
+- **Katas** (`fixture` / `solution`): a small project, usually Cargo, or
+  Python graded by `hidden_files`. `solution/` is copied over `fixture/` to
+  get a correct answer. `__pycache__` folders aren't copied.
 
 The tests and solutions here are public. Hidden tests are withheld from each
 trial's initial project; scores measure a public regression suite rather than
@@ -84,10 +85,31 @@ agents_dir = "agents"       # worker agent configs, relative to the task
 A task is graded by **hidden tests**, by **transcript predicates**, or by
 both; it needs at least one. The row's `pass` is the conjunction.
 
-**Hidden tests.** After the agent finishes, they are appended to the named
-source file inside `#[cfg(test)] mod eval_hidden { use super::*; … }`, and
-the check command runs. The part passes only when the command succeeds
-**and** at least one hidden test ran.
+**Hidden tests.** After the agent finishes, `hidden` tests are appended to
+the named source file inside `#[cfg(test)] mod eval_hidden { use super::*; … }`,
+`hidden_files` are copied in, and the check command runs. The part passes
+only when the command succeeds **and** at least one hidden test ran and none
+failed.
+
+**Hidden files** grade a project in another language, or with a checker
+script rather than tests. Each `{ from, to }` copies `from` (relative to the
+task) to `to` (relative to the project root, which it must stay inside),
+replacing whatever the agent left there:
+
+```toml
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+```
+
+The check counts cargo's `eval_hidden::…` test lines and Python
+`unittest -v` lines whose test id contains `eval_hidden`, so name the hidden
+module that way. A hidden module that fails to import counts as a failed test
+and "did not compile". Use `-b`, so a test's own output can't split its result
+line, and only the standard library, with no `pip install`: runs are offline
+and sandboxed, and CI's Linux and macOS (system Python 3.9) must give the same
+answer. Python's `__pycache__` folders and `.pyc` files stay out of the run's
+diff, as `Cargo.lock` does.
 
 **Transcript predicates** (`[[check.transcript]]`) grade what the agent
 *chose*, read from `transcript.ndjson`: its reads, test runs, edits,
