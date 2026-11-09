@@ -794,13 +794,12 @@ ERROR: test_err (tests.test_eval_hidden.Hidden)
     /// `compaction` lines and in the older info text alike.
     #[test]
     fn compactions_count_only_those_with_a_summary() {
-        let stream = concat!(
-            r#"{"type":"compaction","status":"started"}"#, "\n",
-            r#"{"type":"compaction","status":"completed","summary_tokens":1200}"#, "\n",
-            r#"{"type":"compaction","status":"started"}"#, "\n",
-            r#"{"type":"compaction","status":"failed"}"#, "\n",
-            r#"{"type":"info","message":"✅ Compacted 12 messages (~900 token summary)"}"#, "\n",
-        );
+        let stream = r#"{"type":"compaction","status":"started"}
+{"type":"compaction","status":"completed","summary_tokens":1200}
+{"type":"compaction","status":"started"}
+{"type":"compaction","status":"failed"}
+{"type":"info","message":"✅ Compacted 12 messages (~900 token summary)"}
+"#;
         let v = verdicts(
             r#"transcript = [
   { type = "compactions", min = 1 },
