@@ -1,0 +1,55 @@
+id = "data-messy-csv-totals"
+# Data work, not code: a question about a bank export, answered in the final
+# message. The CSV has a byte-order mark, three date formats, amounts with
+# `$`, thousands separators and two refund notations, categories in mixed
+# case and spacing, rows exported twice, and a TOTAL footer. 4,934 rows is
+# too many to add up by reading; the figures need a script. hidden/solve.py
+# shows that keeping the duplicates, dropping the non-ISO dates or counting
+# refunds as spend changes every category's figure. fixture/data/ comes from
+# hidden/make_data.py.
+prompt = """`data/transactions.csv` is our card export for August to November 2026 (see `data/README.md`). How much did we spend in October 2026 in each category, to the cent? Refunds count against their category."""
+tags = ["data", "daily", "csv", "careful-reading", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\bgroceries\b.*?\$?\s?30,?425\.59\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\bdining\b.*?\$?\s?11,?146\.90\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\btransport\b.*?\$?\s?7,?962\.18\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\butilities\b.*?\$?\s?4,?522\.59\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\bshopping\b.*?\$?\s?49,?255\.48\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\btravel\b.*?\$?\s?12,?476\.20\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\bhealth\b.*?\$?\s?7,?854\.44\b'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*\bentertainment\b.*?\$?\s?6,?407\.82\b'
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900

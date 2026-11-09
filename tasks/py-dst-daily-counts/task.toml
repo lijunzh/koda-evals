@@ -1,0 +1,27 @@
+id = "py-dst-daily-counts"
+# A Python kata. Two bugs with one cause, the clock changes: every event is
+# moved to local time with the offset of the batch's first event, and every
+# day is taken to last 24 hours. Visible tests use UTC and one summer week, so
+# they pass. Hidden tests cover both changes in New York and Berlin, a batch
+# across both offsets, the per-level counts, and 23- and 25-hour days.
+prompt = """Our daily event report (`python3 summarize.py --tz America/New_York logs/*.log`) is off around the clocks changing. On 2026-03-08 and 2026-11-01, and the days either side, the per-day counts for New York don't match what we count by hand in the raw logs, and the events-per-hour figure on those two days looks wrong too. Other weeks look right.
+
+Please fix it, for any time zone, not just New York."""
+tags = ["python", "kata", "logic", "time-zones", "multi-bug", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 1200

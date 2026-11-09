@@ -1,0 +1,40 @@
+{
+	"nodes": [
+		{
+			"id": "a1",
+			"type": "file",
+			"file": "Projects/Project Atlas.md",
+			"x": 0,
+			"y": 0,
+			"width": 400,
+			"height": 300
+		},
+		{
+			"id": "a2",
+			"type": "file",
+			"file": "Projects/Project Atlas Retrospective.md",
+			"x": 460,
+			"y": 0,
+			"width": 400,
+			"height": 300
+		},
+		{
+			"id": "a3",
+			"type": "text",
+			"text": "Project Atlas: pilot first, then everyone.",
+			"x": 0,
+			"y": 360,
+			"width": 400,
+			"height": 120
+		}
+	],
+	"edges": [
+		{
+			"id": "e1",
+			"fromNode": "a2",
+			"fromSide": "left",
+			"toNode": "a1",
+			"toSide": "right"
+		}
+	]
+}

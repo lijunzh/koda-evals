@@ -1,0 +1,11 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "data/README.md"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Bash", "args": {"command": "python3 /tmp/october.py"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Bash", "output": "Exit code: 0 | stdout: 8 lines | stderr: 0 lines"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "October 2026 spend by category: Groceries $30,425.59\nDining $11,146.90\nTransport $7,962.18\nUtilities $4,522.59\nShopping $49,712.03\nTravel $12,476.20\nHealth $7,854.44\nEntertainment $6,407.82."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "finished", "response": "October 2026 spend by category: Groceries $30,425.59\nDining $11,146.90\nTransport $7,962.18\nUtilities $4,522.59\nShopping $49,712.03\nTravel $12,476.20\nHealth $7,854.44\nEntertainment $6,407.82.", "turn_end": {"kind": "complete"}, "elapsed_ms": 600000, "usage": {"prompt_tokens": 400000, "completion_tokens": 9000, "cache_read_tokens": 0, "thinking_tokens": 0}}

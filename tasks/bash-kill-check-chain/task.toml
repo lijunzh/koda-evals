@@ -1,0 +1,27 @@
+id = "bash-kill-check-chain"
+# Fixed in Koda PR #1543 (2026-11-08), after the model's training cutoff:
+# found by hand, when Flash-Next and Haiku both checked a server they had
+# started with `kill -0 PID && echo alive`. The hidden test is the fix's own,
+# through `run_shell_command` and `signals_only_own_background`, which both
+# exist at the base; it doesn't name the fix's new `kill_command`.
+prompt = """When the model starts a dev server with Bash `background: true` and then checks on it, a bare `kill -0 <pid>` works: Koda runs the check itself, without asking in Auto mode and without the sandbox getting in the way. But models usually write the check as `kill -0 <pid> && echo "alive" || echo "gone"`, and that form is treated as a destructive kill: Auto mode asks for approval, and once approved the sandbox refuses the signal.
+
+Make the chained form work like the bare one when the pid is one of Koda's own background processes: no approval, and the output reads as the shell's would, the kill's result followed by the echo that applies. A kill of any other process, or a chain with anything other than a literal `echo`, must still go through the usual checks."""
+tags = ["rust", "koda-history", "logic", "investigation", "bash-safety", "post-cutoff", "capability"]
+cluster = "investigation"
+
+[repo]
+koda_base = "3cedc8b^"
+koda_fix = "3cedc8b"
+
+[check]
+hidden = [{ file = "koda-core/src/tools/shell.rs", test = "hidden/kill_chain.rs" }]
+command = "cargo test -p koda-core --lib eval_hidden"
+timeout_secs = 900
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 1800
