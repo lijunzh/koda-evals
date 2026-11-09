@@ -1,0 +1,25 @@
+# vault-fix-renamed-links again on Koda with Haiku, after lijunzh/koda#1545
+# (Lijun's yes, 2026-11-09). capability-koda-haiku at e22f363 passed it 1 of 3:
+# both misses edited a file Haiku had only seen in Grep results. Same settings
+# as that run. Paid API calls, a few cents.
+#   ./target/release/koda-eval run runs/capability-koda-haiku-vault.toml
+#
+# Result, 20261109T102920Z: 2 of 3. The miss again changed the link examples
+# in the code block of Guides/Linking Cheatsheet.md, but this time it had
+# read the file first, so the Edit was allowed. The Koda gap is closed; what
+# remains is Haiku's judgement on what a rename should leave alone.
+name = "capability-koda-haiku-vault"
+tasks = ["vault-fix-renamed-links"]
+repeats = 3
+jobs = 3
+memory = "none"
+wall_secs = 1800
+
+[[variants]]
+name = "koda"
+ref = "425d8c2"  # main: the 0.6.1 candidate, with lijunzh/koda#1545
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

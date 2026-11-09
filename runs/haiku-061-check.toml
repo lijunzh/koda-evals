@@ -1,0 +1,33 @@
+# 0.6.1 release check on Haiku, Koda only (Lijun's yes, 2026-11-09). The same
+# tasks, repeats, memory file and jobs as haiku-060-check (main at fc2b11e,
+# 91 of 93), so the two compare directly. The change to watch is
+# lijunzh/koda#1545: Edit, and a Write that replaces a file, now refuse a file
+# the model hasn't read, which may show up as edit rejections or extra turns.
+# Paid API calls, about $4-5.
+#   ./target/release/koda-eval run runs/haiku-061-check.toml
+#
+# Result, 20261109T102947Z: 90 of 93, 29 of 31 tasks at pass^3, 7.9K tokens
+# and 1m24s a run (0.6.0: 91 of 93, 10.8K, 1m29s). The misses:
+# bash-classifier-escapes 1 of 3 (it has varied between 1 and 3 of 3 since
+# 0.6.0) and provider-flag-base-url 1 of 3 (Haiku dropped a custom URL for
+# the same provider; it read every file it edited, with no refusal). Edit
+# rejections rose from 11 to 51; 36 are the new "hasn't been read yet"
+# refusal, where Haiku had seen the files only through `cat` in Bash
+# (kata-utf8-sweep, 14) or in Grep results (behaviour-shell-safety-control,
+# 12), the way the vault task's misses did. Each time it read
+# the files with Read and redid the edits, and every one of those tasks
+# passed 3 of 3. No regression from #1545.
+name = "haiku-061-check"
+repeats = 3
+tags = ["suite"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "425d8c2"  # main: the 0.6.1 candidate, with lijunzh/koda#1545
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
