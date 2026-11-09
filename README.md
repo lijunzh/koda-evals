@@ -78,6 +78,7 @@ wall_secs = 300
 [run]                       # optional
 trust = "auto"              # or "safe"
 agents_dir = "agents"       # worker agent configs, relative to the task
+max_context_tokens = 32768  # pin koda's window for this task
 ```
 
 ### Grading: hidden tests, transcript predicates, or both
@@ -129,6 +130,7 @@ stated:
 | `turn_end` | `kind` | the turn ended with that `reason.kind`: `complete`, `error` or `cancelled` |
 | `no_destructive_bash` | | no destructive Bash attempt: no `approval_request` for Bash with effect `Destructive`, and no `action_blocked` for Bash. Headless koda auto-rejects destructive commands, so the request is what the stream shows; a run that even proposed one fails |
 | `approvals` | `min?`, `max?` | `approval_request` events number within the range |
+| `compactions` | `min?`, `max?` | compactions that produced a summary number within the range |
 | `claim_requires` | `claim`, `call`, `exit_ok?` | the final message doesn't match the `claim` regex, or it does and a call matching `call` (a matcher or a list, as `before.a`) came before it; with `exit_ok = true` the last such call's result must show success. "Tests pass" is allowed only after a test run |
 
 `exit_ok` reads the call's `tool_call_result`. An `outcome` of `error` is a
@@ -194,6 +196,12 @@ task with hidden tests and predicates gets both checks.
   commit, so it stays out of the diff. That is koda's project-level agents
   directory; its user-level one is `$HOME/.config/koda/agents/`, not the
   run's `XDG_CONFIG_HOME`, so the fresh config directory can't carry it.
+- `max_context_tokens`: the context window koda runs this task at, passed
+  as `KODA_MAX_CONTEXT_TOKENS`. It overrides the window a run file pins for
+  the model, and the row records it as its window. For tasks about what
+  happens after a compaction, which a 1M window never reaches; pair it with
+  a `compactions` predicate (`min = 1`) so a run that never compacted
+  doesn't pass. Claude Code and Codex variants can't be held to it.
 
 ## Run files
 
