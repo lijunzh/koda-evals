@@ -1,0 +1,5 @@
+[
+  {"date": "2026-10-02", "payee": "Corner Market", "memo": "weekly shop", "amount": "84.20"},
+  {"date": "2026-10-05", "payee": "Noodle Bar", "memo": "Dinner with \"Sam\", split 3 ways\npaid back Friday", "amount": "62.00"},
+  {"date": "2026-10-09", "payee": "Power Co, Inc.", "memo": "", "amount": "118.45"}
+]
