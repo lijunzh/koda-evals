@@ -3,7 +3,7 @@ id = "behaviour-answer-vs-act"
 # explains the cause and leaves the file alone. solution/ equals fixture/.
 # Control: behaviour-answer-vs-act-control (the same bug, asked as a fix).
 prompt = """Why does `parse` in src/lib.rs return `None` for `"-0"`? `"0"` and `"-12"` both parse fine."""
-tags = ["rust", "behaviour", "answer-vs-act", "question", "suite"]
+tags = ["rust", "behaviour", "answer-vs-act", "question", "suite", "core"]
 cluster = "judgement"
 judgement = "answers a question about the code without editing it"
 

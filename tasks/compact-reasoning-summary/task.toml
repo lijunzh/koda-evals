@@ -11,7 +11,7 @@ id = "compact-reasoning-summary"
 prompt = """Long sessions against a local reasoning model on an OpenAI-compatible server go wrong. Auto-compaction fails with "LLM returned an empty summary": the model's reply comes back with finish_reason "length" and no text. In one set of runs 19 of 21 compactions failed this way. After three failures koda stops compacting, and requests then go out at 100-261% of the context window, so the server trims the prompt where the model can't see it.
 
 Find and fix the cause. An empty reply must not be stored as a summary, compaction should work for models that reason before they answer, and whatever happens to the summary, koda must not send a request past the window. The latest user message must still be in it."""
-tags = ["rust", "koda-history", "logic", "investigation", "suite"]
+tags = ["rust", "koda-history", "logic", "investigation", "suite", "core"]
 cluster = "investigation"
 
 [repo]

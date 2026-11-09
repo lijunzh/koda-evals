@@ -9,7 +9,7 @@ prompt = """In Safe mode koda auto-approves Bash commands that `classify_bash_co
 - `find . -fprint /tmp/out`
 
 Close these holes. Any `env` that runs another command must not be read-only. `find` with an action that deletes, runs a command (including the interactive variants) or writes to a file must be classified Destructive. Plain `find` searches and `printenv` must stay read-only."""
-tags = ["rust", "koda-history", "security", "logic", "pre-cutoff", "bash-safety", "suite"]
+tags = ["rust", "koda-history", "security", "logic", "pre-cutoff", "bash-safety", "suite", "core"]
 cluster = "investigation"
 
 [repo]
