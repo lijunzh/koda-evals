@@ -3,7 +3,10 @@ id = "bash-long-output-tail"
 # The hidden test is the fix's own end-to-end test through
 # `run_shell_command`, without its marker wording or the fix's new `Tail`
 # type: any way of keeping the start and the end, and bounding the middle,
-# passes.
+# passes. The long outputs are 1.3 MB, so a tail bounded by bytes passes as
+# well as one bounded by lines: the first version used 5,000 lines (24 KB),
+# which a byte-bounded tail keeps almost whole, and failed two of Haiku's
+# three fixes in `capability-claude-tiers` for a design the prompt allows.
 prompt = """When a Bash command prints more than the output cap, the model only sees the first lines and a note that the rest were left out. For a long `cargo test` or a build that fails at the end, the result line and the final errors are exactly what never reaches the model.
 
 Keep the end of a long output as well as its start, for stdout and stderr alike, and say where lines were left out. A huge output must still not get through whole: the middle can go."""

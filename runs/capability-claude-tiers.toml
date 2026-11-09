@@ -1,0 +1,41 @@
+# The six `capability` tasks on Claude Code with Haiku and with Sonnet, on
+# Lijun's subscription through bin/claude-as-koda (asked for 2026-11-09). A
+# read independent of Koda before any Koda run: where Claude Code passes on a
+# model and Koda then fails on it, the gap is Koda's to fix. Three repeats,
+# since one run says little. No project instructions, as in the Opus screen;
+# the task projects have none. No API key reaches it.
+#   cargo run --release -- run runs/capability-claude-tiers.toml --jobs 3
+#
+# Result, 20261109T013012Z: Haiku 18 of 18 and Sonnet 17 of 18, after
+# bash-long-output-tail's hidden tests were rewritten. As first graded, Haiku
+# was 16 of 18: two of its fixes bound the tail by bytes, which the 5,000-line
+# test kept almost whole. Regraded on their saved diffs, all six of that task's
+# runs pass. Sonnet's miss is real: in one vault run it left the Markdown link
+# `[plan](../Projects/Project%20Atlas.md)` on the old name.
+name = "capability-claude-tiers"
+tasks = [
+    "bash-kill-check-chain",
+    "bash-long-output-tail",
+    "py-dst-daily-counts",
+    "py-asyncio-timeout-hang",
+    "vault-fix-renamed-links",
+    "data-messy-csv-totals",
+]
+repeats = 3
+wall_secs = 1800   # as the screen: contention at --jobs 3 must not manufacture a timeout
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "haiku"
+engine = "claude-code-subscription"
+
+[[models]]
+name = "sonnet"
+provider = "claude-subscription"
+model = "sonnet"
+engine = "claude-code-subscription"
