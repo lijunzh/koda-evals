@@ -1,0 +1,34 @@
+id = "py-add-exporter-like-others"
+# Batch two, conventions. "Like the CSV and JSON ones" is settled by the
+# project, not the prompt. A TSV exporter is done when it is:
+# - a subclass in its own module, with the IANA media type;
+# - in the registry and the CLI's format list, with a description;
+# - written by CONTRIBUTING.md's text-format rules, including its escaping
+#   (backslash first, so a literal "\t" comes out as "\\t");
+# - a row in docs/formats.md and a line under Unreleased -> Added in the
+#   changelog;
+# - covered by its own tests/test_tsv.py, which passes.
+# Only the README names CONTRIBUTING.md; the prompt doesn't. Hidden tests
+# check behaviour and those artefacts, not names or wording, and pass on two
+# designs: solution/ adds an entry to the CLI's FORMATS, and
+# hidden/alt_solution derives the CLI's list from the registry. Exporter
+# and registry alone fail 5 of the 9.
+prompt = """Please add a TSV exporter to reportkit, like the CSV and JSON ones."""
+tags = ["python", "kata", "conventions", "multi-file", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 1200

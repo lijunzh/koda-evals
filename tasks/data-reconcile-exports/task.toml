@@ -1,0 +1,37 @@
+id = "data-reconcile-exports"
+# Batch two, weak feedback, daily work. The bank's and the budget app's
+# exports of the same card should agree but differ in three places: a charge
+# missing from the budget (2026-10-14, 87.36), one it has twice (2026-09-22,
+# 41.80), and one it has as 54.10 for the bank's 45.10 (2026-10-27). Both
+# files have 1,406 rows, so the counts agree. Payees are written differently,
+# signs are opposite, and the dates are in two formats. Decoys that agree:
+# two identical 4.50 coffees on 2026-10-03, and a 19.99 refund. Nothing tells
+# the model it has found them all. fixture/ comes from hidden/make_data.py;
+# hidden/solve.py reconciles the files independently. The checks accept any
+# common date format next to each amount, and the swapped pair anywhere.
+prompt = """`bank.csv` and `budget.csv` are two exports of the same card for September and October 2026 (see `README.md`). They should agree, but our budget is off. Which transactions don't match between the two? For each, give the date, the amount and what's wrong."""
+tags = ["data", "daily", "csv", "weak-feedback", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*(?:2026-10-14|oct[a-z]*\.?\s+0?14\b|0?14\s+oct|10/14|0?10/0?14\b).*\b87\.36\b|^.*\b87\.36\b.*(?:2026-10-14|oct[a-z]*\.?\s+0?14\b|0?14\s+oct|10/14|0?10/0?14\b)'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?im)^.*(?:2026-09-22|sep[a-z]*\.?\s+0?22\b|0?22\s+sep|09/22|0?9/0?22\b).*\b41\.80\b|^.*\b41\.80\b.*(?:2026-09-22|sep[a-z]*\.?\s+0?22\b|0?22\s+sep|09/22|0?9/0?22\b)'
+
+[[check.transcript]]
+type = "final_message"
+matches = '(?is)\b45\.10\b.*\b54\.10\b|\b54\.10\b.*\b45\.10\b'
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900

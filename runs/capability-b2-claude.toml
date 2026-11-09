@@ -1,0 +1,46 @@
+# Batch two of the `capability` tasks (2026-11-09) on Claude Code, on Lijun's
+# subscription through bin/claude-as-koda: the weak-feedback and conventions
+# tasks. Opus once, to show each can be solved, then Haiku and Sonnet three
+# times each, the read independent of Koda. Target per task: Haiku 0-2 of 3,
+# Sonnet at least 2 of 3. No API key reaches it.
+#   cargo run --release -- run runs/capability-b2-claude.toml --jobs 3
+#
+# Result, 20261109T024238Z, after one test fix (py-csv-roundtrip's
+# spreadsheet check now allows a byte-order mark, which every model wrote;
+# its nine saved diffs regrade OK):
+#   py-csv-roundtrip             Opus 3/3, Haiku 3/3, Sonnet 3/3
+#   data-reconcile-exports       Opus 3/3, Haiku 3/3, Sonnet 3/3
+#   py-add-exporter-like-others  Opus 3/3, Haiku 3/3, Sonnet 1/3
+# Sonnet's two misses are real: it quoted with the csv module where
+# CONTRIBUTING.md says TSV escapes, and never read that file. No task hits
+# the target; Haiku passes all three.
+name = "capability-b2-claude"
+tasks = [
+    "py-csv-roundtrip",
+    "data-reconcile-exports",
+    "py-add-exporter-like-others",
+]
+repeats = 3
+wall_secs = 1800
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "opus"
+engine = "claude-code-subscription"
+
+[[models]]
+name = "haiku"
+provider = "claude-subscription"
+model = "haiku"
+engine = "claude-code-subscription"
+
+[[models]]
+name = "sonnet"
+provider = "claude-subscription"
+model = "sonnet"
+engine = "claude-code-subscription"

@@ -1,0 +1,5 @@
+[
+  {"day": "2026-11-02", "clinic": "North", "visits": 41, "note": null},
+  {"day": "2026-11-03", "clinic": "North", "visits": 38, "note": "short-staffed\tmorning"},
+  {"day": "2026-11-03", "clinic": "South, annex", "visits": 12, "note": "power cut\nreopened 2pm"}
+]
