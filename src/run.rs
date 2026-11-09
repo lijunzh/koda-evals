@@ -501,6 +501,12 @@ impl RunOne<'_> {
             .env("RUST_LOG", "koda_core=debug,koda_cli=info")
             .envs(self.keys)
             .envs(&self.model.env)
+            .envs(
+                task.spec
+                    .run
+                    .max_context_tokens
+                    .map(|n| ("KODA_MAX_CONTEXT_TOKENS", n.to_string())),
+            )
             .stdin(Stdio::null())
             .stdout(File::create(&transcript_path)?)
             .stderr(File::create(self.art.join("stderr.log"))?);
@@ -551,7 +557,7 @@ impl RunOne<'_> {
             // run files compare.
             "config": {
                 "engine": engine_of(self.model),
-                "window": window_of(self.model),
+                "window": task.spec.run.max_context_tokens.or(window_of(self.model)),
                 "wall_secs": self.wall_secs,
                 "trust": trust,
                 "jobs": self.jobs,
@@ -583,7 +589,14 @@ impl RunOne<'_> {
         let wall_ms = agent.elapsed.as_millis() as u64;
         if let (Some(row), Value::Object(log)) = (
             behaviour.as_object_mut(),
-            signals.to_json(window_of(self.model), wall_ms),
+            signals.to_json(
+                self.task
+                    .spec
+                    .run
+                    .max_context_tokens
+                    .or(window_of(self.model)),
+                wall_ms,
+            ),
         ) {
             row.extend(log);
         }

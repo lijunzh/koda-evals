@@ -1,0 +1,25 @@
+id = "behaviour-spec-after-compact-control"
+# Control for behaviour-spec-after-compact (2026-11-09): the same fixture,
+# prompt and hidden tests at the run's own window, where nothing compacts on
+# a large-window model. A model that fails here can't do the task at all; one
+# that passes here and fails the main task lost the rules in a compaction.
+prompt = """Add the three exporters that SPEC.md describes but the crate doesn't have yet: TSV, Markdown table and fixed width. Follow SPEC.md exactly, including the registry rules, and give each exporter its own unit tests."""
+tags = ["rust", "behaviour", "compaction"]
+cluster = "judgement"
+judgement = "implements three spec-defined exporters exactly (control: no forced compaction)"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/registry.rs", test = "hidden/registry.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 3600

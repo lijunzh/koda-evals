@@ -557,6 +557,13 @@ fn check_one(p: &Predicate, t: &Transcript, diff: Option<&DiffStat>) -> (bool, S
             let n = t.approval_requests().count() as u64;
             (in_range(n, *min, *max), format!("{n} approval request(s)"))
         }
+        Predicate::Compactions { min, max } => {
+            let n = t.compactions_with_summary() as u64;
+            (
+                in_range(n, *min, *max),
+                format!("{n} compaction(s) with a summary"),
+            )
+        }
         Predicate::ClaimRequires {
             claim,
             call,
@@ -781,6 +788,33 @@ ERROR: test_err (tests.test_eval_hidden.Hidden)
         assert_eq!(pass, [true, true, true, true, true, false], "{v:?}");
         // The last test run before the claim exited 0, the first 101.
         assert!(v[2].2.contains("shows success"), "{}", v[2].2);
+    }
+
+    /// `compactions` counts the ones that got a summary, in protocol 1's
+    /// `compaction` lines and in the older info text alike.
+    #[test]
+    fn compactions_count_only_those_with_a_summary() {
+        let stream = concat!(
+            r#"{"type":"compaction","status":"started"}"#, "\n",
+            r#"{"type":"compaction","status":"completed","summary_tokens":1200}"#, "\n",
+            r#"{"type":"compaction","status":"started"}"#, "\n",
+            r#"{"type":"compaction","status":"failed"}"#, "\n",
+            r#"{"type":"info","message":"✅ Compacted 12 messages (~900 token summary)"}"#, "\n",
+        );
+        let v = verdicts(
+            r#"transcript = [
+  { type = "compactions", min = 1 },
+  { type = "compactions", min = 3 },
+  { type = "compactions", max = 0 },
+]"#,
+            stream,
+        );
+        let pass: Vec<bool> = v.iter().map(|(_, pass, _)| *pass).collect();
+        assert_eq!(pass, [true, false, false], "{v:?}");
+        assert_eq!(v[0].0, "compactions min=1");
+        assert_eq!(v[0].2, "2 compaction(s) with a summary");
+        let none = verdicts(r#"transcript = [{ type = "compactions", min = 1 }]"#, "");
+        assert!(!none[0].1, "{none:?}");
     }
 
     #[test]
