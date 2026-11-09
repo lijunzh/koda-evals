@@ -1,0 +1,42 @@
+# The nine `capability` tasks on Koda with Haiku 5.5 through the API (Lijun's
+# yes, 2026-11-09; Haiku only, Sonnet costs too much for this). Claude Code on
+# Haiku passed all nine on the subscription (capability-claude-tiers 18 of 18,
+# capability-b2-claude 9 of 9), so any task Koda fails here is a gap in Koda.
+# memory = "none" matches those runs: the wrapper loads no instructions file,
+# and the two history tasks' checkouts would otherwise bring Koda's own.
+# Paid API calls, roughly $5-14.
+#   ./target/release/koda-eval run runs/capability-koda-haiku.toml
+#
+# Result, 20261109T040355Z: Koda 25 of 27, 8 of 9 tasks at pass^3, 1m54s and
+# 16.9K tokens a run. Claude Code on Haiku had 27 of 27. The two misses are
+# both vault-fix-renamed-links: Haiku changed the link examples inside a
+# code block in Guides/Linking Cheatsheet.md, editing it from Grep hits
+# without reading it. The run that passed read it first, and so did all
+# three Claude Code runs, whose Edit refuses a file not yet read. Koda's
+# Edit only refuses one that changed since a read (validate.rs: no read on
+# record passes). A gap in Koda.
+name = "capability-koda-haiku"
+tasks = [
+    "bash-kill-check-chain",
+    "bash-long-output-tail",
+    "py-dst-daily-counts",
+    "py-asyncio-timeout-hang",
+    "vault-fix-renamed-links",
+    "data-messy-csv-totals",
+    "py-csv-roundtrip",
+    "data-reconcile-exports",
+    "py-add-exporter-like-others",
+]
+repeats = 3
+jobs = 3
+memory = "none"
+wall_secs = 1800   # as the Claude Code runs
+
+[[variants]]
+name = "koda"
+ref = "e22f363"  # main: the 0.6.1 candidate
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
