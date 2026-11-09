@@ -1,0 +1,26 @@
+# Stage one of the gate for the first six `capability` tasks (2026-11-08):
+# Claude Code with Opus on Lijun's subscription, through bin/claude-as-koda.
+# It shows each task is fair and within a strong model's reach, and catches
+# broken checks before any API run. No API key reaches it.
+#   cargo run --release -- run runs/capability-screen.toml --jobs 3
+name = "capability-screen"
+tasks = [
+    "bash-kill-check-chain",
+    "bash-long-output-tail",
+    "py-dst-daily-counts",
+    "py-asyncio-timeout-hang",
+    "vault-fix-renamed-links",
+    "data-messy-csv-totals",
+]
+repeats = 1
+wall_secs = 1800   # raised for the screen: contention at --jobs 3 must not manufacture a timeout
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "opus"
+engine = "claude-code-subscription"

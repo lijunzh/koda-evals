@@ -104,7 +104,7 @@ command = "python3 -m unittest -v -b tests.test_eval_hidden"
 
 The check counts cargo's `eval_hidden::…` test lines and Python
 `unittest -v` lines whose test id contains `eval_hidden`, so name the hidden
-module that way. A hidden module that fails to import counts as a failed test
+module that way, and don't use `subTest`, whose result lines aren't counted. A hidden module that fails to import counts as a failed test
 and "did not compile". Use `-b`, so a test's own output can't split its result
 line, and only the standard library, with no `pip install`: runs are offline
 and sandboxed, and CI's Linux and macOS (system Python 3.9) must give the same
