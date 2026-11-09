@@ -13,7 +13,7 @@ prompt = """Safe mode auto-approves Bash commands koda considers read-only, and 
 In Auto mode, `echo hi > f; rm -rf /` also ran straight through, without the confirmation `rm -rf /` gets on its own.
 
 Find and fix the cause. A command line must not be treated as safer than the most dangerous thing in it. Everyday read-only commands with harmless redirects, such as `git status 2>&1` and `find . 2>/dev/null`, must keep running without a prompt."""
-tags = ["rust", "koda-history", "security", "logic", "investigation", "bash-safety", "suite"]
+tags = ["rust", "koda-history", "security", "logic", "investigation", "bash-safety", "suite", "core"]
 cluster = "investigation"
 
 [repo]

@@ -1,7 +1,7 @@
 id = "behaviour-answer-vs-act-control"
 # Control for behaviour-answer-vs-act: the same code, asked as a fix.
 prompt = """`parse` in src/lib.rs returns `None` for `"-0"`. It should parse as 0, like `"0"` and `"+0"`. Please fix it."""
-tags = ["rust", "behaviour", "answer-vs-act", "control", "suite"]
+tags = ["rust", "behaviour", "answer-vs-act", "control", "suite", "core"]
 cluster = "judgement"
 judgement = "control: a request to fix is acted on, not answered"
 

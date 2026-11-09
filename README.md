@@ -267,6 +267,18 @@ run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
 tasks included, so don't use that for a score. Changing what the suite holds,
 or how one of its tasks is graded, starts a new baseline.
 
+**`core` is the routine subset:** 20 of the 31, for PR checks and local-model
+checks; the full `suite` runs before a release. It keeps all 13 behaviour
+tasks and controls, the three tasks a local model still misses
+(`bash-classifier-escapes`, `bash-readonly-fail-closed`,
+`compact-reasoning-summary`) and one task per remaining kind of bug
+(`kata-utf8-sweep` and `loop-guard-char-boundary` for byte-boundary slicing,
+`kata-api-migration-tests`, `provider-flag-base-url`). It leaves out tasks
+that repeat a kind already covered or that every model passes in seconds.
+On Flash-Next at 0.6.0 its tasks took about 168 minutes a repeat against
+the suite's 291. Every `core` task is a `suite` task, so a `core` run
+compares task by task with full suite runs.
+
 ### `memory`: the project's instructions
 
 `memory` decides which instructions file the agent finds in its project. Koda,
@@ -549,6 +561,10 @@ After the grid, **Tool use** gives one line per variant and model: how many
 Grep calls came back empty, split by patterns with regex characters and plain
 ones, and what share of Bash calls were searches (`grep`, `rg`) or reads
 (`sed`, `cat`). A Bash call is classed by its first command.
+
+**Cost per task** gives each task's mean tokens and mean wall time per
+variant and model. When pass rates are saturated, cost is where a change, a
+model or another agent still shows a difference.
 
 A `-` means the log has nothing to say. `report` fills these from a row's
 own artifacts when `results.jsonl` predates them, so old result

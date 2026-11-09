@@ -394,6 +394,26 @@ fn trouble_cells(rows: &[Row], task: &str) -> [String; 6] {
     ]
 }
 
+/// One task's mean tokens and mean wall time for one variant × model, over
+/// the rows that carry each figure, as `tokens · time`; `-` when no row
+/// carries either.
+fn cost_cell(rows: &[Row], task: &str, variant: &str, model: &str) -> String {
+    let mine: Vec<&Row> = rows
+        .iter()
+        .filter(|r| r.task == task && r.variant == variant && r.model == model)
+        .collect();
+    let mean = |values: Vec<u64>| {
+        (!values.is_empty()).then(|| values.iter().sum::<u64>() / values.len() as u64)
+    };
+    let tokens = mean(mine.iter().filter_map(|r| r.tokens).collect());
+    let wall = mean(mine.iter().filter_map(|r| r.wall_ms).collect());
+    if tokens.is_none() && wall.is_none() {
+        "-".into()
+    } else {
+        format!("{} · {}", fmt_num(tokens), fmt_secs(wall))
+    }
+}
+
 /// `k (p%)` of `n`; `-` with nothing to divide by.
 fn share(k: u64, n: u64) -> String {
     if n == 0 {
@@ -704,6 +724,27 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
         "Compactions and edit rejections are summed over the task's runs; time limit is the runs that hit the wall-clock limit. Asked is the runs that ended on a question to the user, which count as complete; no edits is the runs that never called Edit or Write. Peak context is the fullest run's largest request, with its share of the window when the run file pins one; a leading `~` marks koda's estimate, which runs well under the real figure, used when the log has no provider count. Compaction tokens (prompt + completion) and time are summed over the task's runs, the time with its share of their wall time. Summary max is the longest compaction summary in characters. `-` means the run's log has nothing to say."
     );
 
+    // What each task costs, so a saturated pass rate still shows where a
+    // variant or model spends more.
+    let _ = writeln!(out, "\n## Cost per task\n");
+    let _ = writeln!(
+        out,
+        "| task | {} |\n|---|{}",
+        header.join(" | "),
+        "---|".repeat(cells.len())
+    );
+    for task in &tasks {
+        let costs: Vec<String> = cells
+            .iter()
+            .map(|(v, m)| cost_cell(rows, task, v, m))
+            .collect();
+        let _ = writeln!(out, "| {task} | {} |", costs.join(" | "));
+    }
+    let _ = writeln!(
+        out,
+        "\nEach cell is the mean over that task's runs: tokens (prompt + completion, cache reads excluded) · wall time."
+    );
+
     let lines: Vec<String> = cells
         .iter()
         .filter_map(|(v, m)| tool_use_line(rows, v, m))
@@ -985,6 +1026,20 @@ mod tests {
         );
         // No signal for this cell: no line, not a row of dashes.
         assert!(!md.contains("| old | m | 0"), "{md}");
+    }
+
+    #[test]
+    fn cost_per_task_is_the_mean_per_cell() {
+        let mut rows = vec![
+            row("a", "v", Some(true), 1_000),
+            row("a", "v", Some(false), 3_000),
+            row("b", "v", Some(true), 500),
+        ];
+        rows[1].wall_ms = Some(180_000);
+        let md = render(&rows, &Value::Null, "x");
+        assert!(md.contains("## Cost per task"), "{md}");
+        assert!(md.contains("| a | 2,000 · 2m00s |"), "{md}");
+        assert!(md.contains("| b | 500 · 1m00s |"), "{md}");
     }
 
     #[test]
