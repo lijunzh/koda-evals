@@ -25,7 +25,8 @@ use crate::transcript::{DELEGATION_TOOLS, EDIT_TOOLS, ToolCall, Transcript};
 pub struct HiddenOutcome {
     pub exit: Option<i32>,
     pub timed_out: bool,
-    /// Hidden tests (those under `eval_hidden`) that passed and failed.
+    /// Hidden tests that passed and failed: cargo's tests under
+    /// `eval_hidden`, or Python `unittest -v` tests whose id names it.
     pub hidden_ok: u32,
     pub hidden_failed: u32,
     pub compile_error: bool,
@@ -190,17 +191,59 @@ pub fn not_run(reason: &str) -> HiddenOutcome {
     }
 }
 
+/// A test line from Python's `unittest -v`: `test_x (pkg.test_eval_hidden.T)
+/// ... ok`, with the method repeated inside the parentheses from 3.11. A test
+/// with a docstring prints that on the next line, followed by the result.
+static UNITTEST: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\w+) \(([\w.]+)\)(?: \.\.\. (.+))?$").unwrap());
+
+/// Whether a `unittest` result passed; `None` for a skip.
+fn unittest_passed(result: &str) -> Option<bool> {
+    match result {
+        "ok" | "expected failure" => Some(true),
+        r if r.starts_with("skipped") => None,
+        _ => Some(false),
+    }
+}
+
 fn outcome(exit: Option<i32>, timed_out: bool, text: &str) -> HiddenOutcome {
     let mut hidden_ok = 0;
     let mut hidden_failed = 0;
     let mut compile_error = false;
+    let mut count = |passed: Option<bool>| match passed {
+        Some(true) => hidden_ok += 1,
+        Some(false) => hidden_failed += 1,
+        None => {}
+    };
+    // A hidden `unittest` test whose result is on a later line.
+    let mut pending = false;
     for line in text.lines() {
         let line = line.trim_end();
+        if std::mem::take(&mut pending)
+            && let Some((_, result)) = line.rsplit_once(" ... ")
+        {
+            count(unittest_passed(result));
+            continue;
+        }
+        if let Some(c) = UNITTEST.captures(line)
+            && (c[1].contains("eval_hidden") || c[2].contains("eval_hidden"))
+        {
+            // A hidden module that didn't import (a syntax or import error
+            // in the agent's code) is reported as a test of the loader.
+            if c[2].contains("_FailedTest") {
+                compile_error = true;
+            }
+            match c.get(3) {
+                Some(result) => count(unittest_passed(result.as_str())),
+                None => pending = true,
+            }
+            continue;
+        }
         if line.starts_with("test ") && line.contains("eval_hidden::") {
             if line.ends_with("... ok") {
-                hidden_ok += 1;
+                count(Some(true));
             } else if line.ends_with("... FAILED") {
-                hidden_failed += 1;
+                count(Some(false));
             }
         }
         if line.starts_with("error[E") || line.starts_with("error: could not compile") {
@@ -608,6 +651,63 @@ mod tests {
     fn passes_when_every_hidden_test_passes() {
         let log = "test eval_hidden::a ... ok\ntest eval_hidden::b ... ok\n";
         assert!(outcome(Some(0), false, log).passed());
+    }
+
+    /// `python3 -m unittest -v` on 3.15 and on macOS's 3.9, verbatim but for
+    /// the tracebacks: one passing test, one with a docstring, a failure, an
+    /// error, a skip, a visible test and a hidden module that didn't import.
+    const UNITTEST_NEW: &str = "\
+test_doc (tests.test_eval_hidden.Hidden.test_doc)
+Has a docstring. ... ok
+test_err (tests.test_eval_hidden.Hidden.test_err) ... ERROR
+test_fail (tests.test_eval_hidden.Hidden.test_fail) ... FAIL
+test_ok (tests.test_eval_hidden.Hidden.test_ok) ... ok
+test_skip (tests.test_eval_hidden.Hidden.test_skip) ... skipped 'why'
+test_visible (tests.test_visible.Visible.test_visible) ... ok
+test_broken_eval_hidden (unittest.loader._FailedTest.test_broken_eval_hidden) ... ERROR
+
+======================================================================
+ERROR: test_err (tests.test_eval_hidden.Hidden.test_err)
+----------------------------------------------------------------------
+FAIL: test_fail (tests.test_eval_hidden.Hidden.test_fail)
+Ran 7 tests in 0.001s
+
+FAILED (failures=1, errors=2, skipped=1)
+";
+    const UNITTEST_OLD: &str = "\
+test_doc (tests.test_eval_hidden.Hidden)
+Has a docstring. ... ok
+test_err (tests.test_eval_hidden.Hidden) ... ERROR
+test_fail (tests.test_eval_hidden.Hidden) ... FAIL
+test_ok (tests.test_eval_hidden.Hidden) ... ok
+test_skip (tests.test_eval_hidden.Hidden) ... skipped 'why'
+test_visible (tests.test_visible.Visible) ... ok
+test_broken_eval_hidden (unittest.loader._FailedTest) ... ERROR
+ERROR: test_err (tests.test_eval_hidden.Hidden)
+";
+
+    #[test]
+    fn counts_hidden_unittest_tests_on_old_and_new_python() {
+        for log in [UNITTEST_NEW, UNITTEST_OLD] {
+            let o = outcome(Some(1), false, log);
+            assert_eq!((o.hidden_ok, o.hidden_failed), (2, 3), "{log}");
+            assert!(o.compile_error, "the module that didn't import");
+            assert!(!o.passed());
+        }
+    }
+
+    #[test]
+    fn a_unittest_run_passes_only_with_hidden_tests() {
+        let log = "test_a (test_eval_hidden.T.test_a) ... ok\n\
+                   test_b (test_eval_hidden.T.test_b)\nChecks b. ... ok\n\
+                   test_c (test_eval_hidden.T.test_c) ... skipped 'later'\n";
+        let o = outcome(Some(0), false, log);
+        assert_eq!((o.hidden_ok, o.hidden_failed), (2, 0));
+        assert!(o.passed());
+
+        let visible_only = "test_a (tests.test_lib.T.test_a) ... ok\n\nOK\n";
+        let o = outcome(Some(0), false, visible_only);
+        assert_eq!(o.failure_kind(), "no hidden tests ran");
     }
 
     // ── predicates ────────────────────────────────────────────────────

@@ -192,9 +192,14 @@ pub(crate) fn archive(repo: &Path, rev: &str, dest: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Copy `src` into `dst`, leaving out Python's bytecode caches: a fixture
+/// tried by hand leaves them beside its sources.
 fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
     for entry in std::fs::read_dir(src).with_context(|| format!("read {}", src.display()))? {
         let entry = entry?;
+        if entry.file_name() == "__pycache__" {
+            continue;
+        }
         let to = dst.join(entry.file_name());
         if entry.file_type()?.is_dir() {
             std::fs::create_dir_all(&to)?;
@@ -246,8 +251,15 @@ pub struct DiffStat {
 pub fn capture_diff(dir: &Path, patch: &Path) -> Result<DiffStat> {
     git(dir, &["add", "-A"])?;
     // A fixture without a Cargo.lock gets one from the agent's first
-    // `cargo` call; that's cargo's footprint, not the agent's.
-    let scope = ["--", ".", ":!Cargo.lock"];
+    // `cargo` call, and running Python writes `__pycache__`; those are the
+    // tools' footprints, not the agent's.
+    let scope = [
+        "--",
+        ".",
+        ":!Cargo.lock",
+        ":(exclude,glob)**/__pycache__/**",
+        ":(exclude,glob)**/*.pyc",
+    ];
     let mut show = vec!["diff", "--cached", "--binary"];
     show.extend(scope);
     std::fs::write(patch, git(dir, &show)?)?;
@@ -273,7 +285,8 @@ fn parse_numstat(text: &str) -> DiffStat {
 
 /// Append the task's hidden tests to their source files, one
 /// `mod eval_hidden` per file, so they can reach private items through
-/// `use super::*`.
+/// `use super::*`; then copy in its hidden files, over anything the agent
+/// left at the same path.
 pub fn inject_hidden(task: &Task, dir: &Path) -> Result<()> {
     let mut by_file: BTreeMap<&str, Vec<String>> = BTreeMap::new();
     for hidden in &task.spec.check.hidden {
@@ -288,6 +301,29 @@ pub fn inject_hidden(task: &Task, dir: &Path) -> Result<()> {
             .with_context(|| format!("read {} to append hidden tests", path.display()))?;
         text.push_str(&hidden_module(&bodies));
         std::fs::write(&path, text)?;
+    }
+    for file in &task.spec.check.hidden_files {
+        let from = task.dir.join(&file.from);
+        let to = dir.join(&file.to);
+        if let Some(parent) = to.parent() {
+            // The agent may have made a folder on the way a link out of the
+            // project; nothing is created or written through it.
+            let existing = parent.ancestors().find(|a| a.exists()).unwrap_or(dir);
+            if !existing.canonicalize()?.starts_with(dir.canonicalize()?) {
+                bail!("hidden file {} would land outside the project", file.to);
+            }
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("create {}", parent.display()))?;
+        }
+        // A directory or link the agent left there is replaced, not
+        // written through.
+        if to.is_dir() && !to.is_symlink() {
+            std::fs::remove_dir_all(&to)?;
+        } else if to.symlink_metadata().is_ok() {
+            std::fs::remove_file(&to)?;
+        }
+        std::fs::copy(&from, &to)
+            .with_context(|| format!("copy hidden file {} to {}", from.display(), to.display()))?;
     }
     Ok(())
 }
@@ -602,6 +638,113 @@ command = "true"
         stamp(&dir).unwrap();
         let mtime = std::fs::metadata(&file).unwrap().modified().unwrap();
         assert!(mtime > old + Duration::from_secs(3000));
+    }
+
+    /// A Python kata graded by a hidden `unittest` module, on whatever
+    /// `python3` is on the path (CI's, or macOS's 3.9).
+    fn python_task(root: &Path) -> Task {
+        let task_dir = root.join("py");
+        for (rel, text) in [
+            ("fixture/calc.py", "def double(x):\n    return x + x + 1\n"),
+            ("fixture/__pycache__/calc.cpython-39.pyc", "stale"),
+            ("solution/calc.py", "def double(x):\n    return x + x\n"),
+            (
+                "hidden/test_eval_hidden.py",
+                "import unittest\nfrom calc import double\n\n\
+                 class Hidden(unittest.TestCase):\n    \
+                 def test_double(self):\n        self.assertEqual(double(2), 4)\n",
+            ),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(
+            task_dir.join("task.toml"),
+            r#"id = "py"
+prompt = "p"
+[repo]
+fixture = "fixture"
+solution = "solution"
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+"#,
+        )
+        .unwrap();
+        Task::load(&task_dir).unwrap()
+    }
+
+    #[test]
+    fn a_python_task_fails_at_the_start_and_passes_solved() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task = python_task(tmp.path());
+        let target = tmp.path().join("target");
+
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        // The fixture's bytecode cache isn't copied.
+        assert!(!start.join("__pycache__").exists());
+        // An agent's own test at the same path is replaced.
+        std::fs::create_dir_all(start.join("tests")).unwrap();
+        std::fs::write(
+            start.join("tests/test_eval_hidden.py"),
+            "raise SystemExit(0)\n",
+        )
+        .unwrap();
+        inject_hidden(&task, &start).unwrap();
+        let o = crate::check::run(&task, &start, &target, &tmp.path().join("s.log")).unwrap();
+        assert_eq!((o.hidden_ok, o.hidden_failed), (0, 1), "{}", o.tail);
+        assert!(!o.passed());
+
+        let solved = tmp.path().join("solved");
+        materialize(&task, Stage::Solved, tmp.path(), &solved).unwrap();
+        inject_hidden(&task, &solved).unwrap();
+        let o = crate::check::run(&task, &solved, &target, &tmp.path().join("v.log")).unwrap();
+        assert!(o.passed(), "{}", o.tail);
+    }
+
+    #[test]
+    fn python_caches_stay_out_of_the_diff() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task = python_task(tmp.path());
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        for rel in [
+            "__pycache__/calc.cpython-315.pyc",
+            "pkg/__pycache__/m.pyc",
+            "old.pyc",
+        ] {
+            let path = start.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, "bytecode").unwrap();
+        }
+        let stat = capture_diff(&start, &tmp.path().join("d.patch")).unwrap();
+        assert_eq!(stat.files, 0);
+
+        std::fs::write(start.join("calc.py"), "def double(x):\n    return 2 * x\n").unwrap();
+        let stat = capture_diff(&start, &tmp.path().join("d.patch")).unwrap();
+        assert_eq!(stat.files, 1);
+    }
+
+    #[test]
+    fn a_hidden_file_is_not_written_through_a_link_out_of_the_project() {
+        use std::os::unix::fs::symlink;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let task = python_task(tmp.path());
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        let outside = tmp.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        symlink(&outside, start.join("tests")).unwrap();
+
+        let err = inject_hidden(&task, &start).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("outside the project"),
+            "{err:#}"
+        );
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
     }
 
     #[test]
