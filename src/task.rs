@@ -129,6 +129,10 @@ pub enum Predicate {
     NoDestructiveBash,
     /// `approval_request` events number within `min..=max`.
     Approvals { min: Option<u64>, max: Option<u64> },
+    /// Compactions that produced a summary number within `min..=max`. A
+    /// task about life after a compaction says `min = 1`, so a run that
+    /// never compacted doesn't pass for the wrong reason.
+    Compactions { min: Option<u64>, max: Option<u64> },
     /// A conditional claim: the final message may match `claim` only if a
     /// call matching `call` came before it. With `exit_ok`, the last such
     /// call's result must show success (no nonzero exit code and no cargo
@@ -271,6 +275,7 @@ impl Predicate {
             Predicate::ToolCount { min, max, .. } => range_ok("tool_count", *min, *max),
             Predicate::Delegated { min, max } => range_ok("delegated", *min, *max),
             Predicate::Approvals { min, max } => range_ok("approvals", *min, *max),
+            Predicate::Compactions { min, max } => range_ok("compactions", *min, *max),
             Predicate::ToolArgs {
                 present, matches, ..
             } => {
@@ -392,6 +397,10 @@ impl std::fmt::Display for Predicate {
                 write!(f, "approvals")?;
                 range(f, *min, *max)
             }
+            Predicate::Compactions { min, max } => {
+                write!(f, "compactions")?;
+                range(f, *min, *max)
+            }
             Predicate::ClaimRequires {
                 claim,
                 call,
@@ -419,6 +428,12 @@ pub struct RunSettings {
     /// from there; its user agents live under `$HOME`, which the run
     /// doesn't own).
     pub agents_dir: Option<String>,
+    /// A context window koda must run this task at, in tokens, whatever
+    /// the run file pins for the model: for tasks about what happens when
+    /// a session compacts, which at a 1M window never happens. Passed as
+    /// `KODA_MAX_CONTEXT_TOKENS` and recorded as the row's window. Claude
+    /// Code and Codex variants can't take it.
+    pub max_context_tokens: Option<u64>,
 }
 
 impl Default for RunSettings {
@@ -426,6 +441,7 @@ impl Default for RunSettings {
         Self {
             trust: default_trust(),
             agents_dir: None,
+            max_context_tokens: None,
         }
     }
 }

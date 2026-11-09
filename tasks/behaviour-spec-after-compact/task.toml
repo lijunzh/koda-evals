@@ -1,0 +1,42 @@
+id = "behaviour-spec-after-compact"
+# Koda-only (lijunzh/koda-evals, 2026-11-09). Three exporters whose rules
+# sit in a long SPEC.md, built under a pinned 32K window, so the session
+# compacts partway: a run passes only if the rules survive the compaction,
+# through the summary or a re-read of SPEC.md. Every rule the hidden tests
+# check is one SPEC.md states and convention wouldn't guess (`.tab`, the
+# upper-case header, cents in TSV, `---:`, the total row, 23 chars + `…`,
+# CRLF, sorted registry). `compactions min = 1` keeps a run that never
+# compacted from passing for the wrong reason. Control:
+# behaviour-spec-after-compact-control, the same task at the run's window.
+# Claude Code and Codex can't be held to a window, so they don't run it.
+# wall_secs is an hour: on Flash-Next each compaction takes 3-6 minutes
+# (about 10K output tokens at xhigh), and a 30-minute screen run had the
+# exporters right when the wall stopped it (spec-after-compact-flashnext
+# 20261109T153552Z).
+prompt = """Add the three exporters that SPEC.md describes but the crate doesn't have yet: TSV, Markdown table and fixed width. Follow SPEC.md exactly, including the registry rules, and give each exporter its own unit tests."""
+tags = ["rust", "behaviour", "compaction", "koda-only"]
+cluster = "judgement"
+judgement = "keeps rules it read before a compaction, by its summary or a re-read"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/registry.rs", test = "hidden/registry.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[[check.transcript]]
+type = "compactions"
+min = 1
+
+[run]
+max_context_tokens = 32768
+
+[limits]
+wall_secs = 3600
