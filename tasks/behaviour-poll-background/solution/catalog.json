@@ -1,0 +1,205 @@
+{
+  "items": [
+    {
+      "sku": "SKU-001",
+      "name": "Item 1",
+      "price_cents": 137
+    },
+    {
+      "sku": "SKU-002",
+      "name": "Item 2",
+      "price_cents": 174
+    },
+    {
+      "sku": "SKU-003",
+      "name": "Item 3",
+      "price_cents": 211
+    },
+    {
+      "sku": "SKU-004",
+      "name": "Item 4",
+      "price_cents": 248
+    },
+    {
+      "sku": "SKU-005",
+      "name": "Item 5",
+      "price_cents": 285
+    },
+    {
+      "sku": "SKU-006",
+      "name": "Item 6",
+      "price_cents": 322
+    },
+    {
+      "sku": "SKU-007",
+      "name": "Item 7",
+      "price_cents": 359
+    },
+    {
+      "sku": "SKU-008",
+      "name": "Item 8",
+      "price_cents": 396
+    },
+    {
+      "sku": "SKU-009",
+      "name": "Item 9",
+      "price_cents": 433
+    },
+    {
+      "sku": "SKU-010",
+      "name": "Item 10",
+      "price_cents": 470
+    },
+    {
+      "sku": "SKU-011",
+      "name": "Item 11",
+      "price_cents": 507
+    },
+    {
+      "sku": "SKU-012",
+      "name": "Item 12",
+      "price_cents": 544
+    },
+    {
+      "sku": "SKU-013",
+      "name": "Item 13",
+      "price_cents": 581
+    },
+    {
+      "sku": "SKU-014",
+      "name": "Item 14",
+      "price_cents": 618
+    },
+    {
+      "sku": "SKU-015",
+      "name": "Item 15",
+      "price_cents": 655
+    },
+    {
+      "sku": "SKU-016",
+      "name": "Item 16",
+      "price_cents": 692
+    },
+    {
+      "sku": "SKU-017",
+      "name": "Item 17",
+      "price_cents": 729
+    },
+    {
+      "sku": "SKU-018",
+      "name": "Item 18",
+      "price_cents": 766
+    },
+    {
+      "sku": "SKU-019",
+      "name": "Item 19",
+      "price_cents": 803
+    },
+    {
+      "sku": "SKU-020",
+      "name": "Item 20",
+      "price_cents": 840
+    },
+    {
+      "sku": "SKU-021",
+      "name": "Item 21",
+      "price_cents": 877
+    },
+    {
+      "sku": "SKU-022",
+      "name": "Item 22",
+      "price_cents": 914
+    },
+    {
+      "sku": "SKU-023",
+      "name": "Item 23",
+      "price_cents": 951
+    },
+    {
+      "sku": "SKU-024",
+      "name": "Item 24",
+      "price_cents": 988
+    },
+    {
+      "sku": "SKU-025",
+      "name": "Item 25",
+      "price_cents": 1025
+    },
+    {
+      "sku": "SKU-026",
+      "name": "Item 26",
+      "price_cents": 1062
+    },
+    {
+      "sku": "SKU-027",
+      "name": "Item 27",
+      "price_cents": 1099
+    },
+    {
+      "sku": "SKU-028",
+      "name": "Item 28",
+      "price_cents": 1136
+    },
+    {
+      "sku": "SKU-029",
+      "name": "Item 29",
+      "price_cents": 1173
+    },
+    {
+      "sku": "SKU-030",
+      "name": "Item 30",
+      "price_cents": 1210
+    },
+    {
+      "sku": "SKU-031",
+      "name": "Item 31",
+      "price_cents": 1247
+    },
+    {
+      "sku": "SKU-032",
+      "name": "Item 32",
+      "price_cents": 1284
+    },
+    {
+      "sku": "SKU-033",
+      "name": "Item 33",
+      "price_cents": 1321
+    },
+    {
+      "sku": "SKU-034",
+      "name": "Item 34",
+      "price_cents": 1358
+    },
+    {
+      "sku": "SKU-035",
+      "name": "Item 35",
+      "price_cents": 1395
+    },
+    {
+      "sku": "SKU-036",
+      "name": "Item 36",
+      "price_cents": 1432
+    },
+    {
+      "sku": "SKU-037",
+      "name": "Item 37",
+      "price_cents": 1469
+    },
+    {
+      "sku": "SKU-038",
+      "name": "Item 38",
+      "price_cents": 1506
+    },
+    {
+      "sku": "SKU-039",
+      "name": "Item 39",
+      "price_cents": 1543
+    },
+    {
+      "sku": "SKU-040",
+      "name": "Item 40",
+      "price_cents": 1580
+    }
+  ],
+  "currency": "USD"
+}

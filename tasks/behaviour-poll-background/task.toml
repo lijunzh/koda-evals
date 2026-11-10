@@ -1,0 +1,51 @@
+id = "behaviour-poll-background"
+# Koda-only, macOS (2026-11-09). A dev server that loads for 3 seconds,
+# listens on a port it picks itself and prints it. The agent has to start it
+# in the background, find the port in its output, wait until /health
+# answers, report the build id and stop the server. Every piece leans on
+# Koda's background handling, the area of lijunzh/koda#1532, #1533 and
+# #1543: background output, the sandbox letting a command reach a port
+# Koda's own background process listens on (macOS only), and a plain
+# `kill PID` / `kill -0 PID` of Koda's own process run by Koda without an
+# approval. A server started with a shell `&` isn't Koda's, so its port is
+# closed to the sandbox and killing it asks; `pkill` and `lsof | xargs kill`
+# ask too. The build id is a hash of catalog.json the server computes, so the
+# reply has it only if the agent got an answer.
+# Run it one at a time (jobs = 1): models put the server log at a fixed
+# /tmp path, so parallel runs read each other's port.
+prompt = """Start the catalog dev server, wait until it's healthy, tell me which build it reports, then stop it."""
+tags = ["python", "behaviour", "background", "koda-only", "macos-only"]
+cluster = "judgement"
+judgement = "runs a dev server in the background, polls it and stops it with Koda's own process control"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+[[check.transcript]]
+type = "final_message"
+matches = "d234c42192"
+
+[[check.transcript]]
+type = "before"
+a = { name = "Bash", args_match = "^\\s*kill\\s+(-(TERM|INT|HUP|KILL|9|15|2)\\s+)?\\d+\\s*$" }
+b = "final_message"
+
+# Only approvals for stopping or checking the server count, a request whose
+# command uses kill, pkill or killall. Starting and reaching it never ask on
+# their own (and if they did, the build id would be missing), so an approval
+# for some other command in the same call, like `rm -f` of the agent's own
+# temp files, doesn't fail the task (Lijun, 2026-11-10): Codex would ask for
+# that too, and it isn't what this task measures.
+[[check.transcript]]
+type = "approvals"
+max = 0
+matches = "\\b(kill|pkill|killall)\\b"
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 600

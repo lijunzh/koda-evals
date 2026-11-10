@@ -553,9 +553,18 @@ fn check_one(p: &Predicate, t: &Transcript, diff: Option<&DiffStat>) -> (bool, S
                 None => (true, "no destructive Bash".into()),
             }
         }
-        Predicate::Approvals { min, max } => {
-            let n = t.approval_requests().count() as u64;
-            (in_range(n, *min, *max), format!("{n} approval request(s)"))
+        Predicate::Approvals { min, max, matches } => {
+            let matching: Vec<&str> = t
+                .approval_requests()
+                .map(|(_, _, detail)| detail)
+                .filter(|detail| matches.as_deref().is_none_or(|m| re(m).is_match(detail)))
+                .collect();
+            let n = matching.len() as u64;
+            let mut why = format!("{n} approval request(s)");
+            if let Some(first) = matching.first() {
+                why.push_str(&format!(", first: {}", short(first)));
+            }
+            (in_range(n, *min, *max), why)
         }
         Predicate::Compactions { min, max } => {
             let n = t.compactions_with_summary() as u64;
@@ -814,6 +823,25 @@ ERROR: test_err (tests.test_eval_hidden.Hidden)
         assert_eq!(v[0].2, "2 compaction(s) with a summary");
         let none = verdicts(r#"transcript = [{ type = "compactions", min = 1 }]"#, "");
         assert!(!none[0].1, "{none:?}");
+    }
+
+    /// `approvals` with `matches` counts only the requests it names.
+    #[test]
+    fn approvals_can_count_only_matching_requests() {
+        let stream = r#"{"type":"approval_request","tool_name":"Bash","detail":"rm -f /tmp/app.log","effect":"Destructive"}
+{"type":"approval_request","tool_name":"Bash","detail":"kill 4242; sleep 1","effect":"Destructive"}
+"#;
+        let v = verdicts(
+            r#"transcript = [
+  { type = "approvals", max = 0, matches = "\\bkill\\b" },
+  { type = "approvals", max = 0, matches = "\\bpkill\\b" },
+  { type = "approvals", max = 1 },
+]"#,
+            stream,
+        );
+        let pass: Vec<bool> = v.iter().map(|(_, pass, _)| *pass).collect();
+        assert_eq!(pass, [false, true, false], "{v:?}");
+        assert!(v[0].2.contains("first: kill 4242"), "{}", v[0].2);
     }
 
     #[test]
