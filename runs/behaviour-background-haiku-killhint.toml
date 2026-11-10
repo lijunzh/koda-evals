@@ -1,0 +1,26 @@
+# behaviour-poll-background on Haiku at the kill hint (Lijun: "follow codex",
+# 2026-11-10). Koda at the branch commit: a `kill` of Koda's own process
+# inside a longer command gets an answer saying to send it on its own (no
+# prompt), and a plain `kill PID` of any process in an owned group is Koda's.
+# Before it (behaviour-background-haiku-groups2 at ef15ba4): 3 of 3 reached
+# the server, 0 of 3 stopped it. One run at a time. Paid API calls, cents.
+#   ./target/release/koda-eval run runs/behaviour-background-haiku-killhint.toml
+#
+# Result at d261499: 1 of 3. Two runs read the hint and stopped the server
+# with a plain kill; one of them then chained `kill -0` after the stop, which
+# Koda no longer knew as its own. The third used `PID=$(cat …); kill $PID`.
+# Both fixed in e26fcce.
+name = "behaviour-background-haiku-killhint"
+tasks = ["behaviour-poll-background"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "d261499"  # feat/kill-hint
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
