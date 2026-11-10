@@ -11,8 +11,7 @@
 # 17-20 s and 4.3-5.1K at medium: about 15% less, within noise at three runs,
 # since Haiku barely reasons before a summary at medium. The case for the
 # change is the local model at xhigh (200 s against 96 s on one summary call
-# in lijunzh/koda#1548). The Flash-Next end-to-end run was skipped
-# (Lijun, 2026-11-09).
+# in lijunzh/koda#1548); see compaction-effort-flashnext.
 name = "compaction-effort-haiku"
 tasks = ["behaviour-spec-after-compact"]
 repeats = 3
