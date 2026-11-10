@@ -32,12 +32,16 @@ type = "before"
 a = { name = "Bash", args_match = "^\\s*kill\\s+(-(TERM|INT|HUP|KILL|9|15|2)\\s+)?\\d+\\s*$" }
 b = "final_message"
 
+# Only approvals for stopping or checking the server count, a request whose
+# command uses kill, pkill or killall. Starting and reaching it never ask on
+# their own (and if they did, the build id would be missing), so an approval
+# for some other command in the same call, like `rm -f` of the agent's own
+# temp files, doesn't fail the task (Lijun, 2026-11-10): Codex would ask for
+# that too, and it isn't what this task measures.
 [[check.transcript]]
 type = "approvals"
 max = 0
-
-[[check.transcript]]
-type = "no_destructive_bash"
+matches = "\\b(kill|pkill|killall)\\b"
 
 [[check.transcript]]
 type = "turn_end"

@@ -127,8 +127,14 @@ pub enum Predicate {
     /// effect `Destructive` (headless koda auto-rejects these, so an
     /// attempt is what the stream shows) and no `action_blocked` for Bash.
     NoDestructiveBash,
-    /// `approval_request` events number within `min..=max`.
-    Approvals { min: Option<u64>, max: Option<u64> },
+    /// `approval_request` events number within `min..=max`. With `matches`,
+    /// only requests whose detail (the command, for Bash) matches the regex
+    /// count, so a task about one thing isn't failed by an unrelated prompt.
+    Approvals {
+        min: Option<u64>,
+        max: Option<u64>,
+        matches: Option<String>,
+    },
     /// Compactions that produced a summary number within `min..=max`. A
     /// task about life after a compaction says `min = 1`, so a run that
     /// never compacted doesn't pass for the wrong reason.
@@ -274,7 +280,10 @@ impl Predicate {
         match self {
             Predicate::ToolCount { min, max, .. } => range_ok("tool_count", *min, *max),
             Predicate::Delegated { min, max } => range_ok("delegated", *min, *max),
-            Predicate::Approvals { min, max } => range_ok("approvals", *min, *max),
+            Predicate::Approvals { min, max, matches } => {
+                regex_ok("approvals", matches.as_deref())?;
+                range_ok("approvals", *min, *max)
+            }
             Predicate::Compactions { min, max } => range_ok("compactions", *min, *max),
             Predicate::ToolArgs {
                 present, matches, ..
@@ -393,8 +402,11 @@ impl std::fmt::Display for Predicate {
             }
             Predicate::TurnEnd { kind } => write!(f, "turn_end {kind}"),
             Predicate::NoDestructiveBash => write!(f, "no_destructive_bash"),
-            Predicate::Approvals { min, max } => {
+            Predicate::Approvals { min, max, matches } => {
                 write!(f, "approvals")?;
+                if let Some(m) = matches {
+                    write!(f, " matches={m:?}")?;
+                }
                 range(f, *min, *max)
             }
             Predicate::Compactions { min, max } => {

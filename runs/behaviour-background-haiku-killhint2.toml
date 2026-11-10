@@ -9,6 +9,9 @@
 # Result at e26fcce (lijunzh/koda#1551): 2 of 3. The miss also stopped the
 # server Koda's way; its one approval request was `rm -f` of its own temp
 # files, which counts as destructive.
+# Regraded 2026-11-10 after the task's approvals check was narrowed to kill,
+# pkill and killall (Lijun: "narrow it"): 3 of 3. The earlier runs regrade
+# unchanged: their failures were Koda's.
 name = "behaviour-background-haiku-killhint2"
 tasks = ["behaviour-poll-background"]
 repeats = 3
