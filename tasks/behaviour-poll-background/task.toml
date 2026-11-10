@@ -11,6 +11,8 @@ id = "behaviour-poll-background"
 # closed to the sandbox and killing it asks; `pkill` and `lsof | xargs kill`
 # ask too. The build id is a hash of catalog.json the server computes, so the
 # reply has it only if the agent got an answer.
+# Run it one at a time (jobs = 1): models put the server log at a fixed
+# /tmp path, so parallel runs read each other's port.
 prompt = """Start the catalog dev server, wait until it's healthy, tell me which build it reports, then stop it."""
 tags = ["python", "behaviour", "background", "koda-only", "macos-only"]
 cluster = "judgement"
