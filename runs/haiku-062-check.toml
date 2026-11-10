@@ -1,0 +1,32 @@
+# 0.6.2 release check on Haiku, Koda only (Lijun's yes, 2026-11-10). The same
+# tasks, repeats, memory file and jobs as haiku-061-check (main at 425d8c2,
+# 90 of 93), so the two compare directly. The changes to watch:
+# lijunzh/koda#1549 (a `$(…)` is classified by what it runs, so fewer Bash
+# commands ask), #1550 (a command's process group is Koda's while it runs;
+# a call ends when its shell does) and #1551 (a chained kill of Koda's own
+# process gets a hint). Also #1547 (Grep `!` glob) and #1548 (compaction
+# summary at low effort). Paid API calls, about $4-5.
+#   ./target/release/koda-eval run runs/haiku-062-check.toml
+#
+# Result, 20261110T182357Z: 90 of 93, 30 of 31 tasks at pass^3, 7.6K tokens
+# and 1m25s a run (0.6.1: 90 of 93, 29 of 31, 7.9K, 1m24s). The one task
+# short of 3 of 3 is bash-classifier-escapes, 0 of 3 (0.6.1: 1 of 3); every
+# miss, then and now, fails the same hidden assertion: Haiku keeps
+# `env PATH=/tmp ls /` read-only. The task edits an April snapshot of the
+# classifier, so it measures the model, not this build. provider-flag-base-url
+# went from 1 of 3 to 3 of 3. No timeouts or blocked actions; 47 approval
+# requests (0.6.1: 52) and 25 edit rejections (0.6.1: 51).
+name = "haiku-062-check"
+repeats = 3
+tags = ["suite"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "b1cb615"  # main: the 0.6.2 candidate, with lijunzh/koda#1547-#1551
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
