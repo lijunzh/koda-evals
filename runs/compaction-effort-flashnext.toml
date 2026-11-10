@@ -1,0 +1,32 @@
+# Compaction at low effort (the summary call only), on Qwen3.8-Flash-Next
+# (Lijun's go-ahead, 2026-11-09). Koda at the branch commit of
+# lijunzh/koda#1548; the baseline is spec-after-compact-flashnext
+# (20261109T153552Z, Koda f200ee1, the summary at xhigh): 1 of 2 at a
+# 30-minute limit (the miss had the code right), 3-4 compactions of 3-6
+# minutes each, 55-65% of the run's time. Settings as that run; the task's
+# limit is now an hour.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/compaction-effort-flashnext.toml
+#
+# Result, 20261110T003341Z: 3 of 3 in 8.3, 8.0 and 15.0 minutes, against
+# 22.6 minutes and a 30-minute timeout at xhigh. Compactions fell from 3-4 a
+# run to 1-2, since a shorter summary leaves more room; each took 94-121 s
+# against 247-294 s, and compaction's share of the run fell from 55-65% to
+# 19-27%. The longest summary was 7.6-14K characters against 26-36K. All
+# four summary calls went out at `low`, and the rules survived.
+name = "compaction-effort-flashnext"
+tasks = ["behaviour-spec-after-compact"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "8cc5f03"  # feat/compaction-effort: the summary call at low effort
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
