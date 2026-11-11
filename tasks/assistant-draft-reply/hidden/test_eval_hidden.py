@@ -8,8 +8,8 @@ isn't. Sam's weekend, from the calendar and the 08:00-21:00 rule:
 
 Offered times are read from the text: a clock time (`5pm`, `17:00`, `noon`,
 the start of a range like `12-2pm`) belongs to the last Saturday or Sunday
-named before it. Clauses that decline (`can't`, `doesn't work`, ...) are
-skipped, so the decline of Saturday morning doesn't count as an offer, and
+named before it. Clauses that decline (`can't`, `doesn't work`, ...) or only
+describe an event (`Mia has soccer from 9 to noon`) are skipped, so the decline of Saturday morning doesn't count as an offer, and
 quoted text from Jordan's email is ignored.
 """
 
@@ -30,6 +30,11 @@ FREE = {
 }
 DECLINE = re.compile(r"can'?t|can’t|cannot|can not|won'?t|won’t|unable|not able|doesn'?t work|doesn’t work|"
                      r"does not work|isn'?t going to|busy|tied up|unfortunately|no good|not free|not available", re.I)
+# A clause that only describes an event ("Mia has a soccer tournament from 9 to
+# noon") explains the decline; one that also offers ("I'm free", "could",
+# "how about") or says nothing else, like a bullet with a time, is an offer.
+EXPLAINS = re.compile(r"\b(has|have|had|got|tournament|party|brunch|lesson|dinner|game|appointment|soccer|swim|birthday|plans)\b", re.I)
+OFFERS = re.compile(r"\b(free|available|open|could|can|works?|how about|would|happy to|glad to|either)\b", re.I)
 DAY = re.compile(r"\b(saturday|sunday|sat|sun|monday|tuesday|wednesday|thursday|friday)\b", re.I)
 TIME = re.compile(
     r"\b(?P<noon>noon|midday)\b(?:\s*(?:-|\u2013|\u2014|to|until|till)\s*\d{1,2}(?::[0-5]\d)?\s*(?:[ap]\.?m\.?\b)?)?"
@@ -55,11 +60,14 @@ def offers(body):
     """(day, start minute) for each clock time offered, in order."""
     day = None
     found = []
+    # Rejoin lines wrapped mid-sentence; blank lines and bullets stay breaks.
+    body = re.sub(r"(?<!\n)\n(?!\n|\s*[-*\u2022]\s|\s*\d+[.)]\s)", " ", body)
     clauses = []
     for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
         clauses += re.split(r"[,;]|:\s|\s\u2014\s|\bbut\b|\bhowever\b|\bthough\b", sentence, flags=re.I)
     for sentence in clauses:
-        declined = bool(DECLINE.search(sentence))
+        declined = bool(DECLINE.search(sentence)) or (
+            bool(EXPLAINS.search(sentence)) and not OFFERS.search(sentence))
         tokens = sorted([(m.start(), "day", m) for m in DAY.finditer(sentence)]
                         + [(m.start(), "time", m) for m in TIME.finditer(sentence)], key=lambda t: t[0])
         for _, kind, m in tokens:
