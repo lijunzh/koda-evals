@@ -396,8 +396,8 @@ What keeps the peers' setup like Koda's:
 in place of Koda, so a Qwen model can be run in the harness its own team ships.
 It answers whether a behaviour seen under Koda is the model's or Koda's: for
 example, Qwen3.8-27B checking finished work until the time limit (2026-11-04).
-Name it as a variant's `bin`, beside or instead of a Koda variant, on an
-`lm-studio` model; `KODA_MAX_CONTEXT_TOKENS` and `KODA_REASONING_EFFORT` in the
+Name it as a variant's `bin`, beside or instead of a Koda variant, on a
+local model (`llama-cpp` or `lm-studio`: it uses only the base URL); `KODA_MAX_CONTEXT_TOKENS` and `KODA_REASONING_EFFORT` in the
 model's `env` become Qwen Code's `contextWindowSize` and the `reasoning_effort`
 it sends. macOS only: the run is held to the project, the cargo target and
 ~/.cargo by `sandbox-exec`, since Qwen Code runs with approvals off. Its
