@@ -3,7 +3,9 @@
 //! runs a fake `qwen` with. No model and no GPU.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+#[cfg(target_os = "macos")]
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::{Command, Output};
 
 use serde_json::Value;
