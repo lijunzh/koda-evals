@@ -29,9 +29,11 @@ Claude Code gets it only when it looks, koda always.
 
 CLAUDE_AS_KODA_MEMORY=project loads the project's CLAUDE.md the way Claude
 Code does, as a system-reminder in the first user message, and nothing else:
-it drops --safe-mode, loads only project settings and turns auto memory off.
+it drops --safe-mode, loads only project settings, turns auto memory off and
+excludes the user's own ~/.claude/CLAUDE.md, AGENTS.md and rules
+(`claudeMdExcludes`), which `--setting-sources project` alone lets through.
 Captured on 2.1.296 against a stub: the system prompt is the same as under
---safe-mode, and no user skills, plugins or memory reach the request. Project
+--safe-mode, and no user skills or plugins reach the request. Project
 settings, agents and skills would load too; the koda checkout has none. The
 variable is read here and never reaches the child.
 
@@ -398,7 +400,19 @@ def main():
     if memory == "project":
         print("claude-as-koda: loading project CLAUDE.md", file=sys.stderr)
         isolation = ["--setting-sources", "project"]
-        extra = {"autoMemoryEnabled": False}
+        # `--setting-sources project` keeps user settings out but not the
+        # user's own CLAUDE.md and rules: found 2026-11-10, when the owner's
+        # ~/.claude/CLAUDE.md sent every Claude Code run of a vault task to
+        # the owner's real notes vault. Exclude them by path.
+        claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
+        extra = {
+            "autoMemoryEnabled": False,
+            "claudeMdExcludes": [
+                os.path.join(claude_dir, "CLAUDE.md"),
+                os.path.join(claude_dir, "AGENTS.md"),
+                os.path.join(claude_dir, "rules", "**"),
+            ],
+        }
     else:
         isolation = ["--safe-mode", "--setting-sources", ""]
         extra = None

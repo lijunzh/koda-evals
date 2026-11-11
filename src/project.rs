@@ -116,6 +116,18 @@ pub fn materialize_with(
     }
     stamp(dest)?;
     git(dest, &["init", "-q", "-b", "main"])?;
+    // The agent's own git calls read the owner's global config. Pin what
+    // would make a commit depend on the machine: identity and signing (a
+    // signed commit needs ~/.gnupg, which agents' sandboxes keep read-only,
+    // so it failed for one agent and not another).
+    for (key, value) in [
+        ("user.name", "koda-eval"),
+        ("user.email", "koda-eval@localhost"),
+        ("commit.gpgsign", "false"),
+        ("tag.gpgsign", "false"),
+    ] {
+        git(dest, &["config", key, value])?;
+    }
     git(dest, &["add", "-A"])?;
     git(dest, &["commit", "-q", "--no-verify", "-m", "task start"])?;
     if let Some(uncommitted) = task.uncommitted_dir() {
@@ -505,6 +517,8 @@ mod tests {
         let start = tmp.path().join("start");
         materialize_with(&task, Stage::Start, tmp.path(), &start, &pinned).unwrap();
         assert_eq!(read(&start, "AGENTS.md"), "commit only your own files\n");
+        // The agent's commits don't depend on the owner's global git config.
+        assert_eq!(git(&start, &["config", "commit.gpgsign"]).unwrap(), "false\n");
         // Someone else's work is there, uncommitted.
         assert_eq!(read(&start, "Home.md"), "home, edited by someone else\n");
         assert_eq!(
