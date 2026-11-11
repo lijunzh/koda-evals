@@ -518,7 +518,10 @@ mod tests {
         materialize_with(&task, Stage::Start, tmp.path(), &start, &pinned).unwrap();
         assert_eq!(read(&start, "AGENTS.md"), "commit only your own files\n");
         // The agent's commits don't depend on the owner's global git config.
-        assert_eq!(git(&start, &["config", "commit.gpgsign"]).unwrap(), "false\n");
+        assert_eq!(
+            git(&start, &["config", "commit.gpgsign"]).unwrap(),
+            "false\n"
+        );
         // Someone else's work is there, uncommitted.
         assert_eq!(read(&start, "Home.md"), "home, edited by someone else\n");
         assert_eq!(
