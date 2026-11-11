@@ -1,0 +1,37 @@
+# 0.6.1 check on the local default, targeted (Lijun's yes, 2026-11-09).
+# lijunzh/koda#1545 makes Edit, and a Write that replaces a file, refuse a file
+# the model hasn't read. In haiku-061-check the refusal fired 36 times, in
+# these five tasks; Haiku read the files and redid the edits each time. This
+# checks that Qwen3.8-Flash-Next recovers the same way instead of retrying the
+# Edit or running out its time. Settings as flashnext-060-check: llama-server,
+# the 256K window, `xhigh` effort, an hour per task, one request at a time.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-061-edit-check.toml
+#
+# Result, 20261109T120024Z: 15 of 15, as in flashnext-060-check (15 of 15 on
+# these five), at 2m35s a run, in line with 0.6.0's times. The refusal never
+# fired: Flash-Next read every file with Read before editing it, and no Edit
+# in the 15 runs failed validation at all.
+name = "flashnext-061-edit-check"
+tasks = [
+  "kata-utf8-sweep",
+  "behaviour-shell-safety-control",
+  "kata-api-migration",
+  "kata-api-migration-tests",
+  "behaviour-delegate-or-not-control",
+]
+repeats = 3
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 3600
+
+[[variants]]
+name = "koda"
+ref = "425d8c2"  # main: the 0.6.1 candidate, with lijunzh/koda#1545
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

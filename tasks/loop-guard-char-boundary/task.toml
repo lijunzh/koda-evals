@@ -6,7 +6,7 @@ thread 'main' panicked at koda-core/src/loop_guard.rs:169:23:
 end byte index 200 is not a char boundary; it is inside '─' (bytes 198..201 of string)
 
 Find and fix the cause."""
-tags = ["rust", "koda-history", "panic", "utf8", "suite"]
+tags = ["rust", "koda-history", "panic", "utf8", "suite", "core"]
 cluster = "panic"
 
 [repo]

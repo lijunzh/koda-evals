@@ -1,0 +1,25 @@
+# First screen of vault-follow-agents-md on Flash-Next (llama-server, GPU
+# only): a long AGENTS.md whose hub and Git rules come past 16,000
+# characters, then commit only your own change. Koda at main after #1557.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/vault-agents-md-flashnext.toml
+#
+# Result, 20261111T023545Z: 3 of 3, about 2 minutes a run. Each run had the
+# whole AGENTS.md in its prompt and never re-read it; each committed only the
+# note and the hub with the message AGENTS.md gives.
+name = "vault-agents-md-flashnext"
+tasks = ["vault-follow-agents-md"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "5aedb28"  # main, with lijunzh/koda#1555-#1557
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

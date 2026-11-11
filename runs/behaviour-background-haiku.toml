@@ -1,0 +1,18 @@
+# Screen of behaviour-poll-background on Haiku 5.5 (Lijun's go-ahead,
+# 2026-11-09), Koda at main (b5a06b8). macOS only: on Linux a sandboxed
+# command can't reach a Koda-started server yet. Paid API calls, cents.
+#   ./target/release/koda-eval run runs/behaviour-background-haiku.toml
+name = "behaviour-background-haiku"
+tasks = ["behaviour-poll-background"]
+repeats = 3
+jobs = 3
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "b5a06b8"  # main after lijunzh/koda#1548
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

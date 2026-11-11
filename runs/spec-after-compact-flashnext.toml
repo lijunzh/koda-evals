@@ -1,0 +1,31 @@
+# Screen of behaviour-spec-after-compact and its control on the local default
+# (2026-11-09), Koda at f200ee1 (main after lijunzh/koda#1547). The task pins
+# its own 32K window; the control runs at the model's 256K, where nothing
+# should compact. Settings as flashnext-060-check otherwise.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/spec-after-compact-flashnext.toml
+#
+# Result, 20261109T153552Z (at the tasks' first 30-minute limit): the task 1
+# of 2, the control 2 of 2. The task compacted 4 and 3 times and re-read
+# SPEC.md after compacting; its miss had all 6 hidden tests passing on disk
+# when the wall stopped it. Compaction took 65% and 55% of those runs' time:
+# each summary call wrote 7-14K tokens (summaries of 4.8-6.6K, the rest
+# reasoning at xhigh) at about 40 tokens a second. The control never
+# compacted (peak 41K of 256K) and took 9m12s and 6m38s. The tasks' limit
+# is now an hour.
+name = "spec-after-compact-flashnext"
+tasks = ["behaviour-spec-after-compact", "behaviour-spec-after-compact-control"]
+repeats = 2
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "f200ee1"  # main after lijunzh/koda#1547
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

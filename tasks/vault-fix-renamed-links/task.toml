@@ -1,0 +1,30 @@
+id = "vault-fix-renamed-links"
+# Vault work, not code. A note was renamed outside Obsidian, so its links
+# broke. They come in every form Obsidian takes: plain, aliased, heading,
+# embed, lower case, with a folder, inside a table (`\|`), a Markdown link
+# with `%20`, and a canvas file's path. Prose that names the project, the
+# similarly named "Project Atlas Retrospective", an unwritten
+# "Project Atlas 2", and link examples in code must stay as they are.
+# fixture/, solution/ and hidden/expected.json come from hidden/make_vault.py.
+prompt = """I renamed `Projects/Project Atlas.md` to `Projects/Atlas Migration.md` in Finder, outside Obsidian, so nothing updated the links to it, and now they're broken all over this vault. Please fix every link to that note so it points at the new name. Don't change anything else."""
+tags = ["markdown", "daily", "vault", "careful-edit", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [
+    { from = "hidden/test_eval_hidden.py", to = "eval_hidden/test_eval_hidden.py" },
+    { from = "hidden/expected.json", to = "eval_hidden/expected.json" },
+]
+command = "python3 -m unittest -v -b eval_hidden.test_eval_hidden"
+timeout_secs = 60
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900

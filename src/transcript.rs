@@ -304,6 +304,19 @@ impl Transcript {
     /// Behaviour signals for the results row. Every signal here is read
     /// from the event stream; `time_limit_hit` is the harness's own
     /// observation. A signal with nothing to read it from is `null`.
+    /// Compactions that got a summary: a `compaction` line with status
+    /// `completed` and a `summary_tokens`, or, before protocol 1, a
+    /// "✅ Compacted N messages ..." info line.
+    pub fn compactions_with_summary(&self) -> usize {
+        self.compactions("completed")
+            .filter(|e| e["summary_tokens"].is_number())
+            .count()
+            + self
+                .messages("info")
+                .filter(|m| m.contains("Compacted ") && m.contains(" messages"))
+                .count()
+    }
+
     pub fn behaviour(&self, time_limit_hit: bool) -> Value {
         // A `compaction` line with status `started` per attempt, and
         // `completed` with a `summary_tokens` for one that got a summary.
@@ -315,14 +328,7 @@ impl Transcript {
                 .messages("info")
                 .filter(|m| m.contains("compacting before sending"))
                 .count();
-        let with_summary = self
-            .compactions("completed")
-            .filter(|e| e["summary_tokens"].is_number())
-            .count()
-            + self
-                .messages("info")
-                .filter(|m| m.contains("Compacted ") && m.contains(" messages"))
-                .count();
+        let with_summary = self.compactions_with_summary();
         // Loop guard: a `loop_guard` line each time it acts. Before protocol
         // 1, "Loop detected: ..." when it injected feedback and "Loop guard:
         // ... stopping" when it gave up.

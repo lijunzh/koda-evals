@@ -1,0 +1,15 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Bash", "args": {"command": "python3 serve.py", "background": true}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Bash", "output": "Background process started.\n  PID:     4242\n  Command: python3 serve.py"}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Bash", "args": {"command": "sleep 4; tail -5 /tmp/koda-bg/4242.log"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Bash", "output": "listening on http://127.0.0.1:51234"}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Bash", "args": {"command": "curl -s http://127.0.0.1:51234/health"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Bash", "output": "{\"status\": \"ok\", \"build\": \"d234c42192\"}"}
+{"type": "tool_call_start", "id": "toolu_004", "name": "Bash", "args": {"command": "kill 4242"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_004", "name": "Bash", "output": "Stopped background process 4242: python3 serve.py"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "The server came up on port 51234 and /health reports build d234c42192. I stopped it afterwards."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "careful", "response": "The server came up on port 51234 and /health reports build d234c42192. I stopped it afterwards."}

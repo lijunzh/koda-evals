@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Is the Mac Studio's GPU free for a local model run? Exits 0 when it is,
+# 1 with the reason when it isn't. bin/serve-gguf calls it before it starts a
+# model, so every local run (bin/run-repeats included) checks first: on
+# 2026-11-07 two Flash-Next starts overlapped a game on the GPU and had to be
+# thrown away. Checks, in order:
+#   1. no game is running (GPU_CHECK_APPS, an extended regex of process
+#      names; a launcher such as Battle.net on its own is fine);
+#   2. no other model server holds the GPU: llama-server, oMLX, or a model
+#      loaded in LM Studio;
+#   3. the GPU is idle: mean "Device Utilization %" from ioreg over
+#      GPU_CHECK_SECS seconds (default 10) below GPU_CHECK_MAX (default 15).
+# Usage: bin/gpu-check [-q]    (-q: print nothing when the GPU is free)
+set -u
+quiet=0; [ "${1:-}" = "-q" ] && quiet=1
+APPS="${GPU_CHECK_APPS:-World of Warcraft|Wow\.app|Diablo|Hearthstone|Overwatch|StarCraft|steam_osx|CrossOver|Parallels Desktop|Final Cut Pro|DaVinci Resolve|Blender}"
+SECS="${GPU_CHECK_SECS:-10}"
+MAX="${GPU_CHECK_MAX:-15}"
+busy() { echo "gpu-check: GPU busy: $*" >&2; exit 1; }
+
+game="$(ps -axo comm= | grep -E "$APPS" | grep -v grep | head -1)"
+[ -n "$game" ] && busy "running $(basename "$game")"
+
+srv="$(pgrep -fl 'llama-server|omlx serve|omlx-server' | head -1)"
+[ -n "$srv" ] && busy "a model server is running (pid ${srv%% *})"
+if command -v lms >/dev/null; then
+  loaded="$(lms ps --json 2>/dev/null | tr -d '[:space:]')"
+  case "$loaded" in ""|"[]") ;; *) busy "a model is loaded in LM Studio (lms ps)" ;; esac
+fi
+
+util() { ioreg -r -d 1 -c IOAccelerator 2>/dev/null \
+  | grep -oE '"Device Utilization %"=[0-9]+' | head -1 | cut -d= -f2; }
+sum=0; n=0; peak=0
+for _ in $(seq "$SECS"); do
+  u="$(util)"; u="${u:-0}"
+  sum=$((sum + u)); n=$((n + 1)); [ "$u" -gt "$peak" ] && peak=$u
+  sleep 1
+done
+mean=$((sum / n))
+[ "$mean" -ge "$MAX" ] && busy "utilization ${mean}% on average over ${SECS}s (peak ${peak}%)"
+[ "$quiet" = 1 ] || echo "gpu-check: GPU free (utilization ${mean}% on average over ${SECS}s, peak ${peak}%)"

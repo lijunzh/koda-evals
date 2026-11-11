@@ -1,0 +1,21 @@
+# behaviour-poll-background on Haiku at the process-group change (Lijun:
+# "follow codex design pattern", 2026-11-10). Koda at the branch commit:
+# a command's process group is Koda's while anything in it runs, a call ends
+# when its shell does, and kill / kill -0 take any PID in the group. Same
+# settings as behaviour-background-haiku-serial (0 of 3 at ee944cc, every
+# start a shell `&`), one run at a time. Paid API calls, cents.
+#   ./target/release/koda-eval run runs/behaviour-background-haiku-groups.toml
+name = "behaviour-background-haiku-groups"
+tasks = ["behaviour-poll-background"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "c217ecb"  # feat/own-process-groups
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

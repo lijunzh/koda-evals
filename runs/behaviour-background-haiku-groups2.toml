@@ -1,0 +1,32 @@
+# behaviour-poll-background on Haiku at the process-group change (Lijun:
+# "follow codex design pattern", 2026-11-10). Koda at the branch commit:
+# a command's process group is Koda's while anything in it runs, a call ends
+# when its shell does, and kill / kill -0 take any PID in the group. Same
+# settings as behaviour-background-haiku-serial (0 of 3 at ee944cc, every
+# start a shell `&`), one run at a time. Paid API calls, cents.
+#   ./target/release/koda-eval run runs/behaviour-background-haiku-groups.toml
+#
+# Result at ef15ba4 (lijunzh/koda#1550): every run reached its server and
+# reported build d234c42192, and every one failed the stop. Haiku chained it
+# (`kill PID; sleep 1; kill -0 PID && echo … || echo …`, or
+# `kill $(cat pidfile)`), and Koda takes over only a plain kill.
+#
+# Result, first run at c217ecb: 0 of 3, but no call hung, every server
+# started with `&` was taken over (the result said so), and one run reached
+# its server and got the build id. The misses: `out=$(curl …)` was read as a
+# substitution in the command position (fixed in ef15ba4), and two runs
+# chained `kill` with other commands, which Koda doesn't take over.
+name = "behaviour-background-haiku-groups2"
+tasks = ["behaviour-poll-background"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "ef15ba4"  # feat/own-process-groups, with the assignment fix
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

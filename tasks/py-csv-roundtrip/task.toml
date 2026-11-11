@@ -1,0 +1,38 @@
+id = "py-csv-roundtrip"
+# Batch two, weak feedback. A hand-rolled CSV writer quotes only fields with
+# a comma and never doubles quotes; the reader splits the file into lines
+# (str.splitlines, which also breaks on U+2028 and U+0085) before parsing;
+# `stats` counts lines. The prompt quotes one breaking memo and states the
+# requirement; there's no reproduction and no test that fails, so the model
+# has to decide what "any text" covers and check it itself. Hidden tests
+# check what a CSV reader gets back, not quoting style, and pass on two
+# designs: hidden/alt_solution keeps the hand-rolled code, fixed, and
+# solution/ uses the csv module. The spreadsheet check accepts a byte-order
+# mark: in the first run (capability-b2-claude) all nine Opus, Haiku and
+# Sonnet fixes wrote one, as Excel needs for UTF-8, and failed only on it.
+prompt = """After exporting, a report reads back wrong when a memo has a line break in it. With `examples/october.json`, the memo
+
+    Dinner with "Sam", split 3 ways
+    paid back Friday
+
+comes back broken, and `python3 ledger.py stats` on the export says there are 4 transactions when there are 3.
+
+Please make export and import round-trip any payee or memo text, make `stats` count transactions correctly, and make sure the exported file opens correctly in spreadsheets. Reports written by the current version must still load."""
+tags = ["python", "kata", "weak-feedback", "careful-edit", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 1200

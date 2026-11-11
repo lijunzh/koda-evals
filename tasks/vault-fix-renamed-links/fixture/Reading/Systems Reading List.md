@@ -1,0 +1,3 @@
+- A paper on build caching
+- A book on running large clusters
+- Notes from the scheduling talk

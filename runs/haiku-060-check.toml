@@ -1,15 +1,19 @@
-# Release check before 0.6.0: the 31 tasks tagged `suite` three times, at
-# Koda's default window, on `main` at the merge of lijunzh/koda#1503. Covers
-# the ACP and /undo removals, the sub-agent changes and the new retry path.
-# Compare with results/haiku-edit-check/20261102T020956Z. Approved by Lijun
-# 2026-11-02, about $4.
+# 0.6.0 release check on Haiku, Koda only (Lijun's yes, 2026-11-07). Since
+# the parity baseline at 522daac (Koda 93 of 93, Claude Code 92 of 93),
+# lijunzh/koda#1522, #1525, #1526 and #1527 changed what the model sees, so
+# Koda's side is measured again; Claude Code's side of parity-haiku
+# (20261103T163233Z) stays the peer score. Same tasks, repeats, memory file
+# and jobs as parity-haiku. Paid API calls, about $4-5.
+#   ./target/release/koda-eval run runs/haiku-060-check.toml
 name = "haiku-060-check"
 repeats = 3
 tags = ["suite"]
+jobs = 3
+memory = "memory/rust-project.md"
 
 [[variants]]
-name = "main"
-ref = "afb7716d02a5551ef262b3522303d37561569174"
+name = "koda"
+ref = "fc2b11e"  # main at 5976cba plus lijunzh/koda#1528 (cache-read reporting only)
 
 [[models]]
 name = "haiku"

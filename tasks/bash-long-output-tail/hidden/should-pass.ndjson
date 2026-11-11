@@ -1,0 +1,13 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "koda-core/src/tools/shell.rs"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Edit", "args": {"file_path": "koda-core/src/tools/shell.rs", "replacements": [{"old_str": "...", "new_str": "..."}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Edit", "output": "Applied 1 edit(s) to koda-core/src/tools/shell.rs"}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Bash", "args": {"command": "cargo test -p koda-core --lib shell 2>&1 | tail -3"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Bash", "output": "Exit code: 0 | stdout: 1 lines | stderr: 0 lines\n\n--- stdout (1 lines) ---\ntest result: ok. 12 passed; 0 failed"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Bash now keeps the last lines of each stream past the cap, after a marker for the lines left out; shell tests pass."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "finished", "response": "Bash now keeps the last lines of each stream past the cap, after a marker for the lines left out; shell tests pass.", "turn_end": {"kind": "complete"}, "elapsed_ms": 600000, "usage": {"prompt_tokens": 400000, "completion_tokens": 9000, "cache_read_tokens": 0, "thinking_tokens": 0}}

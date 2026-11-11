@@ -46,9 +46,10 @@ pub const MEMORY_FILES: &[&str] = &[
     ".claude/CLAUDE.md",
 ];
 
-/// Where a pinned file goes. Koda and Claude Code read `CLAUDE.md`, and Codex
-/// reads `AGENTS.md`. Koda takes the first of `MEMORY.md`, `CLAUDE.md` and
-/// `AGENTS.md` it finds, so it still reads the text once.
+/// Where a pinned file goes. Claude Code reads `CLAUDE.md`, and Codex, Qwen
+/// Code and Koda read `AGENTS.md`. Each reads one file per folder (Koda falls
+/// back to `CLAUDE.md`, an older Koda took it first), so each reads the text
+/// once.
 pub const PINNED_AS: &[&str] = &["CLAUDE.md", "AGENTS.md"];
 
 /// Write the task's project for `stage` into `dest` (which must not exist)
@@ -76,7 +77,10 @@ pub fn materialize_with(
         (Source::Fixture { dir, .. }, Stage::Start) => copy_dir(dir, dest)?,
         (Source::Fixture { dir, solution }, Stage::Solved) => {
             copy_dir(dir, dest)?;
-            copy_dir(solution, dest)?;
+            // A solution that is a commit goes in after the start commit.
+            if task.spec.repo.solution_commit.is_none() {
+                copy_dir(solution, dest)?;
+            }
         }
     }
     // Worker agent configs go in `<project>/agents/`, koda's project-level
@@ -89,6 +93,12 @@ pub fn materialize_with(
         std::fs::create_dir_all(&to)?;
         copy_dir(&agents, &to).with_context(|| format!("copy agents from {}", agents.display()))?;
     }
+    // A task about its own instructions keeps them.
+    let memory = if task.spec.repo.keep_memory {
+        &Memory::Checkout
+    } else {
+        memory
+    };
     if *memory != Memory::Checkout {
         for name in MEMORY_FILES {
             let path = dest.join(name);
@@ -106,8 +116,33 @@ pub fn materialize_with(
     }
     stamp(dest)?;
     git(dest, &["init", "-q", "-b", "main"])?;
+    // The agent's own git calls read the owner's global config. Pin what
+    // would make a commit depend on the machine: identity and signing (a
+    // signed commit needs ~/.gnupg, which agents' sandboxes keep read-only,
+    // so it failed for one agent and not another).
+    for (key, value) in [
+        ("user.name", "koda-eval"),
+        ("user.email", "koda-eval@localhost"),
+        ("commit.gpgsign", "false"),
+        ("tag.gpgsign", "false"),
+    ] {
+        git(dest, &["config", key, value])?;
+    }
     git(dest, &["add", "-A"])?;
     git(dest, &["commit", "-q", "--no-verify", "-m", "task start"])?;
+    if let Some(uncommitted) = task.uncommitted_dir() {
+        copy_dir(&uncommitted, dest)?;
+    }
+    if let (Source::Fixture { solution, .. }, Stage::Solved, Some(message)) =
+        (&task.source, stage, &task.spec.repo.solution_commit)
+    {
+        copy_dir(solution, dest)?;
+        let mut add = vec!["add", "--"];
+        let files = relative_files(solution)?;
+        add.extend(files.iter().map(String::as_str));
+        git(dest, &add)?;
+        git(dest, &["commit", "-q", "--no-verify", "-m", message])?;
+    }
     Ok(())
 }
 
@@ -191,9 +226,41 @@ pub(crate) fn archive(repo: &Path, rev: &str, dest: &Path) -> Result<()> {
     Ok(())
 }
 
+/// The files under `dir`, relative to it, as `copy_dir` copies them.
+fn relative_files(dir: &Path) -> Result<Vec<String>> {
+    fn walk(root: &Path, dir: &Path, out: &mut Vec<String>) -> Result<()> {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            if entry.file_name() == "__pycache__" {
+                continue;
+            }
+            if entry.file_type()?.is_dir() {
+                walk(root, &entry.path(), out)?;
+            } else {
+                let rel = entry
+                    .path()
+                    .strip_prefix(root)?
+                    .to_string_lossy()
+                    .into_owned();
+                out.push(rel);
+            }
+        }
+        Ok(())
+    }
+    let mut out = Vec::new();
+    walk(dir, dir, &mut out)?;
+    out.sort();
+    Ok(out)
+}
+
+/// Copy `src` into `dst`, leaving out Python's bytecode caches: a fixture
+/// tried by hand leaves them beside its sources.
 fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
     for entry in std::fs::read_dir(src).with_context(|| format!("read {}", src.display()))? {
         let entry = entry?;
+        if entry.file_name() == "__pycache__" {
+            continue;
+        }
         let to = dst.join(entry.file_name());
         if entry.file_type()?.is_dir() {
             std::fs::create_dir_all(&to)?;
@@ -233,7 +300,7 @@ fn git(dir: &Path, args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
-#[derive(Debug, Default, PartialEq, serde::Serialize)]
+#[derive(Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct DiffStat {
     pub files: u32,
     pub insertions: u32,
@@ -245,12 +312,23 @@ pub struct DiffStat {
 pub fn capture_diff(dir: &Path, patch: &Path) -> Result<DiffStat> {
     git(dir, &["add", "-A"])?;
     // A fixture without a Cargo.lock gets one from the agent's first
-    // `cargo` call; that's cargo's footprint, not the agent's.
-    let scope = ["--", ".", ":!Cargo.lock"];
-    let mut show = vec!["diff", "--cached", "--binary"];
+    // `cargo` call, and running Python writes `__pycache__`; those are the
+    // tools' footprints, not the agent's.
+    let scope = [
+        "--",
+        ".",
+        ":!Cargo.lock",
+        ":(exclude,glob)**/__pycache__/**",
+        ":(exclude,glob)**/*.pyc",
+    ];
+    // Against the start commit, not HEAD: an agent's own commits are part
+    // of what it changed.
+    let roots = git(dir, &["rev-list", "--max-parents=0", "HEAD"])?;
+    let start = roots.lines().last().unwrap_or("HEAD").to_string();
+    let mut show = vec!["diff", "--cached", "--binary", start.as_str()];
     show.extend(scope);
     std::fs::write(patch, git(dir, &show)?)?;
-    let mut stat = vec!["diff", "--cached", "--numstat"];
+    let mut stat = vec!["diff", "--cached", "--numstat", start.as_str()];
     stat.extend(scope);
     Ok(parse_numstat(&git(dir, &stat)?))
 }
@@ -272,7 +350,8 @@ fn parse_numstat(text: &str) -> DiffStat {
 
 /// Append the task's hidden tests to their source files, one
 /// `mod eval_hidden` per file, so they can reach private items through
-/// `use super::*`.
+/// `use super::*`; then copy in its hidden files, over anything the agent
+/// left at the same path.
 pub fn inject_hidden(task: &Task, dir: &Path) -> Result<()> {
     let mut by_file: BTreeMap<&str, Vec<String>> = BTreeMap::new();
     for hidden in &task.spec.check.hidden {
@@ -287,6 +366,29 @@ pub fn inject_hidden(task: &Task, dir: &Path) -> Result<()> {
             .with_context(|| format!("read {} to append hidden tests", path.display()))?;
         text.push_str(&hidden_module(&bodies));
         std::fs::write(&path, text)?;
+    }
+    for file in &task.spec.check.hidden_files {
+        let from = task.dir.join(&file.from);
+        let to = dir.join(&file.to);
+        if let Some(parent) = to.parent() {
+            // The agent may have made a folder on the way a link out of the
+            // project; nothing is created or written through it.
+            let existing = parent.ancestors().find(|a| a.exists()).unwrap_or(dir);
+            if !existing.canonicalize()?.starts_with(dir.canonicalize()?) {
+                bail!("hidden file {} would land outside the project", file.to);
+            }
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("create {}", parent.display()))?;
+        }
+        // A directory or link the agent left there is replaced, not
+        // written through.
+        if to.is_dir() && !to.is_symlink() {
+            std::fs::remove_dir_all(&to)?;
+        } else if to.symlink_metadata().is_ok() {
+            std::fs::remove_file(&to)?;
+        }
+        std::fs::copy(&from, &to)
+            .with_context(|| format!("copy hidden file {} to {}", from.display(), to.display()))?;
     }
     Ok(())
 }
@@ -381,6 +483,75 @@ mod tests {
         assert_eq!(read(&pinned, "AGENTS.override.md"), None);
         // In the start commit, so the agent's diff doesn't show it.
         assert_eq!(git(&pinned, &["status", "--porcelain"]).unwrap(), "");
+    }
+
+    #[test]
+    fn a_git_task_keeps_its_memory_finds_others_work_and_commits_its_solution() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task_dir = tmp.path().join("g");
+        for (rel, text) in [
+            ("fixture/AGENTS.md", "commit only your own files\n"),
+            ("fixture/Home.md", "home\n"),
+            ("others/Home.md", "home, edited by someone else\n"),
+            ("others/Draft.md", "someone's draft\n"),
+            ("solution/Notes/New.md", "a new note\n"),
+            ("hidden/check.py", "print('ok')\n"),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(
+            task_dir.join("task.toml"),
+            "id = \"g\"\nprompt = \"p\"\n[repo]\nfixture = \"fixture\"\nsolution = \"solution\"\n\
+             keep_memory = true\nuncommitted = \"others\"\nsolution_commit = \"notes: add New\"\n\
+             [check]\nhidden_files = [{ from = \"hidden/check.py\", to = \"check.py\" }]\n\
+             command = \"true\"\n",
+        )
+        .unwrap();
+        let task = Task::load(&task_dir).unwrap();
+        let read = |dir: &Path, name: &str| std::fs::read_to_string(dir.join(name)).unwrap();
+        let pinned = Memory::Pinned("short file\n".into());
+
+        // The task's AGENTS.md stays, whatever the run file pins.
+        let start = tmp.path().join("start");
+        materialize_with(&task, Stage::Start, tmp.path(), &start, &pinned).unwrap();
+        assert_eq!(read(&start, "AGENTS.md"), "commit only your own files\n");
+        // The agent's commits don't depend on the owner's global git config.
+        assert_eq!(
+            git(&start, &["config", "commit.gpgsign"]).unwrap(),
+            "false\n"
+        );
+        // Someone else's work is there, uncommitted.
+        assert_eq!(read(&start, "Home.md"), "home, edited by someone else\n");
+        assert_eq!(
+            git(&start, &["status", "--porcelain"]).unwrap(),
+            " M Home.md\n?? Draft.md\n"
+        );
+        assert_eq!(
+            git(&start, &["rev-list", "--count", "HEAD"]).unwrap(),
+            "1\n"
+        );
+
+        // Solved: the solution is a commit of its own files only.
+        let solved = tmp.path().join("solved");
+        materialize_with(&task, Stage::Solved, tmp.path(), &solved, &pinned).unwrap();
+        assert_eq!(
+            git(&solved, &["log", "--format=%s"]).unwrap(),
+            "notes: add New\ntask start\n"
+        );
+        assert_eq!(
+            git(&solved, &["show", "--name-only", "--format=", "HEAD"]).unwrap(),
+            "Notes/New.md\n"
+        );
+        assert_eq!(
+            git(&solved, &["status", "--porcelain"]).unwrap(),
+            " M Home.md\n?? Draft.md\n"
+        );
+
+        // The saved diff counts the agent's commit as well as its edits.
+        let stat = capture_diff(&solved, &tmp.path().join("p.diff")).unwrap();
+        assert_eq!(stat.files, 3);
     }
 
     #[test]
@@ -601,6 +772,113 @@ command = "true"
         stamp(&dir).unwrap();
         let mtime = std::fs::metadata(&file).unwrap().modified().unwrap();
         assert!(mtime > old + Duration::from_secs(3000));
+    }
+
+    /// A Python kata graded by a hidden `unittest` module, on whatever
+    /// `python3` is on the path (CI's, or macOS's 3.9).
+    fn python_task(root: &Path) -> Task {
+        let task_dir = root.join("py");
+        for (rel, text) in [
+            ("fixture/calc.py", "def double(x):\n    return x + x + 1\n"),
+            ("fixture/__pycache__/calc.cpython-39.pyc", "stale"),
+            ("solution/calc.py", "def double(x):\n    return x + x\n"),
+            (
+                "hidden/test_eval_hidden.py",
+                "import unittest\nfrom calc import double\n\n\
+                 class Hidden(unittest.TestCase):\n    \
+                 def test_double(self):\n        self.assertEqual(double(2), 4)\n",
+            ),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(
+            task_dir.join("task.toml"),
+            r#"id = "py"
+prompt = "p"
+[repo]
+fixture = "fixture"
+solution = "solution"
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+"#,
+        )
+        .unwrap();
+        Task::load(&task_dir).unwrap()
+    }
+
+    #[test]
+    fn a_python_task_fails_at_the_start_and_passes_solved() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task = python_task(tmp.path());
+        let target = tmp.path().join("target");
+
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        // The fixture's bytecode cache isn't copied.
+        assert!(!start.join("__pycache__").exists());
+        // An agent's own test at the same path is replaced.
+        std::fs::create_dir_all(start.join("tests")).unwrap();
+        std::fs::write(
+            start.join("tests/test_eval_hidden.py"),
+            "raise SystemExit(0)\n",
+        )
+        .unwrap();
+        inject_hidden(&task, &start).unwrap();
+        let o = crate::check::run(&task, &start, &target, &tmp.path().join("s.log")).unwrap();
+        assert_eq!((o.hidden_ok, o.hidden_failed), (0, 1), "{}", o.tail);
+        assert!(!o.passed());
+
+        let solved = tmp.path().join("solved");
+        materialize(&task, Stage::Solved, tmp.path(), &solved).unwrap();
+        inject_hidden(&task, &solved).unwrap();
+        let o = crate::check::run(&task, &solved, &target, &tmp.path().join("v.log")).unwrap();
+        assert!(o.passed(), "{}", o.tail);
+    }
+
+    #[test]
+    fn python_caches_stay_out_of_the_diff() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task = python_task(tmp.path());
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        for rel in [
+            "__pycache__/calc.cpython-315.pyc",
+            "pkg/__pycache__/m.pyc",
+            "old.pyc",
+        ] {
+            let path = start.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, "bytecode").unwrap();
+        }
+        let stat = capture_diff(&start, &tmp.path().join("d.patch")).unwrap();
+        assert_eq!(stat.files, 0);
+
+        std::fs::write(start.join("calc.py"), "def double(x):\n    return 2 * x\n").unwrap();
+        let stat = capture_diff(&start, &tmp.path().join("d.patch")).unwrap();
+        assert_eq!(stat.files, 1);
+    }
+
+    #[test]
+    fn a_hidden_file_is_not_written_through_a_link_out_of_the_project() {
+        use std::os::unix::fs::symlink;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let task = python_task(tmp.path());
+        let start = tmp.path().join("start");
+        materialize(&task, Stage::Start, tmp.path(), &start).unwrap();
+        let outside = tmp.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        symlink(&outside, start.join("tests")).unwrap();
+
+        let err = inject_hidden(&task, &start).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("outside the project"),
+            "{err:#}"
+        );
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
     }
 
     #[test]

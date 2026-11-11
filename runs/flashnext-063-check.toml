@@ -1,0 +1,40 @@
+# 0.6.3 release check on Flash-Next (GPU only): the tasks and settings of
+# flashnext-062-check (7 of 8 at b1cb615; the miss a model miss on
+# bash-classifier-escapes), at the 0.6.3 candidate. The change to watch is
+# lijunzh/koda#1556: in Auto only a forced rm asks among file changes, so
+# these Bash-heavy tasks should see fewer approvals.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-063-check.toml
+#
+# Result, 20261111T100207Z: 8 of 8 (0.6.2: 7 of 8; its miss,
+# bash-classifier-escapes, passed this time). Destructive approvals in Auto:
+# 2 (0.6.2: 3): a heredoc test file holding `rm -rf` strings and a forced
+# `rm -f /tmp/relay_probe.rs`. No timeouts. A first start of this run file
+# failed before its first task while the Haiku check built the same commit;
+# it was started again.
+name = "flashnext-063-check"
+tasks = [
+  "bash-classifier-escapes",
+  "bash-readonly-fail-closed",
+  "bash-split-multibyte",
+  "behaviour-shell-safety",
+  "behaviour-shell-safety-control",
+  "behaviour-validation-fidelity",
+  "kata-async-blocking",
+  "behaviour-poll-background",
+]
+repeats = 1
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 3600
+
+[[variants]]
+name = "koda"
+ref = "e0618c6"  # main: the 0.6.3 candidate
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

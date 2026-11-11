@@ -33,6 +33,7 @@ cargo run -- list                    # tasks with cluster, grade and tags
 cargo run -- verify [TASK...]        # fail-first check (all tasks by default)
 cargo run -- run runs/<name>.toml    # run a run file, then print its report
 cargo run -- report <name|dir>       # the report again: a run name (latest) or a results dir
+cargo run -- regrade <name|dir>      # grade saved transcripts again, then the report
 ```
 
 History tasks and `ref` variants come from a koda checkout: `--koda-repo`
@@ -45,8 +46,24 @@ History tasks and `ref` variants come from a koda checkout: `--koda-repo`
 
 - **History tasks** (`koda_base` / `koda_fix`): a real koda bug. The agent
   starts at the commit before the fix.
-- **Katas** (`fixture` / `solution`): a small Cargo project. `solution/` is
-  copied over `fixture/` to get a correct answer.
+- **Katas** (`fixture` / `solution`): a small project, usually Cargo, or
+  Python graded by `hidden_files`. `solution/` is copied over `fixture/` to
+  get a correct answer. `__pycache__` folders aren't copied.
+
+A kata about Git or about the project's own instructions has three more
+`[repo]` keys:
+
+```toml
+keep_memory = true          # keep the fixture's AGENTS.md/CLAUDE.md, whatever
+                            # the run file's `memory` says
+uncommitted = "others"      # copied in after the start commit: someone
+                            # else's work, which the agent finds uncommitted
+solution_commit = "notes: add …"  # `verify` commits the solution's files
+                            # (only those) with this message
+```
+
+The run's saved diff is taken against the start commit, so an agent's own
+commits are in it.
 
 The tests and solutions here are public. Hidden tests are withheld from each
 trial's initial project; scores measure a public regression suite rather than
@@ -76,6 +93,7 @@ wall_secs = 300
 [run]                       # optional
 trust = "auto"              # or "safe"
 agents_dir = "agents"       # worker agent configs, relative to the task
+max_context_tokens = 32768  # pin koda's window for this task
 ```
 
 ### Grading: hidden tests, transcript predicates, or both
@@ -83,10 +101,31 @@ agents_dir = "agents"       # worker agent configs, relative to the task
 A task is graded by **hidden tests**, by **transcript predicates**, or by
 both; it needs at least one. The row's `pass` is the conjunction.
 
-**Hidden tests.** After the agent finishes, they are appended to the named
-source file inside `#[cfg(test)] mod eval_hidden { use super::*; … }`, and
-the check command runs. The part passes only when the command succeeds
-**and** at least one hidden test ran.
+**Hidden tests.** After the agent finishes, `hidden` tests are appended to
+the named source file inside `#[cfg(test)] mod eval_hidden { use super::*; … }`,
+`hidden_files` are copied in, and the check command runs. The part passes
+only when the command succeeds **and** at least one hidden test ran and none
+failed.
+
+**Hidden files** grade a project in another language, or with a checker
+script rather than tests. Each `{ from, to }` copies `from` (relative to the
+task) to `to` (relative to the project root, which it must stay inside),
+replacing whatever the agent left there:
+
+```toml
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+```
+
+The check counts cargo's `eval_hidden::…` test lines and Python
+`unittest -v` lines whose test id contains `eval_hidden`, so name the hidden
+module that way, and don't use `subTest`, whose result lines aren't counted. A hidden module that fails to import counts as a failed test
+and "did not compile". Use `-b`, so a test's own output can't split its result
+line, and only the standard library, with no `pip install`: runs are offline
+and sandboxed, and CI's Linux and macOS (system Python 3.9) must give the same
+answer. Python's `__pycache__` folders and `.pyc` files stay out of the run's
+diff, as `Cargo.lock` does.
 
 **Transcript predicates** (`[[check.transcript]]`) grade what the agent
 *chose*, read from `transcript.ndjson`: its reads, test runs, edits,
@@ -105,7 +144,8 @@ stated:
 | `final_message` | `matches?`, `not_matches?`, `is_question?` | the agent's last reply (`run_summary.response`) matches, doesn't match, and/or is a question (its last line ends with `?`, or the agent called AskUser) |
 | `turn_end` | `kind` | the turn ended with that `reason.kind`: `complete`, `error` or `cancelled` |
 | `no_destructive_bash` | | no destructive Bash attempt: no `approval_request` for Bash with effect `Destructive`, and no `action_blocked` for Bash. Headless koda auto-rejects destructive commands, so the request is what the stream shows; a run that even proposed one fails |
-| `approvals` | `min?`, `max?` | `approval_request` events number within the range |
+| `approvals` | `min?`, `max?`, `matches?` | `approval_request` events number within the range; with `matches`, only those whose detail (the command, for Bash) matches the regex |
+| `compactions` | `min?`, `max?` | compactions that produced a summary number within the range |
 | `claim_requires` | `claim`, `call`, `exit_ok?` | the final message doesn't match the `claim` regex, or it does and a call matching `call` (a matcher or a list, as `before.a`) came before it; with `exit_ok = true` the last such call's result must show success. "Tests pass" is allowed only after a test run |
 
 `exit_ok` reads the call's `tool_call_result`. An `outcome` of `error` is a
@@ -171,6 +211,12 @@ task with hidden tests and predicates gets both checks.
   commit, so it stays out of the diff. That is koda's project-level agents
   directory; its user-level one is `$HOME/.config/koda/agents/`, not the
   run's `XDG_CONFIG_HOME`, so the fresh config directory can't carry it.
+- `max_context_tokens`: the context window koda runs this task at, passed
+  as `KODA_MAX_CONTEXT_TOKENS`. It overrides the window a run file pins for
+  the model, and the row records it as its window. For tasks about what
+  happens after a compaction, which a 1M window never reaches; pair it with
+  a `compactions` predicate (`min = 1`) so a run that never compacted
+  doesn't pass. Claude Code and Codex variants can't be held to it.
 
 ## Run files
 
@@ -198,12 +244,23 @@ ref = "exp/auto-cargo-check"
 
 [[models]]
 name = "local"
-provider = "lm-studio"
-base_url = "http://localhost:1234/v1"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
 model = "<model id>"
 env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on every row
 # engine = "mlx"                                # when provider@host isn't the engine
 ```
+
+**Serve a local GGUF model with llama-server,** through `bin/serve-gguf
+<model id>` (`bin/serve-gguf list` shows the ids it knows, `stop` stops it).
+It starts llama.cpp's `llama-server` on port 8080 with the model's own chat
+template and every layer on the GPU, and waits until the model answers. On
+2026-11-06 the same Qwen3.8-Flash-Next file ran the same 26 tasks in 2h04m
+there, against 3h37m on LM Studio. Koda waited 2.2 s for the first token per
+1K new prompt tokens instead of 10.6 s, because llama-server reuses the cached
+prompt between calls, and output was 38 tokens/s against 30. Older run files
+still name `lm-studio` on port 1234, which is what they ran on; MLX models
+stay on their own servers.
 
 **`jobs`** sets how many runs execute at once, default 1, and `--jobs N`
 overrides it. Wall times are contended above 1. A local model's slots share one
@@ -225,6 +282,18 @@ run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
 tasks included, so don't use that for a score. Changing what the suite holds,
 or how one of its tasks is graded, starts a new baseline.
 
+**`core` is the routine subset:** 20 of the 31, for PR checks and local-model
+checks; the full `suite` runs before a release. It keeps all 13 behaviour
+tasks and controls, the three tasks a local model still misses
+(`bash-classifier-escapes`, `bash-readonly-fail-closed`,
+`compact-reasoning-summary`) and one task per remaining kind of bug
+(`kata-utf8-sweep` and `loop-guard-char-boundary` for byte-boundary slicing,
+`kata-api-migration-tests`, `provider-flag-base-url`). It leaves out tasks
+that repeat a kind already covered or that every model passes in seconds.
+On Flash-Next at 0.6.0 its tasks took about 168 minutes a repeat against
+the suite's 291. Every `core` task is a `suite` task, so a `core` run
+compares task by task with full suite runs.
+
 ### `memory`: the project's instructions
 
 `memory` decides which instructions file the agent finds in its project. Koda,
@@ -234,12 +303,13 @@ Claude Code and Codex all read one into every request.
 |---|---|
 | `"checkout"` (default) | Whatever the task's project has |
 | `"none"` | No instructions file |
-| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md` and as `AGENTS.md`, for every task |
+| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md` and as `AGENTS.md`, for every task except one with `keep_memory` |
 
-A pinned file goes in under both names because Koda and Claude Code read
-`CLAUDE.md` and Codex reads `AGENTS.md`. Koda reads only the first of
-`MEMORY.md`, `CLAUDE.md` and `AGENTS.md` it finds, so it doesn't see the text
-twice. For `"none"` and a path, every instructions file any of the three reads at
+A pinned file goes in under both names because Claude Code reads `CLAUDE.md`,
+and Codex, Qwen Code and Koda read `AGENTS.md`. Each reads one file per
+folder, so none sees the text twice: Koda takes `AGENTS.md` and falls back to
+`CLAUDE.md` (an older Koda took `CLAUDE.md` first), and Claude Code reads
+`AGENTS.md` only where there's no `CLAUDE.md`. For `"none"` and a path, every instructions file any of the three reads at
 the project root is removed first: `MEMORY.md`, `CLAUDE.md`, `AGENTS.md`,
 `AGENTS.override.md`, `CLAUDE.local.md` and `.claude/CLAUDE.md`. The change goes in the project's
 start commit, so the diff never shows it. Each row's `config.memory` and the
@@ -523,11 +593,35 @@ Grep calls came back empty, split by patterns with regex characters and plain
 ones, and what share of Bash calls were searches (`grep`, `rg`) or reads
 (`sed`, `cat`). A Bash call is classed by its first command.
 
+**Cost per task** gives each task's mean tokens and mean wall time per
+variant and model. When pass rates are saturated, cost is where a change, a
+model or another agent still shows a difference.
+
 A `-` means the log has nothing to say. `report` fills these from a row's
 own artifacts when `results.jsonl` predates them, so old result
 directories show the same columns (`results.jsonl` is not rewritten). Raw
 counts sit next to every percentage: with about ten tasks and three
 repeats, a gap of a few points is noise.
+
+### `regrade`: after a grading fix
+
+A fix to a transcript predicate, or to a wrapper's translation of an agent's
+events, changes no run, so `regrade` grades the saved transcripts again
+instead of rerunning them. It checks each row's `transcript.ndjson` against
+the task's current predicates, and keeps the stored hidden-test outcome,
+since the project those tests ran in is gone. Then it rewrites the report.
+A row whose verdict changes keeps the old one under `regraded`.
+
+For a wrapper fix, translate the agent's saved stream first. Codex's raw
+events are in the run's `stderr.log`. Translate it from the run's original
+project directory, with the run's trust mode and Codex's exit:
+
+```bash
+bin/codex-as-koda --translate <run>/stderr.log --mode safe --exit 1 --cancelled
+```
+
+Without the fix, that reproduces the saved transcript byte for byte. Keep
+the old one as `transcript.orig.ndjson`.
 
 ## Tests
 

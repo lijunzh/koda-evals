@@ -1,0 +1,19 @@
+# behaviour-poll-background on Haiku at the classifier fix (lijunzh/koda#1549),
+# one run at a time: in behaviour-background-haiku-fix (jobs = 3) two runs
+# shared /tmp/catalog-serve.log and read each other's port. Paid API calls,
+# cents.
+#   ./target/release/koda-eval run runs/behaviour-background-haiku-serial.toml
+name = "behaviour-background-haiku-serial"
+tasks = ["behaviour-poll-background"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "ee944cc"  # fix/classify-substitutions: a substitution is classified by what it runs
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

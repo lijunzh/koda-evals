@@ -501,6 +501,12 @@ impl RunOne<'_> {
             .env("RUST_LOG", "koda_core=debug,koda_cli=info")
             .envs(self.keys)
             .envs(&self.model.env)
+            .envs(
+                task.spec
+                    .run
+                    .max_context_tokens
+                    .map(|n| ("KODA_MAX_CONTEXT_TOKENS", n.to_string())),
+            )
             .stdin(Stdio::null())
             .stdout(File::create(&transcript_path)?)
             .stderr(File::create(self.art.join("stderr.log"))?);
@@ -538,23 +544,7 @@ impl RunOne<'_> {
             let _ = std::fs::rename(&target, &shared);
         }
 
-        // When koda itself failed (no model call, a provider error, a
-        // crash), say so instead of blaming the untouched code.
-        let agent_failed =
-            agent.timed_out || agent.exit != Some(0) || transcript.turn_end_kind() == Some("error");
-        // A protocol this reader doesn't know leaves the checks unreadable,
-        // so a pass from them means nothing.
-        let unsupported = transcript.unsupported_protocol();
-        let pass = check.passed() && unsupported.is_none();
-        let failure = if unsupported.is_some() {
-            unsupported
-        } else if pass {
-            None
-        } else if agent_failed && !agent.timed_out {
-            Some("agent failed".to_string())
-        } else {
-            Some(check.failure_kind())
-        };
+        let (pass, failure) = verdict(&check, &transcript, agent.exit, agent.timed_out);
 
         Ok(json!({
             "task": task.id(),
@@ -567,7 +557,7 @@ impl RunOne<'_> {
             // run files compare.
             "config": {
                 "engine": engine_of(self.model),
-                "window": window_of(self.model),
+                "window": task.spec.run.max_context_tokens.or(window_of(self.model)),
                 "wall_secs": self.wall_secs,
                 "trust": trust,
                 "jobs": self.jobs,
@@ -599,12 +589,46 @@ impl RunOne<'_> {
         let wall_ms = agent.elapsed.as_millis() as u64;
         if let (Some(row), Value::Object(log)) = (
             behaviour.as_object_mut(),
-            signals.to_json(window_of(self.model), wall_ms),
+            signals.to_json(
+                self.task
+                    .spec
+                    .run
+                    .max_context_tokens
+                    .or(window_of(self.model)),
+                wall_ms,
+            ),
         ) {
             row.extend(log);
         }
         behaviour
     }
+}
+
+/// A graded run's pass and failure reason, from its check and how the agent
+/// ended. Shared with `regrade`, so a regraded row reads like a fresh one.
+pub(crate) fn verdict(
+    check: &check::CheckOutcome,
+    transcript: &Transcript,
+    exit: Option<i32>,
+    timed_out: bool,
+) -> (bool, Option<String>) {
+    // When koda itself failed (no model call, a provider error, a
+    // crash), say so instead of blaming the untouched code.
+    let agent_failed = timed_out || exit != Some(0) || transcript.turn_end_kind() == Some("error");
+    // A protocol this reader doesn't know leaves the checks unreadable,
+    // so a pass from them means nothing.
+    let unsupported = transcript.unsupported_protocol();
+    let pass = check.passed() && unsupported.is_none();
+    let failure = if unsupported.is_some() {
+        unsupported
+    } else if pass {
+        None
+    } else if agent_failed && !timed_out {
+        Some("agent failed".to_string())
+    } else {
+        Some(check.failure_kind())
+    };
+    (pass, failure)
 }
 
 /// The engine a model runs on: an explicit `engine`, else the provider

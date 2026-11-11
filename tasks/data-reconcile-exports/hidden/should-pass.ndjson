@@ -1,0 +1,11 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "README.md"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Bash", "args": {"command": "python3 /tmp/reconcile.py"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Bash", "output": "Exit code: 0 | stdout: 4 lines | stderr: 0 lines"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Three transactions don't match:\n- 2026-10-14, Harbor Foods, $87.36: in the bank, missing from the budget.\n- Sep 22, 2026, Noodle Bar, $41.80: once in the bank, twice in the budget.\n- 2026-10-27, Bookshop: the bank has $45.10, the budget $54.10 (digits swapped)."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "finished", "response": "Three transactions don't match:\n- 2026-10-14, Harbor Foods, $87.36: in the bank, missing from the budget.\n- Sep 22, 2026, Noodle Bar, $41.80: once in the bank, twice in the budget.\n- 2026-10-27, Bookshop: the bank has $45.10, the budget $54.10 (digits swapped).", "turn_end": {"kind": "complete"}, "elapsed_ms": 600000, "usage": {"prompt_tokens": 400000, "completion_tokens": 9000, "cache_read_tokens": 0, "thinking_tokens": 0}}

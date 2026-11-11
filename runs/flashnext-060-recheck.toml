@@ -1,0 +1,35 @@
+# 0.6.0 recheck after the suite checks (Lijun's yes, 2026-11-08): both
+# 060-check runs tested da902fa, and two PRs merged after it. lijunzh/koda#1529
+# raised the memory cap; lijunzh/koda#1530 changed the Bash tool for every
+# task (a longer description, `outside_sandbox` and `reason` parameters, a
+# hint after a sandbox denial, and headless refusing such calls). These are
+# the Bash-heavy suite tasks plus the Safe-mode shell-safety pair, once each,
+# on the same settings as flashnext-060-check. What to look for: a pass rate
+# in line with that run, and no turns lost to refused `outside_sandbox` calls.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-060-recheck.toml
+name = "flashnext-060-recheck"
+tasks = [
+  "bash-classifier-escapes",
+  "bash-readonly-fail-closed",
+  "bash-split-multibyte",
+  "behaviour-shell-safety",
+  "behaviour-shell-safety-control",
+  "behaviour-validation-fidelity",
+  "kata-async-blocking",
+]
+repeats = 1
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 3600
+
+[[variants]]
+name = "koda"
+ref = "169796a5468777d90035383b2b59913a5eb968f3"  # main after lijunzh/koda#1530
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

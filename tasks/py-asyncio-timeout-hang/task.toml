@@ -1,0 +1,26 @@
+id = "py-asyncio-timeout-hang"
+# A Python kata with two bugs behind one symptom. The retry loop catches
+# BaseException, so the timeout's cancellation is retried and the batch
+# never ends; and the timeout path drops the fetches that did finish.
+# Visible tests only use fetches that answer. Hidden tests run each case in
+# its own thread with a time limit, so a hang fails the test rather than
+# the check's timeout.
+prompt = """`python3 collect.py --timeout 2 host1:80 host2:80 …` never exits when one of the hosts accepts the connection but never answers: it hangs until we press Ctrl+C, long after the 2 seconds. What we want is what `fetch_all`'s docstring promises: after the timeout it prints the results it did get, marks the rest as no answer, and exits."""
+tags = ["python", "kata", "asyncio", "concurrency", "multi-bug", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 180
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 1200

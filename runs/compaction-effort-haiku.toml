@@ -1,0 +1,28 @@
+# Compaction at low effort (the summary call only), on Haiku 5.5 (Lijun's
+# yes, 2026-11-09). Koda at the branch commit of the change; the baseline is
+# spec-after-compact-haiku (20261109T170022Z, Koda f200ee1, the summary at
+# Haiku's default medium): 3 of 3, 2-3 compactions, 1m29s-1m48s a run.
+# What to look for: the same passes (the rules survive a shorter summary)
+# and less compaction time. Paid API calls, well under $1.
+#   ./target/release/koda-eval run runs/compaction-effort-haiku.toml
+#
+# Result, 20261109T234114Z: 3 of 3, as the baseline. All six summary calls
+# went out at `low`. Per compaction 12-17 s and 3.2-4.4K tokens against
+# 17-20 s and 4.3-5.1K at medium: about 15% less, within noise at three runs,
+# since Haiku barely reasons before a summary at medium. The case for the
+# change is the local model at xhigh (200 s against 96 s on one summary call
+# in lijunzh/koda#1548); see compaction-effort-flashnext.
+name = "compaction-effort-haiku"
+tasks = ["behaviour-spec-after-compact"]
+repeats = 3
+jobs = 3
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "8cc5f03"  # feat/compaction-effort: the summary call at low effort
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

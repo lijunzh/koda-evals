@@ -10,6 +10,7 @@ mod keys;
 mod klog;
 mod proc;
 mod project;
+mod regrade;
 mod report;
 mod run;
 mod task;
@@ -75,6 +76,13 @@ enum Cmd {
         /// A results directory, or a run name (its latest results).
         what: PathBuf,
     },
+    /// Grade a results directory again from its saved transcripts, against
+    /// the tasks' current checks, and rewrite its report. The stored hidden
+    /// test outcomes stand. For a grading fix that changes no run.
+    Regrade {
+        /// A results directory, or a run name (its latest results).
+        what: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -133,6 +141,13 @@ fn real_main() -> Result<ExitCode> {
         }
         Cmd::Report { what } => {
             let dir = report::locate(&cli.root, &what)?;
+            report::report(&dir)?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Cmd::Regrade { what } => {
+            let dir = report::locate(&cli.root, &what)?;
+            let changed = regrade::regrade(&dir, &task::load_all(&tasks_dir)?)?;
+            println!("{changed} row(s) changed verdict");
             report::report(&dir)?;
             Ok(ExitCode::SUCCESS)
         }

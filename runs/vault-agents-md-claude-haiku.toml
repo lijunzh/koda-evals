@@ -1,0 +1,26 @@
+# Claude Code's half of vault-agents-md-haiku again, after the wrapper fix:
+# with CLAUDE_AS_KODA_MEMORY=project, the owner's ~/.claude/CLAUDE.md had
+# reached Claude Code and sent all three runs to the owner's real notes vault
+# (nothing was written there). The wrapper now excludes user-level CLAUDE.md
+# files (`claudeMdExcludes`). Subscription.
+#   ./target/release/koda-eval run runs/vault-agents-md-claude-haiku.toml
+#
+# Result, 20261111T025639Z: 0 of 3, all on the commit. The note and hub were
+# right and the files were added by path, but `git commit` failed: the
+# owner's global git config signs commits, and Claude Code's sandbox blocks
+# ~/.gnupg. Fixed in the harness the same day; see vault-agents-md-haiku.
+name = "vault-agents-md-claude-haiku"
+tasks = ["vault-follow-agents-md"]
+repeats = 3
+jobs = 3
+memory = "none"
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { CLAUDE_AS_KODA_MEMORY = "project" }
