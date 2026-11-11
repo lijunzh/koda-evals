@@ -13,6 +13,11 @@ one local file operation that is destructive, wherever it is (behind `env`,
 its sandbox can't contain or what loses work for good: git that discards work
 or rewrites a remote, publishing, GitHub changes, `sudo`, disk tools and
 reboots. A substitution is judged by what it runs (lijunzh/koda#1549).
+
+A heredoc body is data, as in Codex: `fn main() {` written with
+`cat > a.rs <<'EOF'` is no fork bomb. It counts when a shell runs it
+(`bash <<EOF`), through the substitutions of an unquoted body, and, for a
+body with no terminator (maybe a misread `<<`), through the commands in it.
 """
 
 import os
@@ -68,6 +73,9 @@ RUNS_ITS_INPUT = SHELLS | {
 }
 
 SUBSTITUTION = "__koda_substitution__"
+
+# Commands that run a heredoc as a script.
+RUNS_A_HEREDOC = {"sh", "bash", "zsh", "dash", "ksh", "fish", "ssh"}
 
 
 def flag_matches(token, flag):
@@ -248,11 +256,193 @@ def segments(command):
     return out
 
 
+def heredoc_delimiter(rest):
+    """The delimiter after `<<`: (word, strip tabs, quoted), or None."""
+    i, strip_tabs = 0, rest.startswith("-")
+    i += strip_tabs
+    while i < len(rest) and rest[i] in " \t":
+        i += 1
+    word, quote, quoted = [], None, False
+    while i < len(rest):
+        c = rest[i]
+        if quote:
+            if c == quote:
+                quote = None
+            else:
+                word.append(c)
+        elif c in "'\"":
+            quote, quoted = c, True
+        elif c == "\\":
+            quoted = True
+            word.append(rest[i + 1:i + 2])
+            i += 1
+        elif c.isspace() or c in ";|&()<>":
+            break
+        else:
+            word.append(c)
+        i += 1
+    return ("".join(word), strip_tabs, quoted) if word else None
+
+
+def heredocs(command):
+    """Each heredoc as (body start, body end, quoted, terminated). Quotes,
+    backslashes, comments and `((…))` (where `<<` is a shift) are skipped."""
+    out, pending, i, quote, arith, n = [], [], 0, None, 0, len(command)
+    while i < n:
+        c = command[i]
+        if quote:
+            if c == "\\" and quote == '"':
+                i += 1
+            elif c == quote:
+                quote = None
+        elif c == "\\":
+            i += 1
+        elif c in "'\"":
+            quote = c
+        elif c == "#" and (i == 0 or command[i - 1] in ";|&()<> \t\n"):
+            while i < n and command[i] != "\n":
+                i += 1
+            continue
+        elif command.startswith("((", i):
+            arith += 1
+            i += 1
+        elif arith and command.startswith("))", i):
+            arith -= 1
+            i += 1
+        elif command.startswith("<<<", i):
+            i += 2
+        elif not arith and command.startswith("<<", i):
+            d = heredoc_delimiter(command[i + 2:])
+            if d:
+                pending.append(d)
+            i += 1
+        elif c == "\n" and pending:
+            i += 1
+            for word, strip_tabs, quoted in pending:
+                start, end, terminated = i, n, False
+                while i < n:
+                    j = command.find("\n", i)
+                    j = n if j < 0 else j
+                    line = command[i:j].rstrip("\r")
+                    if (line.lstrip("\t") if strip_tabs else line) == word:
+                        end, terminated = i, True
+                        i = min(n, j + 1)
+                        break
+                    i = min(n, j + 1)
+                out.append((start, end, quoted, terminated))
+            pending = []
+            continue
+        i += 1
+    return out
+
+
+def heredoc_substitutions(body):
+    """The commands in `$(…)` and backticks of an unquoted heredoc body,
+    where quotes are plain characters; None when one isn't closed."""
+    out, i, n = [], 0, len(body)
+    while i < n:
+        c = body[i]
+        if c == "\\":
+            i += 2
+            continue
+        if c == "`":
+            j = body.find("`", i + 1)
+            if j < 0:
+                return None
+            out.append(body[i + 1:j])
+            i = j + 1
+            continue
+        if body.startswith("$(", i):
+            depth, j = 1, i + 2
+            while j < n and depth:
+                depth += {"(": 1, ")": -1}.get(body[j], 0)
+                j += 1
+            if depth:
+                return None
+            out.append(body[i + 2:j - 1])
+            i = j
+            continue
+        i += 1
+    return out
+
+
+def feeds_a_shell(command):
+    """Whether a segment with a `<<` hands its heredoc to a shell."""
+    for segment in segments(command):
+        if "<<" not in segment:
+            continue
+        try:
+            tokens = shlex.split(segment.strip().lstrip("({!").strip())
+        except ValueError:
+            return True
+        while tokens and re.match(r"^\w+=", tokens[0]):
+            tokens = tokens[1:]
+        inner = unwrap(tokens)
+        if inner and os.path.basename(inner[0]) in RUNS_A_HEREDOC:
+            return True
+    return False
+
+
+def heredoc_destructive(command):
+    """None without heredoc bodies; else whether the command is destructive,
+    judging each body on its own terms and the rest without them."""
+    found = [h for h in heredocs(command) if h[0] < h[1]]
+    if not found:
+        return None
+    rest, at = [], 0
+    for start, end, _, _ in found:
+        rest.append(command[at:start])
+        at = end
+    rest = "".join(rest) + command[at:]
+    to_shell = feeds_a_shell(rest)
+    for start, end, quoted, terminated in found:
+        body = command[start:end]
+        if to_shell:
+            hit = is_destructive(body)
+        elif not terminated:
+            hit = any(segment_destructive(s) for s in segments(body))
+        elif quoted:
+            hit = False
+        else:
+            subs = heredoc_substitutions(body)
+            hit = subs is None or any(is_destructive(b) for b in subs)
+        if hit:
+            return True
+    return is_destructive(rest)
+
+
+def segment_destructive(segment):
+    segment = segment.strip().lstrip("({").strip()
+    # An escaped `\;` ends `find -exec`; only a bare one closes a group.
+    while segment[-1:] in (")", "}", ";") and not segment[:-1].endswith("\\"):
+        segment = segment[:-1].rstrip()
+    if not segment:
+        return False
+    try:
+        tokens = shlex.split(segment)
+    except ValueError:
+        tokens = segment.split()
+    while tokens and re.match(r"^\w+=", tokens[0]):
+        tokens = tokens[1:]  # an assignment, or `X=1 cmd`
+    if not tokens:
+        return False
+    if SUBSTITUTION in segment:
+        # A substitution whose output runs as a command.
+        inner = unwrap(tokens)
+        head = inner[0] if inner else ""
+        if SUBSTITUTION in head or os.path.basename(head) in RUNS_ITS_INPUT:
+            return True
+    return tokens_destructive(tokens)
+
+
 def is_destructive(command):
     """Koda's classifier: whether the command asks even in Auto."""
     command = command.strip()
     if not command:
         return False
+    verdict = heredoc_destructive(command)
+    if verdict is not None:
+        return verdict
     split = split_substitutions(command)
     if split is None:
         return True  # not closed, so it can't be taken apart
@@ -263,27 +453,4 @@ def is_destructive(command):
     unquoted = re.sub(r"\d?>&\d|&?>\s*/dev/null|\d>\s*/dev/null", "", unquoted)
     if any(pattern in unquoted for pattern in RAW_DANGER):
         return True
-    for segment in segments(outer):
-        segment = segment.strip().lstrip("({").strip()
-        # An escaped `\;` ends `find -exec`; only a bare one closes a group.
-        while segment[-1:] in (")", "}", ";") and not segment[:-1].endswith("\\"):
-            segment = segment[:-1].rstrip()
-        if not segment:
-            continue
-        try:
-            tokens = shlex.split(segment)
-        except ValueError:
-            tokens = segment.split()
-        while tokens and re.match(r"^\w+=", tokens[0]):
-            tokens = tokens[1:]  # an assignment, or `X=1 cmd`
-        if not tokens:
-            continue
-        if SUBSTITUTION in segment:
-            # A substitution whose output runs as a command.
-            inner = unwrap(tokens)
-            head = inner[0] if inner else ""
-            if SUBSTITUTION in head or os.path.basename(head) in RUNS_ITS_INPUT:
-                return True
-        if tokens_destructive(tokens):
-            return True
-    return False
+    return any(segment_destructive(s) for s in segments(outer))
