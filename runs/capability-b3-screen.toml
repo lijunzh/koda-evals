@@ -1,0 +1,21 @@
+# Batch three, step 1: Opus in Claude Code on the subscription, to prove
+# each task can be solved and the checks aren't broken. No API cost.
+#   ./target/release/koda-eval run runs/capability-b3-screen.toml
+#
+# Result, 20261111T214754Z: 2 of 2. py-freebusy-short-slots in 24 s (the
+# booking import, from data/README.md), rust-stale-cache-race in 1m57s.
+name = "capability-b3-screen"
+tasks = ["rust-stale-cache-race", "py-freebusy-short-slots"]
+repeats = 1
+jobs = 2
+wall_secs = 1800
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "opus"
+engine = "claude-code-subscription"
