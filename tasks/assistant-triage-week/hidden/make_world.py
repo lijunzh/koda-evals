@@ -35,8 +35,8 @@ and their daughter Mia is in fourth grade.
 
 ## Sam's rules
 
-- Calls only between 09:00 and 17:00 Pacific, starting on the hour or the
-  half hour.
+- Calls only on weekdays, between 09:00 and 17:00 Pacific, starting on the
+  hour or the half hour.
 - Wednesday mornings, before 12:00, stay free for focus work.
 - Nothing before 08:00 or after 21:00, weekends included.
 - A week runs Monday to Sunday.

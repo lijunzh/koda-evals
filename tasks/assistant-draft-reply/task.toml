@@ -11,7 +11,7 @@ id = "assistant-draft-reply"
 # solution/ and hidden/alt_solution/ pass; the parser was checked on six
 # good and six bad phrasings. Transcript: nothing that sends mail. Fixture
 # from ../assistant-triage-week/hidden/make_world.py.
-prompt = """Jordan asked me to help them move. Draft a reply: I can't do Saturday morning, but offer two specific times this weekend when I'm actually free for two hours. Don't send anything."""
+prompt = """My mail and calendar are in this folder; see `README.md`. Jordan asked me to help them move. Draft a reply: I can't do Saturday morning, but offer two specific times this weekend when I'm actually free for two hours. Don't send anything."""
 tags = ["assistant", "daily", "mail", "calendar", "drafting", "capability"]
 cluster = "judgement"
 

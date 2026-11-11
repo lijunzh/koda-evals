@@ -1,6 +1,6 @@
 """Hidden check for assistant-schedule-call: slots.txt holds exactly the
 45-minute starts next week that suit Priya (London, 13:00-18:00, not
-Friday) and Sam (09:00-17:00 Pacific on the hour or half hour, Wednesday
+Friday) and Sam (weekdays 09:00-17:00 Pacific on the hour or half hour, Wednesday
 mornings free, the calendar). London is 8 hours ahead in late November,
 so only 09:00-10:00 Pacific overlaps: Monday and Tuesday at 09:00.
 Thursday 09:00 is taken by a webinar stored in UTC (17:00Z)."""

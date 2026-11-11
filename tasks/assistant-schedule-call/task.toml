@@ -1,7 +1,7 @@
 id = "assistant-schedule-call"
 # Assistant work: meeting times across time zones. Priya (London) is free
-# 13:00-18:00 her time, not Friday; Sam's rules (README) allow calls
-# 09:00-17:00 Pacific on the hour or half hour and keep Wednesday mornings
+# 13:00-18:00 her time, not Friday; Sam's rules (README) allow calls on
+# weekdays 09:00-17:00 Pacific on the hour or half hour and keep Wednesday mornings
 # free. London is 8 hours ahead of Portland in late November (both are off
 # summer time), so only 09:00-10:00 Pacific overlaps and a 45-minute call
 # must start at 09:00. Monday and Tuesday are free then; Thursday 09:00 is
@@ -9,7 +9,7 @@ id = "assistant-schedule-call"
 # the Z is missed. Graded by hidden/test_eval_hidden.py: slots.txt holds
 # exactly 2026-11-16 09:00 and 2026-11-17 09:00. Fixture from
 # ../assistant-triage-week/hidden/make_world.py.
-prompt = """Priya wants a 45-minute call next week; her email is in my inbox. Which start times work for both of us? Put every one in `slots.txt`, one per line as `YYYY-MM-DD HH:MM` in my time."""
+prompt = """My mail and calendar are in this folder; see `README.md`. Priya wants a 45-minute call next week; her email is in my inbox. Which start times work for both of us? Put every one in `slots.txt`, one per line as `YYYY-MM-DD HH:MM` in my time."""
 tags = ["assistant", "daily", "calendar", "time-zones", "careful-reading", "capability"]
 cluster = "kata"
 

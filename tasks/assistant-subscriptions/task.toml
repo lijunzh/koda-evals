@@ -7,7 +7,7 @@ id = "assistant-subscriptions"
 # by hidden/test_eval_hidden.py on subscriptions.csv: the header, one row
 # per subscription with amount, period and date, nothing else. Fixture
 # from ../assistant-triage-week/hidden/make_world.py.
-prompt = """Which subscriptions am I paying for right now? Make me `subscriptions.csv` with the columns `service,amount,period,next_renewal`: the amount of the next charge, `monthly` or `yearly`, and the date of that charge as `YYYY-MM-DD`."""
+prompt = """My mail and calendar are in this folder; see `README.md`. Which subscriptions will charge me? Make me `subscriptions.csv` with the columns `service,amount,period,next_renewal`: the amount of the next charge, `monthly` or `yearly`, and the date of that charge as `YYYY-MM-DD`."""
 tags = ["assistant", "daily", "mail", "extraction", "careful-reading", "capability"]
 cluster = "kata"
 

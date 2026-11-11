@@ -8,7 +8,7 @@ id = "assistant-triage-week"
 # hidden/test_eval_hidden.py on todo.md: one line per item with its date,
 # nothing else, mail/ and calendar/ untouched. The fixtures of all five
 # assistant-* tasks come from hidden/make_world.py.
-prompt = """Go through my inbox and make me a to-do list of everything that needs something from me this week. Put it in `todo.md`, one line per thing to do, as `- YYYY-MM-DD: what to do (who it's from)`, with the date it has to be done by."""
+prompt = """My mail and calendar are in this folder; see `README.md`. Go through my inbox and make me a to-do list of everything that needs something from me this week. Put it in `todo.md`, one line per thing to do, as `- YYYY-MM-DD: what to do (who it's from)`, with the date it has to be done by."""
 tags = ["assistant", "daily", "mail", "triage", "careful-reading", "capability"]
 cluster = "judgement"
 
