@@ -342,6 +342,8 @@ scope), so advice there would move their scores.
 - `bin/claude-as-koda` ignores `CLAUDE.md` unless the model's `env` sets
   `CLAUDE_AS_KODA_MEMORY = "project"`. Set both for Claude Code to read the
   pinned file. `bin/codex-as-koda` needs nothing extra: Codex reads `AGENTS.md`.
+  Nor does `bin/qwen-as-koda`, which sets Qwen Code's context file to
+  `AGENTS.md`.
 
 ### Parity runs: Koda against Claude Code and Codex
 
@@ -387,6 +389,20 @@ What keeps the peers' setup like Koda's:
   arguments, and `behaviour-delegate-or-not-control` grades delegation. Codex
   reads through the shell and has no sub-agents, so leave those two out of the
   Codex comparison.
+
+### A model's own harness: Qwen Code
+
+`bin/qwen-as-koda` runs Qwen Code (the Homebrew `qwen`, the release users get)
+in place of Koda, so a Qwen model can be run in the harness its own team ships.
+It answers whether a behaviour seen under Koda is the model's or Koda's: for
+example, Qwen3.8-27B checking finished work until the time limit (2026-11-04).
+Name it as a variant's `bin`, beside or instead of a Koda variant, on a
+local model (`llama-cpp` or `lm-studio`: it uses only the base URL); `KODA_MAX_CONTEXT_TOKENS` and `KODA_REASONING_EFFORT` in the
+model's `env` become Qwen Code's `contextWindowSize` and the `reasoning_effort`
+it sends. macOS only: the run is held to the project, the cargo target and
+~/.cargo by `sandbox-exec`, since Qwen Code runs with approvals off. Its
+`claude-code` and `codex` agents are stubbed out, so a delegation stays on the
+same model. The script's header has the rest, including the tool mapping.
 
 A `ref` variant is resolved to its commit, unpacked with `git archive`,
 built in release mode and cached at `~/.cache/koda-eval/bin/<sha>/koda`; the
