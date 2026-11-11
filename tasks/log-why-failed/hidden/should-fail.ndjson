@@ -1,0 +1,11 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "logs/README.md"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Bash", "args": {"command": "grep -n 'nightly-export run=20261103' logs/scheduler.log logs/export-worker.log"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Bash", "output": "..."}
+{"type": "response_start"}
+{"type": "text_delta", "text": "The upload credential expired. Attempt 1 hit the 1800s query deadline, and attempt 2 reused cred=exp-20261103, issued at 02:00 with a 45-minute lifetime, so its upload at 02:50 got 403 ExpiredToken. Issue a fresh credential for each attempt."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "finished", "response": "The upload credential expired. Attempt 1 hit the 1800s query deadline, and attempt 2 reused cred=exp-20261103, issued at 02:00 with a 45-minute lifetime, so its upload at 02:50 got 403 ExpiredToken. Issue a fresh credential for each attempt.", "turn_end": {"kind": "complete"}, "elapsed_ms": 300000, "usage": {"prompt_tokens": 200000, "completion_tokens": 6000, "cache_read_tokens": 0, "thinking_tokens": 0}}
