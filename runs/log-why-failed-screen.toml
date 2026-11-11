@@ -1,0 +1,27 @@
+# Screen of the new log-why-failed task on Flash-Next (GPU only): does a
+# local model get past the scheduler's last error to the migration's lock?
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/log-why-failed-screen.toml
+#
+# Result, 20261111T211655Z: 3 of 3, 2m43s-2m57s and about 194K tokens a
+# run, peak context 37K. Every run converted the scheduler's local time to
+# UTC, found the ALTER TABLE and the lock wait in postgres.log, and
+# explained the 403 ExpiredToken as its consequence. So the task doesn't
+# separate Flash-Next from Haiku in Koda; it stays a daily-work check.
+name = "log-why-failed-screen"
+tasks = ["log-why-failed"]
+repeats = 3
+jobs = 1
+memory = "none"
+wall_secs = 900
+
+[[variants]]
+name = "koda"
+ref = "c7163f7"  # main after lijunzh/koda#1569
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

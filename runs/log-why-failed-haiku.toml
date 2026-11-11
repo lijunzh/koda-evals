@@ -1,0 +1,30 @@
+# Screen of the new log-why-failed task on Haiku, in Koda and in Claude
+# Code: does Haiku get past the scheduler's last error to the migration's
+# lock? Claude Code is the read independent of Koda.
+#   ./target/release/koda-eval run runs/log-why-failed-haiku.toml
+#
+# Result, 20261111T212411Z: Koda 3 of 3, Claude Code 2 of 3, about 20 s and
+# 4-5K tokens a run. Claude Code's miss is real: it searched postgres.log
+# for `2026-11-03T0`, but Postgres writes a space between date and time, so
+# it never saw the migration, said "the database was not at fault" and
+# blamed the expired credential alone. Every pass named the ALTER TABLE and
+# its lock and explained the 403 as its consequence.
+name = "log-why-failed-haiku"
+tasks = ["log-why-failed"]
+repeats = 3
+jobs = 3
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "c7163f7"  # main after lijunzh/koda#1569
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { CLAUDE_AS_KODA_MEMORY = "project" }

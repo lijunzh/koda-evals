@@ -1,0 +1,1366 @@
+2026-10-29T20:00:00.405-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T20:00:14.091-04:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-10-29T20:05:00.417-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-29T20:05:48.459-04:00 INFO  job=rollup-hourly finished ok in 48s
+2026-10-29T20:15:00.680-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T20:15:05.109-04:00 INFO  job=sync-inventory finished ok in 4.4s
+2026-10-29T20:30:00.135-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T20:30:07.011-04:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-10-29T20:45:00.555-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T20:45:10.108-04:00 INFO  job=sync-inventory finished ok in 9.6s
+2026-10-29T21:00:00.187-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T21:00:04.996-04:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-10-29T21:05:00.575-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-29T21:05:31.618-04:00 INFO  job=rollup-hourly finished ok in 31s
+2026-10-29T21:15:00.810-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T21:15:07.185-04:00 INFO  job=sync-inventory finished ok in 6.4s
+2026-10-29T21:30:00.681-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T21:30:09.365-04:00 INFO  job=sync-inventory finished ok in 8.7s
+2026-10-29T21:45:00.620-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T21:45:11.857-04:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-10-29T22:00:00.158-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T22:00:08.314-04:00 INFO  job=sync-inventory finished ok in 8.2s
+2026-10-29T22:05:00.447-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-29T22:05:50.617-04:00 INFO  job=rollup-hourly finished ok in 50s
+2026-10-29T22:15:00.747-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T22:15:06.127-04:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-10-29T22:30:00.368-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T22:30:13.826-04:00 INFO  job=sync-inventory finished ok in 13.5s
+2026-10-29T22:45:00.037-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T22:45:07.838-04:00 INFO  job=sync-inventory finished ok in 7.8s
+2026-10-29T23:00:00.068-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T23:00:12.901-04:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-10-29T23:05:00.587-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-29T23:05:37.867-04:00 INFO  job=rollup-hourly finished ok in 37s
+2026-10-29T23:15:00.378-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T23:15:12.741-04:00 INFO  job=sync-inventory finished ok in 12.4s
+2026-10-29T23:30:00.024-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T23:30:12.056-04:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-10-29T23:45:00.435-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-29T23:45:07.120-04:00 INFO  job=sync-inventory finished ok in 6.7s
+2026-10-30T00:00:00.530-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T00:00:11.410-04:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-10-30T00:05:00.690-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T00:05:38.585-04:00 INFO  job=rollup-hourly finished ok in 38s
+2026-10-30T00:15:00.497-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T00:15:07.336-04:00 INFO  job=sync-inventory finished ok in 6.8s
+2026-10-30T00:30:00.077-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T00:30:05.040-04:00 INFO  job=sync-inventory finished ok in 5.0s
+2026-10-30T00:45:00.810-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T00:45:14.413-04:00 INFO  job=sync-inventory finished ok in 13.6s
+2026-10-30T01:00:00.736-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T01:00:11.897-04:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-10-30T01:05:00.729-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T01:05:50.499-04:00 INFO  job=rollup-hourly finished ok in 50s
+2026-10-30T01:15:00.233-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T01:15:04.914-04:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-10-30T01:30:00.603-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T01:30:06.419-04:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-10-30T01:45:00.896-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T01:45:12.350-04:00 INFO  job=sync-inventory finished ok in 11.5s
+2026-10-30T02:00:00.028-04:00 INFO  job=nightly-export run=20261030 attempt=1/2 started on host=exp-worker-2; upload credential cred=exp-20261030 expires=2026-10-30T02:45:00-04:00
+2026-10-30T02:00:00.105-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T02:00:12.693-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-30T02:05:00.521-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T02:05:54.130-04:00 INFO  job=rollup-hourly finished ok in 54s
+2026-10-30T02:14:34.466-04:00 INFO  job=nightly-export run=20261030 finished ok in 15m; 1126141 rows, 12 parts
+2026-10-30T02:15:00.249-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T02:15:12.576-04:00 INFO  job=sync-inventory finished ok in 12.3s
+2026-10-30T02:30:00.535-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T02:30:06.958-04:00 INFO  job=sync-inventory finished ok in 6.4s
+2026-10-30T02:45:00.806-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T02:45:08.458-04:00 INFO  job=sync-inventory finished ok in 7.7s
+2026-10-30T03:00:00.695-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T03:00:06.946-04:00 INFO  job=sync-inventory finished ok in 6.3s
+2026-10-30T03:05:00.474-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T03:05:54.557-04:00 INFO  job=rollup-hourly finished ok in 54s
+2026-10-30T03:15:00.512-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T03:15:12.163-04:00 INFO  job=sync-inventory finished ok in 11.7s
+2026-10-30T03:30:00.860-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T03:30:05.547-04:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-10-30T03:45:00.607-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T03:45:07.097-04:00 INFO  job=sync-inventory finished ok in 6.5s
+2026-10-30T04:00:00.465-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T04:00:04.743-04:00 INFO  job=sync-inventory finished ok in 4.3s
+2026-10-30T04:05:00.552-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T04:05:23.490-04:00 INFO  job=rollup-hourly finished ok in 23s
+2026-10-30T04:15:00.419-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T04:15:10.350-04:00 INFO  job=sync-inventory finished ok in 9.9s
+2026-10-30T04:30:00.509-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T04:30:07.676-04:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-10-30T04:45:00.454-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T04:45:10.348-04:00 INFO  job=sync-inventory finished ok in 9.9s
+2026-10-30T05:00:00.817-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T05:00:12.266-04:00 INFO  job=sync-inventory finished ok in 11.4s
+2026-10-30T05:05:00.011-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T05:05:30.284-04:00 INFO  job=rollup-hourly finished ok in 30s
+2026-10-30T05:15:00.256-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T05:15:06.709-04:00 INFO  job=sync-inventory finished ok in 6.5s
+2026-10-30T05:30:00.877-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T05:30:14.480-04:00 INFO  job=sync-inventory finished ok in 13.6s
+2026-10-30T05:45:00.684-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T05:45:13.513-04:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-10-30T06:00:00.476-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T06:00:10.253-04:00 INFO  job=sync-inventory finished ok in 9.8s
+2026-10-30T06:05:00.230-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T06:05:34.090-04:00 INFO  job=rollup-hourly finished ok in 34s
+2026-10-30T06:15:00.802-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T06:15:07.083-04:00 INFO  job=sync-inventory finished ok in 6.3s
+2026-10-30T06:30:00.404-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T06:30:06.496-04:00 INFO  job=sync-inventory finished ok in 6.1s
+2026-10-30T06:45:00.718-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T06:45:06.434-04:00 INFO  job=sync-inventory finished ok in 5.7s
+2026-10-30T07:00:00.794-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T07:00:05.180-04:00 INFO  job=sync-inventory finished ok in 4.4s
+2026-10-30T07:05:00.869-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T07:05:52.104-04:00 INFO  job=rollup-hourly finished ok in 51s
+2026-10-30T07:15:00.577-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T07:15:08.519-04:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-10-30T07:30:00.629-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T07:30:13.269-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-30T07:45:00.817-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T07:45:09.218-04:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-10-30T08:00:00.602-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T08:00:11.333-04:00 INFO  job=sync-inventory finished ok in 10.7s
+2026-10-30T08:05:00.524-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T08:05:52.607-04:00 INFO  job=rollup-hourly finished ok in 52s
+2026-10-30T08:15:00.569-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T08:15:06.495-04:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-10-30T08:30:00.519-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T08:30:07.892-04:00 INFO  job=sync-inventory finished ok in 7.4s
+2026-10-30T08:45:00.197-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T08:45:08.954-04:00 INFO  job=sync-inventory finished ok in 8.8s
+2026-10-30T09:00:00.825-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T09:00:13.464-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-30T09:05:00.423-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T09:05:48.100-04:00 INFO  job=rollup-hourly finished ok in 48s
+2026-10-30T09:15:00.502-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T09:15:11.666-04:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-10-30T09:30:00.282-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T09:30:11.636-04:00 INFO  job=sync-inventory finished ok in 11.4s
+2026-10-30T09:45:00.488-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T09:45:10.674-04:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-10-30T10:00:00.447-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T10:00:09.007-04:00 INFO  job=sync-inventory finished ok in 8.6s
+2026-10-30T10:05:00.324-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T10:05:43.685-04:00 INFO  job=rollup-hourly finished ok in 43s
+2026-10-30T10:15:00.282-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T10:15:11.180-04:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-10-30T10:30:00.306-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T10:30:10.950-04:00 INFO  job=sync-inventory finished ok in 10.6s
+2026-10-30T10:45:00.124-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T10:45:13.845-04:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-10-30T11:00:00.400-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T11:00:07.379-04:00 INFO  job=sync-inventory finished ok in 7.0s
+2026-10-30T11:05:00.470-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T11:05:53.712-04:00 INFO  job=rollup-hourly finished ok in 53s
+2026-10-30T11:15:00.872-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T11:15:09.904-04:00 INFO  job=sync-inventory finished ok in 9.0s
+2026-10-30T11:30:00.817-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T11:30:05.542-04:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-10-30T11:45:00.448-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T11:45:07.413-04:00 INFO  job=sync-inventory finished ok in 7.0s
+2026-10-30T12:00:00.641-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T12:00:14.305-04:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-10-30T12:05:00.122-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T12:05:41.501-04:00 INFO  job=rollup-hourly finished ok in 41s
+2026-10-30T12:15:00.750-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T12:15:10.723-04:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-10-30T12:30:00.684-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T12:30:11.486-04:00 INFO  job=sync-inventory finished ok in 10.8s
+2026-10-30T12:45:00.435-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T12:45:12.762-04:00 INFO  job=sync-inventory finished ok in 12.3s
+2026-10-30T13:00:00.044-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T13:00:07.362-04:00 INFO  job=sync-inventory finished ok in 7.3s
+2026-10-30T13:05:00.674-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T13:05:52.731-04:00 INFO  job=rollup-hourly finished ok in 52s
+2026-10-30T13:15:00.117-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T13:15:12.515-04:00 INFO  job=sync-inventory finished ok in 12.4s
+2026-10-30T13:30:00.697-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T13:30:10.928-04:00 WARN  job=sync-inventory slow: 10.2s (budget 10s)
+2026-10-30T13:30:10.928-04:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-10-30T13:45:00.043-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T13:45:10.395-04:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-10-30T14:00:00.427-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T14:00:04.667-04:00 INFO  job=sync-inventory finished ok in 4.2s
+2026-10-30T14:05:00.071-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T14:05:48.149-04:00 INFO  job=rollup-hourly finished ok in 48s
+2026-10-30T14:15:00.019-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T14:15:08.002-04:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-10-30T14:30:00.874-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T14:30:11.961-04:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-10-30T14:45:00.851-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T14:45:05.669-04:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-10-30T15:00:00.614-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T15:00:13.076-04:00 INFO  job=sync-inventory finished ok in 12.5s
+2026-10-30T15:05:00.897-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T15:05:28.856-04:00 INFO  job=rollup-hourly finished ok in 28s
+2026-10-30T15:15:00.728-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T15:15:07.603-04:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-10-30T15:30:00.079-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T15:30:11.421-04:00 INFO  job=sync-inventory finished ok in 11.3s
+2026-10-30T15:45:00.068-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T15:45:07.948-04:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-10-30T16:00:00.114-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T16:00:12.161-04:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-10-30T16:05:00.603-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T16:05:50.319-04:00 INFO  job=rollup-hourly finished ok in 50s
+2026-10-30T16:15:00.265-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T16:15:11.741-04:00 INFO  job=sync-inventory finished ok in 11.5s
+2026-10-30T16:30:00.738-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T16:30:14.350-04:00 INFO  job=sync-inventory finished ok in 13.6s
+2026-10-30T16:45:00.266-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T16:45:12.663-04:00 INFO  job=sync-inventory finished ok in 12.4s
+2026-10-30T17:00:00.788-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T17:00:05.830-04:00 INFO  job=sync-inventory finished ok in 5.0s
+2026-10-30T17:05:00.011-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T17:05:46.631-04:00 INFO  job=rollup-hourly finished ok in 47s
+2026-10-30T17:15:00.657-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T17:15:09.362-04:00 INFO  job=sync-inventory finished ok in 8.7s
+2026-10-30T17:30:00.407-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T17:30:04.636-04:00 INFO  job=sync-inventory finished ok in 4.2s
+2026-10-30T17:45:00.143-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T17:45:08.558-04:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-10-30T18:00:00.024-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T18:00:12.625-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-30T18:05:00.181-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T18:05:21.420-04:00 INFO  job=rollup-hourly finished ok in 21s
+2026-10-30T18:15:00.452-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T18:15:10.400-04:00 INFO  job=sync-inventory finished ok in 9.9s
+2026-10-30T18:30:00.616-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T18:30:10.321-04:00 INFO  job=sync-inventory finished ok in 9.7s
+2026-10-30T18:45:00.372-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T18:45:07.188-04:00 INFO  job=sync-inventory finished ok in 6.8s
+2026-10-30T19:00:00.740-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T19:00:04.746-04:00 INFO  job=sync-inventory finished ok in 4.0s
+2026-10-30T19:05:00.445-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T19:05:50.226-04:00 INFO  job=rollup-hourly finished ok in 50s
+2026-10-30T19:15:00.781-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T19:15:13.553-04:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-10-30T19:30:00.715-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T19:30:11.399-04:00 INFO  job=sync-inventory finished ok in 10.7s
+2026-10-30T19:45:00.140-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T19:45:12.769-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-30T20:00:00.641-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T20:00:06.587-04:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-10-30T20:05:00.028-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T20:05:30.881-04:00 INFO  job=rollup-hourly finished ok in 31s
+2026-10-30T20:15:00.456-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T20:15:05.583-04:00 INFO  job=sync-inventory finished ok in 5.1s
+2026-10-30T20:30:00.060-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T20:30:10.092-04:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-10-30T20:45:00.709-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T20:45:05.739-04:00 INFO  job=sync-inventory finished ok in 5.0s
+2026-10-30T21:00:00.167-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T21:00:08.493-04:00 INFO  job=sync-inventory finished ok in 8.3s
+2026-10-30T21:05:00.337-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T21:05:42.892-04:00 INFO  job=rollup-hourly finished ok in 43s
+2026-10-30T21:15:00.567-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T21:15:08.545-04:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-10-30T21:30:00.301-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T21:30:14.052-04:00 INFO  job=sync-inventory finished ok in 13.8s
+2026-10-30T21:45:00.412-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T21:45:11.527-04:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-10-30T22:00:00.418-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T22:00:08.295-04:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-10-30T22:05:00.874-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T22:05:24.637-04:00 INFO  job=rollup-hourly finished ok in 24s
+2026-10-30T22:15:00.341-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T22:15:09.993-04:00 INFO  job=sync-inventory finished ok in 9.7s
+2026-10-30T22:30:00.557-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T22:30:05.786-04:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-10-30T22:45:00.204-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T22:45:11.305-04:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-10-30T23:00:00.608-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T23:00:06.914-04:00 INFO  job=sync-inventory finished ok in 6.3s
+2026-10-30T23:05:00.048-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-30T23:05:44.319-04:00 INFO  job=rollup-hourly finished ok in 44s
+2026-10-30T23:15:00.213-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T23:15:13.306-04:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-10-30T23:30:00.737-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T23:30:05.118-04:00 INFO  job=sync-inventory finished ok in 4.4s
+2026-10-30T23:45:00.187-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-30T23:45:10.204-04:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-10-31T00:00:00.362-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T00:00:08.839-04:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-10-31T00:05:00.507-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T00:05:21.684-04:00 INFO  job=rollup-hourly finished ok in 21s
+2026-10-31T00:15:00.012-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T00:15:07.218-04:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-10-31T00:30:00.503-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T00:30:14.085-04:00 INFO  job=sync-inventory finished ok in 13.6s
+2026-10-31T00:45:00.494-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T00:45:12.317-04:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-10-31T01:00:00.865-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T01:00:06.257-04:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-10-31T01:05:00.793-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T01:05:28.458-04:00 INFO  job=rollup-hourly finished ok in 28s
+2026-10-31T01:15:00.014-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T01:15:05.888-04:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-10-31T01:30:00.837-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T01:30:04.846-04:00 INFO  job=sync-inventory finished ok in 4.0s
+2026-10-31T01:45:00.424-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T01:45:05.815-04:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-10-31T02:00:00.041-04:00 INFO  job=nightly-export run=20261031 attempt=1/2 started on host=exp-worker-2; upload credential cred=exp-20261031 expires=2026-10-31T02:45:00-04:00
+2026-10-31T02:00:00.193-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T02:00:04.871-04:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-10-31T02:05:00.681-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T02:05:21.055-04:00 INFO  job=rollup-hourly finished ok in 20s
+2026-10-31T02:13:58.260-04:00 INFO  job=nightly-export run=20261031 finished ok in 14m; 1308922 rows, 14 parts
+2026-10-31T02:15:00.343-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T02:15:10.741-04:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-10-31T02:30:00.110-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T02:30:12.736-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-31T02:45:00.304-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T02:45:07.164-04:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-10-31T03:00:00.718-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T03:00:07.323-04:00 INFO  job=sync-inventory finished ok in 6.6s
+2026-10-31T03:05:00.594-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T03:05:36.810-04:00 INFO  job=rollup-hourly finished ok in 36s
+2026-10-31T03:15:00.895-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T03:15:06.122-04:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-10-31T03:30:00.102-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T03:30:05.858-04:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-10-31T03:45:00.573-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T03:45:11.461-04:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-10-31T04:00:00.558-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T04:00:10.638-04:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-10-31T04:05:00.219-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T04:05:51.106-04:00 INFO  job=rollup-hourly finished ok in 51s
+2026-10-31T04:15:00.453-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T04:15:05.694-04:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-10-31T04:30:00.169-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T04:30:04.557-04:00 INFO  job=sync-inventory finished ok in 4.4s
+2026-10-31T04:45:00.099-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T04:45:09.631-04:00 INFO  job=sync-inventory finished ok in 9.5s
+2026-10-31T05:00:00.163-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T05:00:04.653-04:00 INFO  job=sync-inventory finished ok in 4.5s
+2026-10-31T05:05:00.770-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T05:05:30.973-04:00 INFO  job=rollup-hourly finished ok in 30s
+2026-10-31T05:15:00.013-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T05:15:05.440-04:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-10-31T05:30:00.709-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T05:30:08.528-04:00 INFO  job=sync-inventory finished ok in 7.8s
+2026-10-31T05:45:00.367-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T05:45:07.151-04:00 INFO  job=sync-inventory finished ok in 6.8s
+2026-10-31T06:00:00.279-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T06:00:08.354-04:00 INFO  job=sync-inventory finished ok in 8.1s
+2026-10-31T06:05:00.762-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T06:05:53.166-04:00 INFO  job=rollup-hourly finished ok in 52s
+2026-10-31T06:15:00.335-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T06:15:09.634-04:00 INFO  job=sync-inventory finished ok in 9.3s
+2026-10-31T06:30:00.400-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T06:30:10.527-04:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-10-31T06:45:00.274-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T06:45:09.716-04:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-10-31T07:00:00.505-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T07:00:04.565-04:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-10-31T07:05:00.110-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T07:05:54.674-04:00 INFO  job=rollup-hourly finished ok in 55s
+2026-10-31T07:15:00.365-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T07:15:05.856-04:00 WARN  job=sync-inventory slow: 5.5s (budget 10s)
+2026-10-31T07:15:05.856-04:00 INFO  job=sync-inventory finished ok in 5.5s
+2026-10-31T07:30:00.642-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T07:30:04.844-04:00 INFO  job=sync-inventory finished ok in 4.2s
+2026-10-31T07:45:00.892-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T07:45:09.273-04:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-10-31T08:00:00.610-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T08:00:07.956-04:00 INFO  job=sync-inventory finished ok in 7.3s
+2026-10-31T08:05:00.186-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T08:05:46.774-04:00 INFO  job=rollup-hourly finished ok in 47s
+2026-10-31T08:15:00.220-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T08:15:13.042-04:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-10-31T08:30:00.598-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T08:30:08.419-04:00 INFO  job=sync-inventory finished ok in 7.8s
+2026-10-31T08:45:00.690-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T08:45:11.833-04:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-10-31T09:00:00.465-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T09:00:06.262-04:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-10-31T09:05:00.034-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T09:05:52.359-04:00 INFO  job=rollup-hourly finished ok in 52s
+2026-10-31T09:15:00.469-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T09:15:05.365-04:00 INFO  job=sync-inventory finished ok in 4.9s
+2026-10-31T09:30:00.384-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T09:30:08.332-04:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-10-31T09:45:00.268-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T09:45:04.907-04:00 INFO  job=sync-inventory finished ok in 4.6s
+2026-10-31T10:00:00.733-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T10:00:13.125-04:00 INFO  job=sync-inventory finished ok in 12.4s
+2026-10-31T10:05:00.723-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T10:05:30.020-04:00 INFO  job=rollup-hourly finished ok in 29s
+2026-10-31T10:15:00.767-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T10:15:10.803-04:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-10-31T10:30:00.158-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T10:30:09.007-04:00 INFO  job=sync-inventory finished ok in 8.8s
+2026-10-31T10:45:00.654-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T10:45:06.694-04:00 INFO  job=sync-inventory finished ok in 6.0s
+2026-10-31T11:00:00.051-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T11:00:04.195-04:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-10-31T11:05:00.183-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T11:05:22.483-04:00 INFO  job=rollup-hourly finished ok in 22s
+2026-10-31T11:15:00.876-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T11:15:14.867-04:00 INFO  job=sync-inventory finished ok in 14.0s
+2026-10-31T11:30:00.502-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T11:30:08.500-04:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-10-31T11:45:00.508-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T11:45:09.412-04:00 INFO  job=sync-inventory finished ok in 8.9s
+2026-10-31T12:00:00.360-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T12:00:11.195-04:00 INFO  job=sync-inventory finished ok in 10.8s
+2026-10-31T12:05:00.084-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T12:05:46.145-04:00 INFO  job=rollup-hourly finished ok in 46s
+2026-10-31T12:15:00.313-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T12:15:04.623-04:00 INFO  job=sync-inventory finished ok in 4.3s
+2026-10-31T12:30:00.021-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T12:30:10.043-04:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-10-31T12:45:00.085-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T12:45:12.661-04:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-10-31T13:00:00.199-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T13:00:12.215-04:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-10-31T13:05:00.546-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T13:05:28.193-04:00 INFO  job=rollup-hourly finished ok in 28s
+2026-10-31T13:15:00.663-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T13:15:12.530-04:00 INFO  job=sync-inventory finished ok in 11.9s
+2026-10-31T13:30:00.550-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T13:30:08.784-04:00 INFO  job=sync-inventory finished ok in 8.2s
+2026-10-31T13:45:00.675-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T13:45:13.132-04:00 INFO  job=sync-inventory finished ok in 12.5s
+2026-10-31T14:00:00.644-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T14:00:05.827-04:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-10-31T14:05:00.623-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T14:05:41.334-04:00 INFO  job=rollup-hourly finished ok in 41s
+2026-10-31T14:15:00.736-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T14:15:05.898-04:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-10-31T14:30:00.398-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T14:30:10.538-04:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-10-31T14:45:00.616-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T14:45:13.732-04:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-10-31T15:00:00.636-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T15:00:08.640-04:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-10-31T15:05:00.259-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T15:05:42.177-04:00 INFO  job=rollup-hourly finished ok in 42s
+2026-10-31T15:15:00.107-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T15:15:06.638-04:00 INFO  job=sync-inventory finished ok in 6.5s
+2026-10-31T15:30:00.179-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T15:30:05.485-04:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-10-31T15:45:00.882-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T15:45:05.518-04:00 INFO  job=sync-inventory finished ok in 4.6s
+2026-10-31T16:00:00.054-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T16:00:06.216-04:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-10-31T16:05:00.738-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T16:05:47.729-04:00 INFO  job=rollup-hourly finished ok in 47s
+2026-10-31T16:15:00.809-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T16:15:07.640-04:00 INFO  job=sync-inventory finished ok in 6.8s
+2026-10-31T16:30:00.773-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T16:30:05.710-04:00 INFO  job=sync-inventory finished ok in 4.9s
+2026-10-31T16:45:00.709-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T16:45:11.512-04:00 INFO  job=sync-inventory finished ok in 10.8s
+2026-10-31T17:00:00.132-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T17:00:10.403-04:00 INFO  job=sync-inventory finished ok in 10.3s
+2026-10-31T17:05:00.761-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T17:05:23.473-04:00 INFO  job=rollup-hourly finished ok in 23s
+2026-10-31T17:15:00.049-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T17:15:11.191-04:00 WARN  job=sync-inventory slow: 11.1s (budget 10s)
+2026-10-31T17:15:11.191-04:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-10-31T17:30:00.607-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T17:30:07.336-04:00 INFO  job=sync-inventory finished ok in 6.7s
+2026-10-31T17:45:00.134-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T17:45:04.701-04:00 INFO  job=sync-inventory finished ok in 4.6s
+2026-10-31T18:00:00.471-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T18:00:04.657-04:00 INFO  job=sync-inventory finished ok in 4.2s
+2026-10-31T18:05:00.833-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T18:05:30.739-04:00 INFO  job=rollup-hourly finished ok in 30s
+2026-10-31T18:15:00.792-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T18:15:13.852-04:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-10-31T18:30:00.790-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T18:30:13.054-04:00 INFO  job=sync-inventory finished ok in 12.3s
+2026-10-31T18:45:00.647-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T18:45:06.907-04:00 INFO  job=sync-inventory finished ok in 6.3s
+2026-10-31T19:00:00.584-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T19:00:11.024-04:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-10-31T19:05:00.815-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T19:05:33.897-04:00 INFO  job=rollup-hourly finished ok in 33s
+2026-10-31T19:15:00.223-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T19:15:04.487-04:00 INFO  job=sync-inventory finished ok in 4.3s
+2026-10-31T19:30:00.779-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T19:30:08.335-04:00 INFO  job=sync-inventory finished ok in 7.6s
+2026-10-31T19:45:00.249-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T19:45:13.550-04:00 INFO  job=sync-inventory finished ok in 13.3s
+2026-10-31T20:00:00.262-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T20:00:07.586-04:00 INFO  job=sync-inventory finished ok in 7.3s
+2026-10-31T20:05:00.399-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T20:05:33.815-04:00 INFO  job=rollup-hourly finished ok in 33s
+2026-10-31T20:15:00.601-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T20:15:08.119-04:00 INFO  job=sync-inventory finished ok in 7.5s
+2026-10-31T20:30:00.827-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T20:30:08.435-04:00 INFO  job=sync-inventory finished ok in 7.6s
+2026-10-31T20:45:00.558-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T20:45:07.110-04:00 INFO  job=sync-inventory finished ok in 6.6s
+2026-10-31T21:00:00.199-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T21:00:11.025-04:00 INFO  job=sync-inventory finished ok in 10.8s
+2026-10-31T21:05:00.109-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T21:05:39.928-04:00 INFO  job=rollup-hourly finished ok in 40s
+2026-10-31T21:15:00.062-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T21:15:11.733-04:00 INFO  job=sync-inventory finished ok in 11.7s
+2026-10-31T21:30:00.870-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T21:30:06.214-04:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-10-31T21:45:00.687-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T21:45:09.038-04:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-10-31T22:00:00.725-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T22:00:13.461-04:00 INFO  job=sync-inventory finished ok in 12.7s
+2026-10-31T22:05:00.289-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T22:05:41.459-04:00 INFO  job=rollup-hourly finished ok in 41s
+2026-10-31T22:15:00.012-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T22:15:09.281-04:00 INFO  job=sync-inventory finished ok in 9.3s
+2026-10-31T22:30:00.078-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T22:30:07.316-04:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-10-31T22:45:00.808-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T22:45:12.463-04:00 INFO  job=sync-inventory finished ok in 11.7s
+2026-10-31T23:00:00.523-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T23:00:14.213-04:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-10-31T23:05:00.017-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-10-31T23:05:51.238-04:00 INFO  job=rollup-hourly finished ok in 51s
+2026-10-31T23:15:00.200-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T23:15:10.430-04:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-10-31T23:30:00.658-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T23:30:05.358-04:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-10-31T23:45:00.110-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-10-31T23:45:06.710-04:00 INFO  job=sync-inventory finished ok in 6.6s
+2026-11-01T00:00:00.592-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T00:00:11.746-04:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-01T00:05:00.487-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T00:05:53.839-04:00 INFO  job=rollup-hourly finished ok in 53s
+2026-11-01T00:15:00.753-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T00:15:07.623-04:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-11-01T00:30:00.516-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T00:30:11.685-04:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-01T00:45:00.813-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T00:45:06.665-04:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-01T01:00:00.756-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:00:11.575-04:00 INFO  job=sync-inventory finished ok in 10.8s
+2026-11-01T01:05:00.158-04:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T01:05:24.686-04:00 INFO  job=rollup-hourly finished ok in 25s
+2026-11-01T01:15:00.526-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:15:09.258-04:00 INFO  job=sync-inventory finished ok in 8.7s
+2026-11-01T01:30:00.388-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:30:10.260-04:00 INFO  job=sync-inventory finished ok in 9.9s
+2026-11-01T01:45:00.197-04:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:45:09.635-04:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-11-01T01:00:00.787-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:00:14.715-05:00 WARN  job=sync-inventory slow: 13.9s (budget 10s)
+2026-11-01T01:00:14.715-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-01T01:05:00.056-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T01:05:21.272-05:00 INFO  job=rollup-hourly finished ok in 21s
+2026-11-01T01:15:00.598-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:15:05.855-05:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-11-01T01:30:00.356-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:30:09.223-05:00 INFO  job=sync-inventory finished ok in 8.9s
+2026-11-01T01:45:00.124-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T01:45:07.288-05:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-11-01T02:00:00.016-05:00 INFO  job=nightly-export run=20261101 attempt=1/2 started on host=exp-worker-2; upload credential cred=exp-20261101 expires=2026-11-01T02:45:00-05:00
+2026-11-01T02:00:00.818-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T02:00:09.656-05:00 INFO  job=sync-inventory finished ok in 8.8s
+2026-11-01T02:05:00.087-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T02:05:31.768-05:00 INFO  job=rollup-hourly finished ok in 32s
+2026-11-01T02:15:00.329-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T02:15:07.576-05:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-11-01T02:19:01.886-05:00 INFO  job=nightly-export run=20261101 finished ok in 19m; 1171734 rows, 12 parts
+2026-11-01T02:30:00.133-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T02:30:07.319-05:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-11-01T02:45:00.622-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T02:45:12.881-05:00 INFO  job=sync-inventory finished ok in 12.3s
+2026-11-01T03:00:00.244-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T03:00:08.481-05:00 INFO  job=sync-inventory finished ok in 8.2s
+2026-11-01T03:05:00.152-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T03:05:48.689-05:00 INFO  job=rollup-hourly finished ok in 49s
+2026-11-01T03:15:00.894-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T03:15:11.048-05:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-11-01T03:30:00.701-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T03:30:14.355-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-01T03:45:00.635-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T03:45:09.589-05:00 WARN  job=sync-inventory slow: 9.0s (budget 10s)
+2026-11-01T03:45:09.589-05:00 INFO  job=sync-inventory finished ok in 9.0s
+2026-11-01T04:00:00.118-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T04:00:11.406-05:00 INFO  job=sync-inventory finished ok in 11.3s
+2026-11-01T04:05:00.834-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T04:05:31.820-05:00 INFO  job=rollup-hourly finished ok in 31s
+2026-11-01T04:15:00.418-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T04:15:04.996-05:00 INFO  job=sync-inventory finished ok in 4.6s
+2026-11-01T04:30:00.218-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T04:30:09.982-05:00 INFO  job=sync-inventory finished ok in 9.8s
+2026-11-01T04:45:00.564-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T04:45:05.032-05:00 INFO  job=sync-inventory finished ok in 4.5s
+2026-11-01T05:00:00.719-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T05:00:07.136-05:00 INFO  job=sync-inventory finished ok in 6.4s
+2026-11-01T05:05:00.305-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T05:05:22.633-05:00 INFO  job=rollup-hourly finished ok in 22s
+2026-11-01T05:15:00.620-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T05:15:09.981-05:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-11-01T05:30:00.550-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T05:30:05.282-05:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-11-01T05:45:00.710-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T05:45:11.695-05:00 INFO  job=sync-inventory finished ok in 11.0s
+2026-11-01T06:00:00.534-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T06:00:08.237-05:00 INFO  job=sync-inventory finished ok in 7.7s
+2026-11-01T06:05:00.159-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T06:05:48.604-05:00 INFO  job=rollup-hourly finished ok in 48s
+2026-11-01T06:15:00.072-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T06:15:08.083-05:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-11-01T06:30:00.257-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T06:30:09.795-05:00 INFO  job=sync-inventory finished ok in 9.5s
+2026-11-01T06:45:00.570-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T06:45:05.396-05:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-11-01T07:00:00.733-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T07:00:06.127-05:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-11-01T07:05:00.197-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T07:05:45.157-05:00 INFO  job=rollup-hourly finished ok in 45s
+2026-11-01T07:15:00.538-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T07:15:05.571-05:00 INFO  job=sync-inventory finished ok in 5.0s
+2026-11-01T07:30:00.756-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T07:30:10.338-05:00 INFO  job=sync-inventory finished ok in 9.6s
+2026-11-01T07:45:00.702-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T07:45:04.821-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-01T08:00:00.135-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T08:00:10.285-05:00 WARN  job=sync-inventory slow: 10.2s (budget 10s)
+2026-11-01T08:00:10.285-05:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-11-01T08:05:00.733-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T08:05:39.463-05:00 INFO  job=rollup-hourly finished ok in 39s
+2026-11-01T08:15:00.321-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T08:15:06.686-05:00 INFO  job=sync-inventory finished ok in 6.4s
+2026-11-01T08:30:00.870-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T08:30:06.732-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-01T08:45:00.862-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T08:45:12.188-05:00 INFO  job=sync-inventory finished ok in 11.3s
+2026-11-01T09:00:00.128-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T09:00:12.185-05:00 INFO  job=sync-inventory finished ok in 12.1s
+2026-11-01T09:05:00.548-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T09:05:35.198-05:00 INFO  job=rollup-hourly finished ok in 35s
+2026-11-01T09:15:00.509-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T09:15:13.762-05:00 INFO  job=sync-inventory finished ok in 13.3s
+2026-11-01T09:30:00.550-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T09:30:12.592-05:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-11-01T09:45:00.505-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T09:45:10.876-05:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-11-01T10:00:00.698-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T10:00:12.331-05:00 INFO  job=sync-inventory finished ok in 11.6s
+2026-11-01T10:05:00.474-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T10:05:40.238-05:00 INFO  job=rollup-hourly finished ok in 40s
+2026-11-01T10:15:00.142-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T10:15:06.292-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-01T10:30:00.451-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T10:30:08.913-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-01T10:45:00.835-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T10:45:09.602-05:00 INFO  job=sync-inventory finished ok in 8.8s
+2026-11-01T11:00:00.754-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T11:00:05.818-05:00 INFO  job=sync-inventory finished ok in 5.1s
+2026-11-01T11:05:00.687-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T11:05:47.434-05:00 INFO  job=rollup-hourly finished ok in 47s
+2026-11-01T11:15:00.367-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T11:15:12.208-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-01T11:30:00.639-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T11:30:08.104-05:00 INFO  job=sync-inventory finished ok in 7.5s
+2026-11-01T11:45:00.061-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T11:45:11.831-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-01T12:00:00.647-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T12:00:06.413-05:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-11-01T12:05:00.764-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T12:05:42.951-05:00 INFO  job=rollup-hourly finished ok in 42s
+2026-11-01T12:15:00.581-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T12:15:14.254-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-01T12:30:00.338-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T12:30:05.109-05:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-11-01T12:45:00.441-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T12:45:13.564-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-01T13:00:00.877-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T13:00:12.881-05:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-11-01T13:05:00.714-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T13:05:47.525-05:00 INFO  job=rollup-hourly finished ok in 47s
+2026-11-01T13:15:00.648-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T13:15:07.422-05:00 INFO  job=sync-inventory finished ok in 6.8s
+2026-11-01T13:30:00.738-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T13:30:08.613-05:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-11-01T13:45:00.858-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T13:45:08.915-05:00 INFO  job=sync-inventory finished ok in 8.1s
+2026-11-01T14:00:00.131-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T14:00:13.727-05:00 INFO  job=sync-inventory finished ok in 13.6s
+2026-11-01T14:05:00.612-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T14:05:51.872-05:00 INFO  job=rollup-hourly finished ok in 51s
+2026-11-01T14:15:00.346-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T14:15:11.527-05:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-01T14:30:00.033-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T14:30:12.829-05:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-11-01T14:45:00.507-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T14:45:13.075-05:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-11-01T15:00:00.376-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T15:00:10.092-05:00 INFO  job=sync-inventory finished ok in 9.7s
+2026-11-01T15:05:00.129-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T15:05:28.531-05:00 INFO  job=rollup-hourly finished ok in 28s
+2026-11-01T15:15:00.245-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T15:15:05.827-05:00 INFO  job=sync-inventory finished ok in 5.6s
+2026-11-01T15:30:00.283-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T15:30:09.860-05:00 INFO  job=sync-inventory finished ok in 9.6s
+2026-11-01T15:45:00.230-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T15:45:08.766-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-01T16:00:00.317-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T16:00:14.210-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-01T16:05:00.843-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T16:05:43.022-05:00 INFO  job=rollup-hourly finished ok in 42s
+2026-11-01T16:15:00.329-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T16:15:10.588-05:00 INFO  job=sync-inventory finished ok in 10.3s
+2026-11-01T16:30:00.799-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T16:30:11.580-05:00 INFO  job=sync-inventory finished ok in 10.8s
+2026-11-01T16:45:00.693-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T16:45:07.292-05:00 INFO  job=sync-inventory finished ok in 6.6s
+2026-11-01T17:00:00.526-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T17:00:07.788-05:00 INFO  job=sync-inventory finished ok in 7.3s
+2026-11-01T17:05:00.442-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T17:05:22.189-05:00 INFO  job=rollup-hourly finished ok in 22s
+2026-11-01T17:15:00.854-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T17:15:09.374-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-01T17:30:00.783-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T17:30:09.324-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-01T17:45:00.263-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T17:45:07.184-05:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-11-01T18:00:00.228-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T18:00:04.430-05:00 INFO  job=sync-inventory finished ok in 4.2s
+2026-11-01T18:05:00.207-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T18:05:47.565-05:00 INFO  job=rollup-hourly finished ok in 47s
+2026-11-01T18:15:00.718-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T18:15:06.946-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-01T18:30:00.106-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T18:30:05.029-05:00 INFO  job=sync-inventory finished ok in 4.9s
+2026-11-01T18:45:00.081-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T18:45:12.988-05:00 INFO  job=sync-inventory finished ok in 12.9s
+2026-11-01T19:00:00.062-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T19:00:09.504-05:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-11-01T19:05:00.263-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T19:05:43.610-05:00 INFO  job=rollup-hourly finished ok in 43s
+2026-11-01T19:15:00.269-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T19:15:06.737-05:00 INFO  job=sync-inventory finished ok in 6.5s
+2026-11-01T19:30:00.644-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T19:30:07.528-05:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-11-01T19:45:00.673-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T19:45:09.229-05:00 INFO  job=sync-inventory finished ok in 8.6s
+2026-11-01T20:00:00.555-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T20:00:13.068-05:00 INFO  job=sync-inventory finished ok in 12.5s
+2026-11-01T20:05:00.730-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T20:05:51.209-05:00 INFO  job=rollup-hourly finished ok in 50s
+2026-11-01T20:15:00.709-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T20:15:13.369-05:00 INFO  job=sync-inventory finished ok in 12.7s
+2026-11-01T20:30:00.115-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T20:30:08.286-05:00 INFO  job=sync-inventory finished ok in 8.2s
+2026-11-01T20:45:00.014-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T20:45:06.242-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-01T21:00:00.734-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T21:00:13.791-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-01T21:05:00.077-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T21:05:34.983-05:00 INFO  job=rollup-hourly finished ok in 35s
+2026-11-01T21:15:00.666-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T21:15:06.292-05:00 INFO  job=sync-inventory finished ok in 5.6s
+2026-11-01T21:30:00.026-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T21:30:12.180-05:00 INFO  job=sync-inventory finished ok in 12.2s
+2026-11-01T21:45:00.087-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T21:45:11.256-05:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-01T22:00:00.891-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T22:00:08.241-05:00 INFO  job=sync-inventory finished ok in 7.4s
+2026-11-01T22:05:00.613-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T22:05:55.153-05:00 INFO  job=rollup-hourly finished ok in 55s
+2026-11-01T22:15:00.306-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T22:15:14.241-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-01T22:30:00.169-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T22:30:10.380-05:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-11-01T22:45:00.772-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T22:45:05.267-05:00 INFO  job=sync-inventory finished ok in 4.5s
+2026-11-01T23:00:00.637-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T23:00:08.226-05:00 INFO  job=sync-inventory finished ok in 7.6s
+2026-11-01T23:05:00.233-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-01T23:05:51.163-05:00 INFO  job=rollup-hourly finished ok in 51s
+2026-11-01T23:15:00.068-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T23:15:07.946-05:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-11-01T23:30:00.184-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T23:30:08.328-05:00 INFO  job=sync-inventory finished ok in 8.1s
+2026-11-01T23:45:00.260-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-01T23:45:10.216-05:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-11-02T00:00:00.048-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T00:00:13.947-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-02T00:05:00.249-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T00:05:40.825-05:00 INFO  job=rollup-hourly finished ok in 41s
+2026-11-02T00:15:00.013-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T00:15:04.123-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-02T00:30:00.591-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T00:30:08.153-05:00 INFO  job=sync-inventory finished ok in 7.6s
+2026-11-02T00:45:00.782-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T00:45:11.724-05:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-11-02T01:00:00.054-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T01:00:07.395-05:00 INFO  job=sync-inventory finished ok in 7.3s
+2026-11-02T01:05:00.615-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T01:05:48.412-05:00 INFO  job=rollup-hourly finished ok in 48s
+2026-11-02T01:15:00.361-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T01:15:08.910-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-02T01:30:00.265-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T01:30:08.586-05:00 INFO  job=sync-inventory finished ok in 8.3s
+2026-11-02T01:45:00.730-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T01:45:08.763-05:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-11-02T02:00:00.038-05:00 INFO  job=nightly-export run=20261102 attempt=1/2 started on host=exp-worker-2; upload credential cred=exp-20261102 expires=2026-11-02T02:45:00-05:00
+2026-11-02T02:00:00.747-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T02:00:12.235-05:00 INFO  job=sync-inventory finished ok in 11.5s
+2026-11-02T02:05:00.425-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T02:05:33.096-05:00 INFO  job=rollup-hourly finished ok in 33s
+2026-11-02T02:14:27.171-05:00 INFO  job=nightly-export run=20261102 finished ok in 14m; 1056602 rows, 11 parts
+2026-11-02T02:15:00.265-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T02:15:08.122-05:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-11-02T02:30:00.525-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T02:30:08.501-05:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-11-02T02:45:00.570-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T02:45:07.290-05:00 INFO  job=sync-inventory finished ok in 6.7s
+2026-11-02T03:00:00.276-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T03:00:14.068-05:00 INFO  job=sync-inventory finished ok in 13.8s
+2026-11-02T03:05:00.204-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T03:05:23.182-05:00 INFO  job=rollup-hourly finished ok in 23s
+2026-11-02T03:15:00.153-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T03:15:09.836-05:00 INFO  job=sync-inventory finished ok in 9.7s
+2026-11-02T03:30:00.319-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T03:30:13.434-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-02T03:45:00.175-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T03:45:05.273-05:00 INFO  job=sync-inventory finished ok in 5.1s
+2026-11-02T04:00:00.662-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T04:00:06.136-05:00 INFO  job=sync-inventory finished ok in 5.5s
+2026-11-02T04:05:00.056-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T04:05:44.383-05:00 INFO  job=rollup-hourly finished ok in 44s
+2026-11-02T04:15:00.385-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T04:15:10.807-05:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-11-02T04:30:00.549-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T04:30:10.349-05:00 INFO  job=sync-inventory finished ok in 9.8s
+2026-11-02T04:45:00.247-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T04:45:11.218-05:00 INFO  job=sync-inventory finished ok in 11.0s
+2026-11-02T05:00:00.783-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T05:00:09.431-05:00 INFO  job=sync-inventory finished ok in 8.6s
+2026-11-02T05:05:00.290-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T05:05:43.392-05:00 INFO  job=rollup-hourly finished ok in 43s
+2026-11-02T05:15:00.243-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T05:15:13.696-05:00 INFO  job=sync-inventory finished ok in 13.5s
+2026-11-02T05:30:00.260-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T05:30:14.160-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-02T05:45:00.169-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T05:45:11.744-05:00 INFO  job=sync-inventory finished ok in 11.6s
+2026-11-02T06:00:00.383-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T06:00:10.498-05:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-11-02T06:05:00.153-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T06:05:49.663-05:00 INFO  job=rollup-hourly finished ok in 50s
+2026-11-02T06:15:00.021-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T06:15:11.541-05:00 INFO  job=sync-inventory finished ok in 11.5s
+2026-11-02T06:30:00.789-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T06:30:09.946-05:00 WARN  job=sync-inventory slow: 9.2s (budget 10s)
+2026-11-02T06:30:09.946-05:00 INFO  job=sync-inventory finished ok in 9.2s
+2026-11-02T06:45:00.826-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T06:45:05.342-05:00 INFO  job=sync-inventory finished ok in 4.5s
+2026-11-02T07:00:00.306-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T07:00:09.231-05:00 INFO  job=sync-inventory finished ok in 8.9s
+2026-11-02T07:05:00.479-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T07:05:29.160-05:00 INFO  job=rollup-hourly finished ok in 29s
+2026-11-02T07:15:00.814-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T07:15:07.535-05:00 INFO  job=sync-inventory finished ok in 6.7s
+2026-11-02T07:30:00.125-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T07:30:04.231-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-02T07:45:00.140-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T07:45:12.715-05:00 INFO  job=sync-inventory finished ok in 12.6s
+2026-11-02T08:00:00.646-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T08:00:09.077-05:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-11-02T08:05:00.586-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T08:05:27.873-05:00 INFO  job=rollup-hourly finished ok in 27s
+2026-11-02T08:15:00.530-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T08:15:12.018-05:00 INFO  job=sync-inventory finished ok in 11.5s
+2026-11-02T08:30:00.560-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T08:30:13.889-05:00 INFO  job=sync-inventory finished ok in 13.3s
+2026-11-02T08:45:00.759-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T08:45:07.816-05:00 INFO  job=sync-inventory finished ok in 7.1s
+2026-11-02T09:00:00.740-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T09:00:04.879-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-02T09:05:00.576-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T09:05:43.229-05:00 INFO  job=rollup-hourly finished ok in 43s
+2026-11-02T09:15:00.847-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T09:15:13.977-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-02T09:30:00.507-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T09:30:08.100-05:00 INFO  job=sync-inventory finished ok in 7.6s
+2026-11-02T09:45:00.232-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T09:45:07.342-05:00 INFO  job=sync-inventory finished ok in 7.1s
+2026-11-02T10:00:00.336-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T10:00:05.916-05:00 INFO  job=sync-inventory finished ok in 5.6s
+2026-11-02T10:05:00.319-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T10:05:30.004-05:00 INFO  job=rollup-hourly finished ok in 30s
+2026-11-02T10:15:00.108-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T10:15:08.449-05:00 INFO  job=sync-inventory finished ok in 8.3s
+2026-11-02T10:30:00.590-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T10:30:08.434-05:00 INFO  job=sync-inventory finished ok in 7.8s
+2026-11-02T10:45:00.093-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T10:45:06.155-05:00 INFO  job=sync-inventory finished ok in 6.1s
+2026-11-02T11:00:00.274-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T11:00:11.392-05:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-11-02T11:05:00.572-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T11:05:48.228-05:00 INFO  job=rollup-hourly finished ok in 48s
+2026-11-02T11:15:00.413-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T11:15:10.363-05:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-11-02T11:30:00.420-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T11:30:10.592-05:00 INFO  job=sync-inventory finished ok in 10.2s
+2026-11-02T11:45:00.764-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T11:45:12.366-05:00 INFO  job=sync-inventory finished ok in 11.6s
+2026-11-02T12:00:00.715-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T12:00:14.369-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-02T12:05:00.255-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T12:05:35.507-05:00 INFO  job=rollup-hourly finished ok in 35s
+2026-11-02T12:15:00.198-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T12:15:13.226-05:00 INFO  job=sync-inventory finished ok in 13.0s
+2026-11-02T12:30:00.405-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T12:30:13.747-05:00 INFO  job=sync-inventory finished ok in 13.3s
+2026-11-02T12:45:00.667-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T12:45:08.398-05:00 WARN  job=sync-inventory slow: 7.7s (budget 10s)
+2026-11-02T12:45:08.398-05:00 INFO  job=sync-inventory finished ok in 7.7s
+2026-11-02T13:00:00.208-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T13:00:06.408-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-02T13:05:00.246-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T13:05:26.909-05:00 INFO  job=rollup-hourly finished ok in 27s
+2026-11-02T13:15:00.273-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T13:15:08.597-05:00 INFO  job=sync-inventory finished ok in 8.3s
+2026-11-02T13:30:00.360-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T13:30:13.113-05:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-11-02T13:45:00.239-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T13:45:04.354-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-02T14:00:00.506-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T14:00:13.818-05:00 INFO  job=sync-inventory finished ok in 13.3s
+2026-11-02T14:05:00.116-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T14:05:29.953-05:00 INFO  job=rollup-hourly finished ok in 30s
+2026-11-02T14:15:00.303-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T14:15:06.321-05:00 INFO  job=sync-inventory finished ok in 6.0s
+2026-11-02T14:30:00.515-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T14:30:11.449-05:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-11-02T14:45:00.718-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T14:45:06.541-05:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-11-02T15:00:00.465-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T15:00:10.176-05:00 INFO  job=sync-inventory finished ok in 9.7s
+2026-11-02T15:05:00.700-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T15:05:47.541-05:00 INFO  job=rollup-hourly finished ok in 47s
+2026-11-02T15:15:00.241-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T15:15:07.152-05:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-11-02T15:30:00.463-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T15:30:05.871-05:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-11-02T15:45:00.479-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T15:45:04.889-05:00 INFO  job=sync-inventory finished ok in 4.4s
+2026-11-02T16:00:00.402-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T16:00:08.927-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-02T16:05:00.561-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T16:05:49.400-05:00 INFO  job=rollup-hourly finished ok in 49s
+2026-11-02T16:15:00.339-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T16:15:09.744-05:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-11-02T16:30:00.489-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T16:30:13.877-05:00 INFO  job=sync-inventory finished ok in 13.4s
+2026-11-02T16:45:00.206-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T16:45:05.168-05:00 INFO  job=sync-inventory finished ok in 5.0s
+2026-11-02T17:00:00.196-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T17:00:13.405-05:00 INFO  job=sync-inventory finished ok in 13.2s
+2026-11-02T17:05:00.899-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T17:05:26.539-05:00 INFO  job=rollup-hourly finished ok in 26s
+2026-11-02T17:15:00.697-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T17:15:07.788-05:00 INFO  job=sync-inventory finished ok in 7.1s
+2026-11-02T17:30:00.274-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T17:30:10.677-05:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-11-02T17:45:00.879-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T17:45:07.253-05:00 INFO  job=sync-inventory finished ok in 6.4s
+2026-11-02T18:00:00.256-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T18:00:07.701-05:00 INFO  job=sync-inventory finished ok in 7.4s
+2026-11-02T18:05:00.641-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T18:05:48.418-05:00 INFO  job=rollup-hourly finished ok in 48s
+2026-11-02T18:15:00.317-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T18:15:06.604-05:00 INFO  job=sync-inventory finished ok in 6.3s
+2026-11-02T18:30:00.777-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T18:30:13.779-05:00 INFO  job=sync-inventory finished ok in 13.0s
+2026-11-02T18:45:00.182-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T18:45:10.078-05:00 INFO  job=sync-inventory finished ok in 9.9s
+2026-11-02T19:00:00.875-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T19:00:07.106-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-02T19:05:00.825-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T19:05:30.368-05:00 INFO  job=rollup-hourly finished ok in 30s
+2026-11-02T19:15:00.320-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T19:15:12.142-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-02T19:30:00.399-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T19:30:13.427-05:00 INFO  job=sync-inventory finished ok in 13.0s
+2026-11-02T19:45:00.816-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T19:45:08.102-05:00 INFO  job=sync-inventory finished ok in 7.3s
+2026-11-02T20:00:00.539-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T20:00:09.277-05:00 WARN  job=sync-inventory slow: 8.7s (budget 10s)
+2026-11-02T20:00:09.277-05:00 INFO  job=sync-inventory finished ok in 8.7s
+2026-11-02T20:05:00.136-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T20:05:50.661-05:00 INFO  job=rollup-hourly finished ok in 51s
+2026-11-02T20:15:00.369-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T20:15:13.805-05:00 INFO  job=sync-inventory finished ok in 13.4s
+2026-11-02T20:30:00.199-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T20:30:04.341-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-02T20:45:00.051-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T20:45:05.213-05:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-11-02T21:00:00.325-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T21:00:13.437-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-02T21:05:00.435-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T21:05:32.760-05:00 INFO  job=rollup-hourly finished ok in 32s
+2026-11-02T21:15:00.124-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T21:15:13.635-05:00 INFO  job=sync-inventory finished ok in 13.5s
+2026-11-02T21:30:00.551-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T21:30:05.817-05:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-11-02T21:45:00.015-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T21:45:05.887-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-02T22:00:00.057-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T22:00:04.334-05:00 INFO  job=sync-inventory finished ok in 4.3s
+2026-11-02T22:05:00.112-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T22:05:28.561-05:00 INFO  job=rollup-hourly finished ok in 28s
+2026-11-02T22:15:00.350-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T22:15:06.557-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-02T22:30:00.119-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T22:30:09.184-05:00 INFO  job=sync-inventory finished ok in 9.1s
+2026-11-02T22:45:00.343-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T22:45:07.851-05:00 INFO  job=sync-inventory finished ok in 7.5s
+2026-11-02T23:00:00.080-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T23:00:06.974-05:00 INFO  job=sync-inventory finished ok in 6.9s
+2026-11-02T23:05:00.412-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-02T23:05:46.728-05:00 INFO  job=rollup-hourly finished ok in 46s
+2026-11-02T23:15:00.784-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T23:15:08.679-05:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-11-02T23:30:00.470-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T23:30:05.834-05:00 INFO  job=sync-inventory finished ok in 5.4s
+2026-11-02T23:45:00.734-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-02T23:45:10.202-05:00 INFO  job=sync-inventory finished ok in 9.5s
+2026-11-03T00:00:00.032-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T00:00:05.697-05:00 INFO  job=sync-inventory finished ok in 5.7s
+2026-11-03T00:05:00.665-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T00:05:20.702-05:00 INFO  job=rollup-hourly finished ok in 20s
+2026-11-03T00:15:00.761-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T00:15:11.814-05:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-11-03T00:30:00.724-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T00:30:06.910-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-03T00:45:00.447-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T00:45:14.129-05:00 WARN  job=sync-inventory slow: 13.7s (budget 10s)
+2026-11-03T00:45:14.129-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-03T01:00:00.175-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T01:00:06.066-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-03T01:05:00.104-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T01:05:45.306-05:00 INFO  job=rollup-hourly finished ok in 45s
+2026-11-03T01:15:00.222-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T01:15:12.044-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-03T01:30:00.148-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T01:30:14.066-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-03T01:45:00.504-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T01:45:06.064-05:00 INFO  job=sync-inventory finished ok in 5.6s
+2026-11-03T02:00:00.015-05:00 INFO  job=nightly-export run=20261103 attempt=1/2 started on host=exp-worker-2; upload credential cred=exp-20261103 expires=2026-11-03T02:45:00-05:00
+2026-11-03T02:00:00.327-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T02:00:11.906-05:00 INFO  job=sync-inventory finished ok in 11.6s
+2026-11-03T02:05:00.107-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T02:05:48.756-05:00 INFO  job=rollup-hourly finished ok in 49s
+2026-11-03T02:15:00.450-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T02:15:06.946-05:00 INFO  job=sync-inventory finished ok in 6.5s
+2026-11-03T02:30:00.346-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T02:30:01.363-05:00 WARN  job=nightly-export run=20261103 attempt=1/2 exited 3 after 30m01s (deadline exceeded); retrying in 60s
+2026-11-03T02:30:06.562-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-03T02:31:01.163-05:00 INFO  job=nightly-export run=20261103 attempt=2/2 started on host=exp-worker-2; reusing cred=exp-20261103
+2026-11-03T02:45:00.366-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T02:45:06.134-05:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-11-03T02:50:36.713-05:00 ERROR job=nightly-export run=20261103 FAILED: attempt=2/2 exited 2: upload failed: 403 ExpiredToken (cred=exp-20261103)
+2026-11-03T02:50:36.813-05:00 ERROR alert sent to #data-oncall: nightly-export 20261103 FAILED (last error: upload failed: 403 ExpiredToken)
+2026-11-03T03:00:00.743-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T03:00:13.928-05:00 INFO  job=sync-inventory finished ok in 13.2s
+2026-11-03T03:05:00.880-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T03:05:33.429-05:00 INFO  job=rollup-hourly finished ok in 33s
+2026-11-03T03:15:00.841-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T03:15:08.704-05:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-11-03T03:30:00.156-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T03:30:04.982-05:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-11-03T03:45:00.125-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T03:45:05.435-05:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-11-03T04:00:00.852-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T04:00:09.272-05:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-11-03T04:05:00.157-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T04:05:34.287-05:00 INFO  job=rollup-hourly finished ok in 34s
+2026-11-03T04:15:00.150-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T04:15:07.537-05:00 INFO  job=sync-inventory finished ok in 7.4s
+2026-11-03T04:30:00.053-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T04:30:12.090-05:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-11-03T04:45:00.129-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T04:45:12.161-05:00 INFO  job=sync-inventory finished ok in 12.0s
+2026-11-03T05:00:00.270-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T05:00:05.532-05:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-11-03T05:05:00.771-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T05:05:42.517-05:00 INFO  job=rollup-hourly finished ok in 42s
+2026-11-03T05:15:00.768-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T05:15:09.617-05:00 INFO  job=sync-inventory finished ok in 8.8s
+2026-11-03T05:30:00.488-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T05:30:13.370-05:00 INFO  job=sync-inventory finished ok in 12.9s
+2026-11-03T05:45:00.060-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T05:45:11.781-05:00 INFO  job=sync-inventory finished ok in 11.7s
+2026-11-03T06:00:00.275-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T06:00:09.263-05:00 INFO  job=sync-inventory finished ok in 9.0s
+2026-11-03T06:05:00.857-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T06:05:26.665-05:00 INFO  job=rollup-hourly finished ok in 26s
+2026-11-03T06:15:00.883-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T06:15:08.081-05:00 INFO  job=sync-inventory finished ok in 7.2s
+2026-11-03T06:30:00.061-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T06:30:07.016-05:00 INFO  job=sync-inventory finished ok in 7.0s
+2026-11-03T06:45:00.574-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T06:45:06.515-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-03T07:00:00.345-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T07:00:08.758-05:00 INFO  job=sync-inventory finished ok in 8.4s
+2026-11-03T07:05:00.458-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T07:05:25.373-05:00 INFO  job=rollup-hourly finished ok in 25s
+2026-11-03T07:15:00.726-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T07:15:14.306-05:00 INFO  job=sync-inventory finished ok in 13.6s
+2026-11-03T07:30:00.374-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T07:30:04.708-05:00 INFO  job=sync-inventory finished ok in 4.3s
+2026-11-03T07:45:00.097-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T07:45:07.116-05:00 INFO  job=sync-inventory finished ok in 7.0s
+2026-11-03T08:00:00.645-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T08:00:10.751-05:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-11-03T08:05:00.024-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T08:05:47.832-05:00 INFO  job=rollup-hourly finished ok in 48s
+2026-11-03T08:15:00.670-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T08:15:05.945-05:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-11-03T08:30:00.713-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T08:30:06.669-05:00 INFO  job=sync-inventory finished ok in 6.0s
+2026-11-03T08:45:00.884-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T08:45:06.933-05:00 INFO  job=sync-inventory finished ok in 6.0s
+2026-11-03T09:00:00.390-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T09:00:04.505-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-03T09:05:00.092-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T09:05:23.044-05:00 INFO  job=rollup-hourly finished ok in 23s
+2026-11-03T09:15:00.844-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T09:15:06.946-05:00 INFO  job=sync-inventory finished ok in 6.1s
+2026-11-03T09:30:00.855-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T09:30:12.021-05:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-03T09:45:00.796-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T09:45:06.413-05:00 WARN  job=sync-inventory slow: 5.6s (budget 10s)
+2026-11-03T09:45:06.413-05:00 INFO  job=sync-inventory finished ok in 5.6s
+2026-11-03T10:00:00.650-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T10:00:14.540-05:00 INFO  job=sync-inventory finished ok in 13.9s
+2026-11-03T10:05:00.841-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T10:05:21.524-05:00 INFO  job=rollup-hourly finished ok in 21s
+2026-11-03T10:15:00.898-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T10:15:13.066-05:00 INFO  job=sync-inventory finished ok in 12.2s
+2026-11-03T10:30:00.170-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T10:30:05.663-05:00 INFO  job=sync-inventory finished ok in 5.5s
+2026-11-03T10:45:00.418-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T10:45:14.151-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-03T11:00:00.491-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T11:00:13.570-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-03T11:05:00.432-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T11:05:47.595-05:00 INFO  job=rollup-hourly finished ok in 47s
+2026-11-03T11:15:00.881-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T11:15:05.642-05:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-11-03T11:30:00.701-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T11:30:06.571-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-03T11:45:00.094-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T11:45:12.359-05:00 INFO  job=sync-inventory finished ok in 12.3s
+2026-11-03T12:00:00.851-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T12:00:08.604-05:00 INFO  job=sync-inventory finished ok in 7.8s
+2026-11-03T12:05:00.091-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T12:05:30.604-05:00 INFO  job=rollup-hourly finished ok in 31s
+2026-11-03T12:15:00.449-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T12:15:13.360-05:00 INFO  job=sync-inventory finished ok in 12.9s
+2026-11-03T12:30:00.793-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T12:30:10.297-05:00 INFO  job=sync-inventory finished ok in 9.5s
+2026-11-03T12:45:00.286-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T12:45:08.752-05:00 INFO  job=sync-inventory finished ok in 8.5s
+2026-11-03T13:00:00.461-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T13:00:13.585-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-03T13:05:00.459-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T13:05:50.586-05:00 INFO  job=rollup-hourly finished ok in 50s
+2026-11-03T13:15:00.547-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T13:15:14.307-05:00 INFO  job=sync-inventory finished ok in 13.8s
+2026-11-03T13:30:00.713-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T13:30:08.430-05:00 INFO  job=sync-inventory finished ok in 7.7s
+2026-11-03T13:45:00.801-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T13:45:07.766-05:00 INFO  job=sync-inventory finished ok in 7.0s
+2026-11-03T14:00:00.240-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T14:00:05.695-05:00 INFO  job=sync-inventory finished ok in 5.5s
+2026-11-03T14:05:00.486-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T14:05:52.301-05:00 INFO  job=rollup-hourly finished ok in 52s
+2026-11-03T14:15:00.090-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T14:15:13.555-05:00 INFO  job=sync-inventory finished ok in 13.5s
+2026-11-03T14:30:00.356-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T14:30:07.870-05:00 INFO  job=sync-inventory finished ok in 7.5s
+2026-11-03T14:45:00.586-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T14:45:11.653-05:00 INFO  job=sync-inventory finished ok in 11.1s
+2026-11-03T15:00:00.717-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T15:00:11.013-05:00 INFO  job=sync-inventory finished ok in 10.3s
+2026-11-03T15:05:00.231-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T15:05:33.065-05:00 INFO  job=rollup-hourly finished ok in 33s
+2026-11-03T15:15:00.750-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T15:15:11.954-05:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-03T15:30:00.537-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T15:30:13.621-05:00 INFO  job=sync-inventory finished ok in 13.1s
+2026-11-03T15:45:00.472-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T15:45:11.680-05:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-03T16:00:00.352-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T16:00:11.226-05:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-11-03T16:05:00.709-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T16:05:39.835-05:00 INFO  job=rollup-hourly finished ok in 39s
+2026-11-03T16:15:00.303-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T16:15:05.814-05:00 INFO  job=sync-inventory finished ok in 5.5s
+2026-11-03T16:30:00.378-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T16:30:13.226-05:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-11-03T16:45:00.664-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T16:45:12.748-05:00 INFO  job=sync-inventory finished ok in 12.1s
+2026-11-03T17:00:00.810-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T17:00:06.849-05:00 INFO  job=sync-inventory finished ok in 6.0s
+2026-11-03T17:05:00.477-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T17:05:50.833-05:00 INFO  job=rollup-hourly finished ok in 50s
+2026-11-03T17:15:00.060-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T17:15:04.851-05:00 INFO  job=sync-inventory finished ok in 4.8s
+2026-11-03T17:30:00.826-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T17:30:13.222-05:00 INFO  job=sync-inventory finished ok in 12.4s
+2026-11-03T17:45:00.851-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T17:45:08.471-05:00 INFO  job=sync-inventory finished ok in 7.6s
+2026-11-03T18:00:00.014-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T18:00:08.667-05:00 INFO  job=sync-inventory finished ok in 8.7s
+2026-11-03T18:05:00.139-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T18:05:42.568-05:00 INFO  job=rollup-hourly finished ok in 42s
+2026-11-03T18:15:00.787-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T18:15:10.742-05:00 INFO  job=sync-inventory finished ok in 10.0s
+2026-11-03T18:30:00.371-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T18:30:13.182-05:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-11-03T18:45:00.514-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T18:45:14.251-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-03T19:00:00.090-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T19:00:05.360-05:00 INFO  job=sync-inventory finished ok in 5.3s
+2026-11-03T19:05:00.409-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T19:05:39.327-05:00 INFO  job=rollup-hourly finished ok in 39s
+2026-11-03T19:15:00.638-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T19:15:11.593-05:00 INFO  job=sync-inventory finished ok in 11.0s
+2026-11-03T19:30:00.748-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T19:30:05.923-05:00 INFO  job=sync-inventory finished ok in 5.2s
+2026-11-03T19:45:00.165-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T19:45:09.707-05:00 INFO  job=sync-inventory finished ok in 9.5s
+2026-11-03T20:00:00.314-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T20:00:10.081-05:00 INFO  job=sync-inventory finished ok in 9.8s
+2026-11-03T20:05:00.790-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T20:05:51.937-05:00 INFO  job=rollup-hourly finished ok in 51s
+2026-11-03T20:15:00.408-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T20:15:11.457-05:00 INFO  job=sync-inventory finished ok in 11.0s
+2026-11-03T20:30:00.010-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T20:30:12.166-05:00 INFO  job=sync-inventory finished ok in 12.2s
+2026-11-03T20:45:00.784-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T20:45:12.571-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-03T21:00:00.653-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T21:00:12.461-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-03T21:05:00.228-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T21:05:23.678-05:00 INFO  job=rollup-hourly finished ok in 23s
+2026-11-03T21:15:00.822-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T21:15:10.502-05:00 INFO  job=sync-inventory finished ok in 9.7s
+2026-11-03T21:30:00.260-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T21:30:11.823-05:00 INFO  job=sync-inventory finished ok in 11.6s
+2026-11-03T21:45:00.485-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T21:45:06.415-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-03T22:00:00.098-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T22:00:09.972-05:00 INFO  job=sync-inventory finished ok in 9.9s
+2026-11-03T22:05:00.840-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T22:05:41.612-05:00 INFO  job=rollup-hourly finished ok in 41s
+2026-11-03T22:15:00.315-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T22:15:06.455-05:00 INFO  job=sync-inventory finished ok in 6.1s
+2026-11-03T22:30:00.616-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T22:30:13.634-05:00 INFO  job=sync-inventory finished ok in 13.0s
+2026-11-03T22:45:00.232-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T22:45:09.648-05:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-11-03T23:00:00.639-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T23:00:05.711-05:00 INFO  job=sync-inventory finished ok in 5.1s
+2026-11-03T23:05:00.442-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-03T23:05:27.797-05:00 INFO  job=rollup-hourly finished ok in 27s
+2026-11-03T23:15:00.539-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T23:15:13.062-05:00 INFO  job=sync-inventory finished ok in 12.5s
+2026-11-03T23:30:00.390-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T23:30:05.107-05:00 INFO  job=sync-inventory finished ok in 4.7s
+2026-11-03T23:45:00.409-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-03T23:45:08.414-05:00 INFO  job=sync-inventory finished ok in 8.0s
+2026-11-04T00:00:00.486-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T00:00:12.651-05:00 INFO  job=sync-inventory finished ok in 12.2s
+2026-11-04T00:05:00.821-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T00:05:37.689-05:00 INFO  job=rollup-hourly finished ok in 37s
+2026-11-04T00:15:00.362-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T00:15:06.816-05:00 INFO  job=sync-inventory finished ok in 6.5s
+2026-11-04T00:30:00.458-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T00:30:06.294-05:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-11-04T00:45:00.825-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T00:45:07.035-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-04T01:00:00.603-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T01:00:05.691-05:00 INFO  job=sync-inventory finished ok in 5.1s
+2026-11-04T01:05:00.126-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T01:05:43.130-05:00 INFO  job=rollup-hourly finished ok in 43s
+2026-11-04T01:15:00.140-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T01:15:11.946-05:00 INFO  job=sync-inventory finished ok in 11.8s
+2026-11-04T01:30:00.629-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T01:30:13.567-05:00 INFO  job=sync-inventory finished ok in 12.9s
+2026-11-04T01:45:00.490-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T01:45:05.946-05:00 INFO  job=sync-inventory finished ok in 5.5s
+2026-11-04T02:00:00.012-05:00 INFO  job=nightly-export run=20261104 attempt=1/2 started on host=exp-worker-2; upload credential cred=exp-20261104 expires=2026-11-04T02:45:00-05:00
+2026-11-04T02:00:00.559-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T02:00:04.675-05:00 INFO  job=sync-inventory finished ok in 4.1s
+2026-11-04T02:05:00.839-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T02:05:30.417-05:00 INFO  job=rollup-hourly finished ok in 30s
+2026-11-04T02:14:59.904-05:00 INFO  job=nightly-export run=20261104 finished ok in 15m; 1330283 rows, 14 parts
+2026-11-04T02:15:00.705-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T02:15:11.333-05:00 INFO  job=sync-inventory finished ok in 10.6s
+2026-11-04T02:30:00.011-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T02:30:07.896-05:00 INFO  job=sync-inventory finished ok in 7.9s
+2026-11-04T02:45:00.771-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T02:45:10.583-05:00 INFO  job=sync-inventory finished ok in 9.8s
+2026-11-04T03:00:00.064-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T03:00:13.732-05:00 INFO  job=sync-inventory finished ok in 13.7s
+2026-11-04T03:05:00.586-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T03:05:48.102-05:00 INFO  job=rollup-hourly finished ok in 48s
+2026-11-04T03:15:00.147-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T03:15:11.073-05:00 INFO  job=sync-inventory finished ok in 10.9s
+2026-11-04T03:30:00.422-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T03:30:06.298-05:00 INFO  job=sync-inventory finished ok in 5.9s
+2026-11-04T03:45:00.767-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T03:45:10.179-05:00 INFO  job=sync-inventory finished ok in 9.4s
+2026-11-04T04:00:00.335-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T04:00:13.743-05:00 INFO  job=sync-inventory finished ok in 13.4s
+2026-11-04T04:05:00.470-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T04:05:31.102-05:00 INFO  job=rollup-hourly finished ok in 31s
+2026-11-04T04:15:00.268-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T04:15:06.094-05:00 INFO  job=sync-inventory finished ok in 5.8s
+2026-11-04T04:30:00.100-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T04:30:11.304-05:00 INFO  job=sync-inventory finished ok in 11.2s
+2026-11-04T04:45:00.215-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T04:45:09.294-05:00 INFO  job=sync-inventory finished ok in 9.1s
+2026-11-04T05:00:00.505-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T05:00:13.275-05:00 INFO  job=sync-inventory finished ok in 12.8s
+2026-11-04T05:05:00.844-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T05:05:23.651-05:00 INFO  job=rollup-hourly finished ok in 23s
+2026-11-04T05:15:00.171-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T05:15:10.638-05:00 INFO  job=sync-inventory finished ok in 10.5s
+2026-11-04T05:30:00.630-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T05:30:11.591-05:00 INFO  job=sync-inventory finished ok in 11.0s
+2026-11-04T05:45:00.439-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T05:45:08.591-05:00 INFO  job=sync-inventory finished ok in 8.2s
+2026-11-04T06:00:00.565-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T06:00:04.830-05:00 INFO  job=sync-inventory finished ok in 4.3s
+2026-11-04T06:05:00.559-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T06:05:54.279-05:00 INFO  job=rollup-hourly finished ok in 54s
+2026-11-04T06:15:00.101-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T06:15:10.209-05:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-11-04T06:30:00.300-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T06:30:07.276-05:00 INFO  job=sync-inventory finished ok in 7.0s
+2026-11-04T06:45:00.401-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T06:45:06.673-05:00 INFO  job=sync-inventory finished ok in 6.3s
+2026-11-04T07:00:00.351-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T07:00:10.778-05:00 INFO  job=sync-inventory finished ok in 10.4s
+2026-11-04T07:05:00.855-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T07:05:54.808-05:00 INFO  job=rollup-hourly finished ok in 54s
+2026-11-04T07:15:00.886-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T07:15:11.534-05:00 INFO  job=sync-inventory finished ok in 10.6s
+2026-11-04T07:30:00.819-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T07:30:06.484-05:00 INFO  job=sync-inventory finished ok in 5.7s
+2026-11-04T07:45:00.378-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T07:45:04.906-05:00 INFO  job=sync-inventory finished ok in 4.5s
+2026-11-04T08:00:00.484-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T08:00:08.321-05:00 INFO  job=sync-inventory finished ok in 7.8s
+2026-11-04T08:05:00.584-05:00 INFO  job=rollup-hourly started on host=exp-worker-2
+2026-11-04T08:05:37.064-05:00 INFO  job=rollup-hourly finished ok in 36s
+2026-11-04T08:15:00.633-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T08:15:06.870-05:00 INFO  job=sync-inventory finished ok in 6.2s
+2026-11-04T08:30:00.326-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T08:30:10.394-05:00 INFO  job=sync-inventory finished ok in 10.1s
+2026-11-04T08:45:00.640-05:00 INFO  job=sync-inventory started on host=sched-1
+2026-11-04T08:45:13.957-05:00 INFO  job=sync-inventory finished ok in 13.3s

@@ -1,0 +1,13 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Read", "args": {"file_path": "logs/README.md"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Read", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_002", "name": "Bash", "args": {"command": "grep -n 'nightly-export run=20261103' logs/scheduler.log logs/export-worker.log"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "Bash", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_003", "name": "Bash", "args": {"command": "grep -n '2026-11-03 07:0' logs/postgres.log"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "Bash", "output": "..."}
+{"type": "response_start"}
+{"type": "text_delta", "text": "A schema migration locked the orders table. At 06:55 UTC (01:55 local) `migrate-0042` ran `ALTER TABLE orders ALTER COLUMN total TYPE numeric(14,2)`, which rewrote the table and held its lock until 07:41 UTC. The export's query waited on that lock and hit its 1800s deadline; the retry waited too, finished at 07:49, and then its upload got 403 ExpiredToken because the run's credential, issued at 02:00 local for 45 minutes, had expired."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "finished", "response": "A schema migration locked the orders table. At 06:55 UTC (01:55 local) `migrate-0042` ran `ALTER TABLE orders ALTER COLUMN total TYPE numeric(14,2)`, which rewrote the table and held its lock until 07:41 UTC. The export's query waited on that lock and hit its 1800s deadline; the retry waited too, finished at 07:49, and then its upload got 403 ExpiredToken because the run's credential, issued at 02:00 local for 45 minutes, had expired.", "turn_end": {"kind": "complete"}, "elapsed_ms": 300000, "usage": {"prompt_tokens": 200000, "completion_tokens": 6000, "cache_read_tokens": 0, "thinking_tokens": 0}}

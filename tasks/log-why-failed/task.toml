@@ -1,0 +1,39 @@
+id = "log-why-failed"
+# Daily work: a question answered from logs, with nothing to change. Three
+# hosts' logs over six days (scheduler in US Eastern time, worker and
+# Postgres in UTC). On 11-03 a schema migration rewrote `orders` under an
+# exclusive lock from 06:55 to 07:41 UTC. The export's query waited on it
+# and hit its 30-minute deadline; the retry ran once the lock was released
+# and then failed to upload, because the run's credential (issued at 02:00
+# local, 45 minutes) had expired. The scheduler's alert names only that
+# last error, a 403 ExpiredToken. Only the Postgres log shows the migration
+# and the lock, matched to the export by time or backend pid. An answer
+# that stops at the expired credential or the timeout fails. fixture/logs/
+# comes from hidden/make_logs.py.
+prompt = """The nightly export failed on 2026-11-03 and the on-call channel got an alert. Logs from the scheduler, the export worker and the database are in `logs/` (see `logs/README.md`). What caused the failure?"""
+tags = ["logs", "daily", "investigation", "careful-reading", "capability"]
+cluster = "investigation"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[[check.transcript]]
+type = "no_edit"
+
+# Names the migration: the ALTER TABLE, migrate-0042, or "migration".
+[[check.transcript]]
+type = "final_message"
+matches = '(?i)alter\s+table|migrat|0042'
+
+# And that the export was held by its lock.
+[[check.transcript]]
+type = "final_message"
+matches = '(?i)\block(s|ed|ing)?\b|\bblock(s|ed|ing)\b'
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900
