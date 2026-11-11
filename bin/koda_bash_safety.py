@@ -49,7 +49,60 @@ DANGER_SUBSUBS = [
     ("gh", "auth", "token"),
 ]
 
-RAW_DANGER = ["| sh", "| bash", "| zsh", "> /dev/", "(){", "() {"]
+RAW_DANGER = ["| sh", "| bash", "| zsh", "> /dev/"]
+
+# A function definition at the start of a segment, and one anywhere (its
+# name in group 1 or 2, the match ending at the `{` of its body).
+FUNCTION_HEADER = re.compile(
+    r"^(?:function\s+[^\s(){};&|]+\s*(?:\(\s*\))?|[^\s(){};&|]+\s*\(\s*\))\s*\{?")
+FUNCTION_DEFINITION = re.compile(
+    r"(?:^|[\s;&|(){}])(?:function\s+([^\s(){};&|]+)\s*(?:\(\s*\))?"
+    r"|([^\s(){};&|]+)\s*\(\s*\))\s*\{")
+
+
+def strip_function_header(segment):
+    """`f() { cargo test` -> `cargo test`: a function is judged by what it runs."""
+    m = FUNCTION_HEADER.match(segment)
+    return segment[m.end():].lstrip() if m else segment
+
+
+def defines_recursive_function(unquoted):
+    """A function that calls itself, the fork bomb's shape (`:(){ :|:& };:`)."""
+    for m in FUNCTION_DEFINITION.finditer(unquoted):
+        name = m.group(1) or m.group(2)
+        start, depth, end = m.end(), 1, len(unquoted)
+        for i in range(start, len(unquoted)):
+            if unquoted[i] == "{":
+                depth += 1
+            elif unquoted[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+        for command in re.split(r"[\n;&|(){}]", unquoted[start:end]):
+            words = command.split()
+            if words and words[0].lstrip("!") == name:
+                return True
+    return False
+
+
+def matching_paren(command, open_):
+    """Index of the `)` closing the `(` at `open_`; None if it never closes."""
+    depth = 0
+    for j in range(open_, len(command)):
+        depth += {"(": 1, ")": -1}.get(command[j], 0)
+        if depth == 0:
+            return j
+    return None
+
+
+def arithmetic_close(command, i):
+    """For a `$((` at `i`, the index of the last `)` of its `))`; None when it
+    isn't arithmetic, as in `$( (cd a && ls) )`."""
+    if not command.startswith("$((", i):
+        return None
+    close, inner = matching_paren(command, i + 1), matching_paren(command, i + 2)
+    return close if close is not None and inner is not None and inner + 1 == close else None
 
 # Commands that run the command after their options, with the options that
 # take a value.
@@ -199,6 +252,16 @@ def split_substitutions(command):
             quote = "'"
         elif c == '"':
             quote = None if quote == '"' else '"'
+        elif arithmetic_close(command, i) is not None:
+            # `$((…))` is arithmetic: only the substitutions inside it run.
+            close = arithmetic_close(command, i)
+            inner = split_substitutions(command[i + 3:close - 1])
+            if inner is None:
+                return None
+            bodies.extend(inner[1])
+            out.append("0")
+            i = close + 1
+            continue
         elif command.startswith(("$(", "<(", ">("), i):
             depth, j = 1, i + 2
             while j < n and depth:
@@ -412,7 +475,10 @@ def heredoc_destructive(command):
 
 
 def segment_destructive(segment):
-    segment = segment.strip().lstrip("({").strip()
+    segment = segment.strip()
+    # `(( $(wc -l < f) > 3 ))` evaluates the number; it doesn't run it.
+    arithmetic = segment.startswith("((")
+    segment = strip_function_header(segment).lstrip("({").strip()
     # An escaped `\;` ends `find -exec`; only a bare one closes a group.
     while segment[-1:] in (")", "}", ";") and not segment[:-1].endswith("\\"):
         segment = segment[:-1].rstrip()
@@ -426,7 +492,7 @@ def segment_destructive(segment):
         tokens = tokens[1:]  # an assignment, or `X=1 cmd`
     if not tokens:
         return False
-    if SUBSTITUTION in segment:
+    if SUBSTITUTION in segment and not arithmetic:
         # A substitution whose output runs as a command.
         inner = unwrap(tokens)
         head = inner[0] if inner else ""
@@ -452,5 +518,7 @@ def is_destructive(command):
     unquoted = re.sub(r"""'[^']*'|"[^"]*\"""", "''", outer)
     unquoted = re.sub(r"\d?>&\d|&?>\s*/dev/null|\d>\s*/dev/null", "", unquoted)
     if any(pattern in unquoted for pattern in RAW_DANGER):
+        return True
+    if defines_recursive_function(unquoted):
         return True
     return any(segment_destructive(s) for s in segments(outer))
