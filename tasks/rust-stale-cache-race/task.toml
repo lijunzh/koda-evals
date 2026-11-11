@@ -1,0 +1,37 @@
+id = "rust-stale-cache-race"
+# A race reported by its symptom, with no failing test to start from. A
+# read-through cache (service.rs over cache.rs) fills with whatever its
+# query returned, so a read whose query ran before an email change or a
+# delete, and whose result arrives after the write's invalidation, puts the
+# old row back in the cache for the rest of its hour. Both read paths have
+# it: `profile` and the batch `profiles`. The visible tests run one call at
+# a time and pass.
+#
+# The hidden tests hold a query open with a gated store to force that
+# interleaving, on a multi-threaded runtime under a ten-second limit. Any
+# correct design passes: solution/ drops a fill whose key was invalidated
+# since the miss (a generation ticket in the cache); hidden/alt_solution/
+# holds a per-user lock across query and fill, and across write and
+# invalidation. Both pass 25 of 25 runs; the fixture fails 25 of 25. They
+# also pin what the prompt asks to keep: repeat reads come from the cache,
+# and reads of different users don't wait on each other, which a single
+# global lock fails. Fixing only `profile` fails the batch test, and
+# writing the new value into the cache instead of invalidating fails all
+# three race tests.
+prompt = """Users report that after changing their email on the account page, the page sometimes keeps showing the old address for up to an hour. Once, a deleted account came back too. We can't reproduce it: it never happens in our tests or locally, only in production, where the HTTP layer calls this crate from many requests at once on a multi-threaded tokio runtime. Find the cause and fix it. Keep the cache, since the database can't take the read load without it, and requests for different users mustn't wait on each other."""
+tags = ["rust", "kata", "async", "race", "weak-feedback", "capability"]
+cluster = "kata"
+depth = "a check-then-act race between a cache fill and a write's invalidation, in two read paths; the visible tests are sequential and pass, and the fix must keep caching and per-user concurrency"
+judgement = "reasons out an interleaving it can't reproduce and fixes it at the cache, for every read path"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/races.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[limits]
+wall_secs = 1200

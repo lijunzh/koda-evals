@@ -1,0 +1,31 @@
+id = "py-freebusy-short-slots"
+# A cause in a different module from its symptom. The free-time view
+# (intervals.py, report.py) shows one-minute free slots such as 09:59-10:00
+# between back-to-back meetings. The intervals code is right; the cause is
+# the booking import (sources/bookings.py), which reads the export's `end`
+# as an exclusive end although data/README.md says it's the last booked
+# minute. So every booking is a minute short: the phantom slots, and busy
+# minutes and utilization a minute low per booking.
+#
+# Hidden tests check Dana's two days in the sample data (free slots, busy
+# minutes, utilization), a booking ending at 16:59 that runs to the end of
+# the day, a real one-minute gap that must stay free, and that --min still
+# filters. Fixed in the importer (solution/) or where bookings become busy
+# time (hidden/alt_solution/): both pass. Hiding short slots by default
+# fails all five, and merging intervals within a minute of each other fails
+# all five.
+prompt = """Dana's free-time view shows one-minute free slots that aren't real, like `09:59-10:00` on 2026-11-12, between things that are back to back. Try `python3 -m freebusy data dana 2026-11-12`. Find out where they come from and fix it."""
+tags = ["python", "kata", "far-cause", "weak-feedback", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[limits]
+wall_secs = 1200

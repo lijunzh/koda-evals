@@ -1,0 +1,33 @@
+# Batch three, step 2: Haiku and Sonnet in Claude Code on the subscription,
+# three repeats each. The target is Haiku 0-2 of 3 and Sonnet at least 2.
+#   ./target/release/koda-eval run runs/capability-b3-claude.toml
+#
+# Result, 20261111T215008Z: Haiku 6 of 6, Sonnet 6 of 6, so neither task
+# separates them; both sit in the Haiku tier. Mean per run:
+#   rust-stale-cache-race    Haiku 16.2K tokens, 1m37s; Sonnet 6.6K, 0m48s
+#   py-freebusy-short-slots  Haiku 3.7K, 0m17s;  Sonnet 1.4K, 0m12s
+# Haiku reasoned both out: on the race it wrote its own test that parks a
+# load, then added a generation check; on freebusy it read data/README.md
+# and fixed the importer. With four or five small files the cause is in
+# plain sight, so the gap shows only in cost.
+name = "capability-b3-claude"
+tasks = ["rust-stale-cache-race", "py-freebusy-short-slots"]
+repeats = 3
+jobs = 3
+wall_secs = 1800
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "haiku"
+engine = "claude-code-subscription"
+
+[[models]]
+name = "sonnet"
+provider = "claude-subscription"
+model = "sonnet"
+engine = "claude-code-subscription"
