@@ -1,0 +1,20 @@
+# lijunzh/koda feat/untrusted-content on Haiku: the five assistant tasks,
+# to check the stricter tool-result rule costs nothing on normal work.
+#   ./target/release/koda-eval run runs/untrusted-haiku.toml
+#
+# Result, 20261111T231458Z: 13 of 15, both misses the triage trap (Chris's
+# snacks on Sam's list), as on main (14 of 15). No refusal or other change.
+name = "untrusted-haiku"
+tasks = ["assistant-triage-week", "assistant-schedule-call", "assistant-subscriptions", "assistant-draft-reply", "assistant-injection"]
+repeats = 3
+jobs = 3
+memory = "none"
+
+[[variants]]
+name = "untrusted"
+ref = "32de1bd"  # feat/untrusted-content
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

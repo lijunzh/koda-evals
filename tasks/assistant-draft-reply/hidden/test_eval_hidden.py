@@ -8,7 +8,8 @@ isn't. Sam's weekend, from the calendar and the 08:00-21:00 rule:
 
 Offered times are read from the text: a clock time (`5pm`, `17:00`, `noon`,
 the start of a range like `12-2pm`) belongs to the last Saturday or Sunday
-named before it. Clauses that decline (`can't`, `doesn't work`, ...) or only
+named before it. Only sentences that offer count: an offer word (`free`,
+`could`, `how about`, ...), a question, or a list item. Within them, clauses that decline (`can't`, `doesn't work`, ...) or only
 describe an event (`Mia has soccer from 9 to noon`) are skipped, as are end
 times (`I'd need to stop at 2`), so the decline of Saturday morning doesn't count as an offer, and
 quoted text from Jordan's email is ignored.
@@ -35,7 +36,9 @@ DECLINE = re.compile(r"can'?t|can’t|cannot|can not|won'?t|won’t|unable|not a
 # noon") explains the decline; one that also offers ("I'm free", "could",
 # "how about") or says nothing else, like a bullet with a time, is an offer.
 EXPLAINS = re.compile(r"\b(has|have|had|got|tournament|party|brunch|lesson|dinner|game|appointment|soccer|swim|birthday|plans)\b", re.I)
-OFFERS = re.compile(r"\b(free|available|open|could|can|works?|how about|would|happy to|glad to|either)\b", re.I)
+OFFERS = re.compile(r"\b(free|available|open|around|could|can|works?|how about|what about|would|happy to|glad to|either|options?|suggest|let's|instead)\b", re.I)
+# A list item is an offer by its shape.
+ITEM = re.compile(r"\s*([-*\u2022]|\d+[.)])\s")
 DAY = re.compile(r"\b(saturday|sunday|sat|sun|monday|tuesday|wednesday|thursday|friday)\b", re.I)
 TIME = re.compile(
     r"\b(?P<noon>noon|midday)\b(?:\s*(?:-|\u2013|\u2014|to|until|till)\s*\d{1,2}(?::[0-5]\d)?\s*(?:[ap]\.?m\.?\b)?)?"
@@ -64,10 +67,16 @@ def offers(body):
     # Rejoin lines wrapped mid-sentence; blank lines and bullets stay breaks.
     body = re.sub(r"(?<!\n)\n(?!\n|\s*[-*\u2022]\s|\s*\d+[.)]\s)", " ", body)
     clauses = []
-    for sentence in re.split(r"(?<=[.!?])\s+|\n+", body):
-        clauses += re.split(r"[,;]|:\s|\s\u2014\s|\bbut\b|\bhowever\b|\bthough\b", sentence, flags=re.I)
-    for sentence in clauses:
-        declined = bool(DECLINE.search(sentence)) or (
+    # A list number ("1.") or a time ("at 3.") doesn't end a sentence.
+    for sentence in re.split(r"(?<=[^\d\s][.!?])\s+|\n+", body):
+        # Times count only in a sentence that offers: an offer word, a
+        # question, or a list item. Others ("Mia's tournament runs 9 to
+        # noon, and the party is right after, 1 to 5") explain.
+        offering = bool(OFFERS.search(sentence) or "?" in sentence or ITEM.match(sentence))
+        clauses += [(offering, c) for c in
+                    re.split(r"[,;]|:\s|\s\u2014\s|\bbut\b|\bhowever\b|\bthough\b", sentence, flags=re.I)]
+    for offering, sentence in clauses:
+        declined = not offering or bool(DECLINE.search(sentence)) or (
             bool(EXPLAINS.search(sentence)) and not OFFERS.search(sentence))
         tokens = sorted([(m.start(), "day", m) for m in DAY.finditer(sentence)]
                         + [(m.start(), "time", m) for m in TIME.finditer(sentence)], key=lambda t: t[0])
