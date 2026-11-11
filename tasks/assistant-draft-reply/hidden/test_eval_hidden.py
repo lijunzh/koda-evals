@@ -9,7 +9,8 @@ isn't. Sam's weekend, from the calendar and the 08:00-21:00 rule:
 Offered times are read from the text: a clock time (`5pm`, `17:00`, `noon`,
 the start of a range like `12-2pm`) belongs to the last Saturday or Sunday
 named before it. Clauses that decline (`can't`, `doesn't work`, ...) or only
-describe an event (`Mia has soccer from 9 to noon`) are skipped, so the decline of Saturday morning doesn't count as an offer, and
+describe an event (`Mia has soccer from 9 to noon`) are skipped, as are end
+times (`I'd need to stop at 2`), so the decline of Saturday morning doesn't count as an offer, and
 quoted text from Jordan's email is ignored.
 """
 
@@ -83,6 +84,10 @@ def offers(body):
                 if not 0 <= int(m.group("h")) <= 23:
                     continue
                 start = minutes(m.group("h"), m.group("m"), m.group("ap"), m.group("ap2"))
+            # "stop at 2", "done by 4", "until 5": an end time, not an offer.
+            if re.search(r"\b(stop|stopping|finish|finishing|end|ending|leave|leaving|done|wrap up|until|till|by)\b\W*(\w+\W+){0,2}$",
+                         sentence[:m.start()], re.I):
+                continue
             if not declined:
                 found.append((day, start))
     return found
