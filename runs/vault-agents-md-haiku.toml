@@ -1,0 +1,35 @@
+# vault-follow-agents-md on Haiku in Koda and in Claude Code, the comparison
+# the suite review asks of every new task (Lijun's yes, 2026-11-10): a task
+# both pass is a regression check, one only Claude Code passes points at
+# Koda. Claude Code loads the vault's AGENTS.md itself (2.1.296 reads it when
+# a project has no CLAUDE.md), with CLAUDE_AS_KODA_MEMORY=project. Koda's side
+# is paid API calls, cents; Claude Code's is the subscription.
+#   ./target/release/koda-eval run runs/vault-agents-md-haiku.toml
+#
+# Result, 20261111T025832Z: Koda 3 of 3, Claude Code 3 of 3, each in 12-17 s
+# and 2.5-3.4K tokens. A regression check for both. Two earlier tries don't
+# count: 025243Z, where the owner's ~/.claude/CLAUDE.md reached Claude Code
+# and sent it to the owner's real vault (fixed in the wrapper with
+# claudeMdExcludes; that run's results stay local), and 025740Z, where
+# Claude Code's commits failed because the owner's global git config signs
+# commits and its sandbox keeps ~/.gnupg read-only (task repos now pin
+# identity and commit.gpgsign = false).
+name = "vault-agents-md-haiku"
+tasks = ["vault-follow-agents-md"]
+repeats = 3
+jobs = 3
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "5aedb28"  # main, with lijunzh/koda#1555-#1557
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { CLAUDE_AS_KODA_MEMORY = "project" }

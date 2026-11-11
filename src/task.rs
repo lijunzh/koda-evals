@@ -56,6 +56,16 @@ pub struct RepoSpec {
     pub fixture: Option<String>,
     /// Kata: directory copied over the fixture to get a correct answer.
     pub solution: Option<String>,
+    /// Kata: keep the fixture's own `AGENTS.md`/`CLAUDE.md` whatever the run
+    /// file's `memory` says, for a task about following them.
+    #[serde(default)]
+    pub keep_memory: bool,
+    /// Kata: directory copied in after the start commit, so the agent finds
+    /// it as someone else's uncommitted work.
+    pub uncommitted: Option<String>,
+    /// Kata: on the solved side, commit the solution's files (and only
+    /// those) with this message, for a check that reads `git log`.
+    pub solution_commit: Option<String>,
 }
 
 /// How a run is graded: hidden tests, transcript predicates, or both.
@@ -567,7 +577,8 @@ impl Task {
                     );
                 };
                 let (fixture, solution) = (dir.join(fixture), dir.join(solution));
-                for d in [&fixture, &solution] {
+                let uncommitted = spec.repo.uncommitted.as_ref().map(|u| dir.join(u));
+                for d in [&fixture, &solution].into_iter().chain(&uncommitted) {
                     if !d.is_dir() {
                         bail!("{}: {} is not a directory", path.display(), d.display());
                     }
@@ -699,6 +710,15 @@ impl Task {
     /// The canned transcript the predicates must fail.
     pub fn canned_fail(&self) -> PathBuf {
         self.dir.join(CANNED_FAIL)
+    }
+
+    /// The directory copied in after the start commit, if any.
+    pub fn uncommitted_dir(&self) -> Option<PathBuf> {
+        self.spec
+            .repo
+            .uncommitted
+            .as_ref()
+            .map(|d| self.dir.join(d))
     }
 
     /// The agents directory to copy into the project, if any.

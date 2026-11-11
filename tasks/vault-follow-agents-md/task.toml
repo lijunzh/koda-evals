@@ -1,0 +1,38 @@
+id = "vault-follow-agents-md"
+# Vault work under a long AGENTS.md: add a reading note and commit it. The
+# vault's AGENTS.md is about 21,000 characters, and its hub and Git rules come
+# last, past 16,000, where Koda's memory cap cut a real file's Git rules off
+# before lijunzh/koda#1529. Someone else's work is in the tree, uncommitted:
+# an edited area note and an inbox capture. Judged: the note's name, place,
+# front matter, no H1 and links follow AGENTS.md; the hub lists it under a
+# new `## 2024` heading, newest year first; one commit holds only the note
+# and the hub, with the message AGENTS.md gives; the other work is untouched
+# and uncommitted. Everyday-use checklist items 3 and 5. The vault is made
+# up; fixture/, others/, solution/ and hidden/expected.json come from
+# hidden/make_vault.py.
+prompt = """I just finished an article for my notes: "Small Steps, Shipped Often" by Mara Okafor, published in 2024. Its argument: teams ship more safely when each change is small and released soon after it's written. Key points: small changes are easier to review, so reviews catch more; when a release fails, a small change is easy to find and undo; and frequent releases make release day routine instead of an event. I'd rate it 4 out of 5. Add a reading note for it to this vault, following the vault's AGENTS.md, and commit it."""
+tags = ["markdown", "daily", "vault", "memory", "git", "behaviour"]
+cluster = "judgement"
+judgement = "follows a long AGENTS.md to its last section and commits only its own change"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+keep_memory = true
+uncommitted = "others"
+solution_commit = "notes: add Reading - Small Steps, Shipped Often (2024)"
+
+[check]
+hidden_files = [
+    { from = "hidden/test_eval_hidden.py", to = "eval_hidden/test_eval_hidden.py" },
+    { from = "hidden/expected.json", to = "eval_hidden/expected.json" },
+]
+command = "python3 -m unittest -v -b eval_hidden.test_eval_hidden"
+timeout_secs = 60
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900

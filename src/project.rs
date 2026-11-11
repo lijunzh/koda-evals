@@ -77,7 +77,10 @@ pub fn materialize_with(
         (Source::Fixture { dir, .. }, Stage::Start) => copy_dir(dir, dest)?,
         (Source::Fixture { dir, solution }, Stage::Solved) => {
             copy_dir(dir, dest)?;
-            copy_dir(solution, dest)?;
+            // A solution that is a commit goes in after the start commit.
+            if task.spec.repo.solution_commit.is_none() {
+                copy_dir(solution, dest)?;
+            }
         }
     }
     // Worker agent configs go in `<project>/agents/`, koda's project-level
@@ -90,6 +93,12 @@ pub fn materialize_with(
         std::fs::create_dir_all(&to)?;
         copy_dir(&agents, &to).with_context(|| format!("copy agents from {}", agents.display()))?;
     }
+    // A task about its own instructions keeps them.
+    let memory = if task.spec.repo.keep_memory {
+        &Memory::Checkout
+    } else {
+        memory
+    };
     if *memory != Memory::Checkout {
         for name in MEMORY_FILES {
             let path = dest.join(name);
@@ -107,8 +116,33 @@ pub fn materialize_with(
     }
     stamp(dest)?;
     git(dest, &["init", "-q", "-b", "main"])?;
+    // The agent's own git calls read the owner's global config. Pin what
+    // would make a commit depend on the machine: identity and signing (a
+    // signed commit needs ~/.gnupg, which agents' sandboxes keep read-only,
+    // so it failed for one agent and not another).
+    for (key, value) in [
+        ("user.name", "koda-eval"),
+        ("user.email", "koda-eval@localhost"),
+        ("commit.gpgsign", "false"),
+        ("tag.gpgsign", "false"),
+    ] {
+        git(dest, &["config", key, value])?;
+    }
     git(dest, &["add", "-A"])?;
     git(dest, &["commit", "-q", "--no-verify", "-m", "task start"])?;
+    if let Some(uncommitted) = task.uncommitted_dir() {
+        copy_dir(&uncommitted, dest)?;
+    }
+    if let (Source::Fixture { solution, .. }, Stage::Solved, Some(message)) =
+        (&task.source, stage, &task.spec.repo.solution_commit)
+    {
+        copy_dir(solution, dest)?;
+        let mut add = vec!["add", "--"];
+        let files = relative_files(solution)?;
+        add.extend(files.iter().map(String::as_str));
+        git(dest, &add)?;
+        git(dest, &["commit", "-q", "--no-verify", "-m", message])?;
+    }
     Ok(())
 }
 
@@ -192,6 +226,33 @@ pub(crate) fn archive(repo: &Path, rev: &str, dest: &Path) -> Result<()> {
     Ok(())
 }
 
+/// The files under `dir`, relative to it, as `copy_dir` copies them.
+fn relative_files(dir: &Path) -> Result<Vec<String>> {
+    fn walk(root: &Path, dir: &Path, out: &mut Vec<String>) -> Result<()> {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            if entry.file_name() == "__pycache__" {
+                continue;
+            }
+            if entry.file_type()?.is_dir() {
+                walk(root, &entry.path(), out)?;
+            } else {
+                let rel = entry
+                    .path()
+                    .strip_prefix(root)?
+                    .to_string_lossy()
+                    .into_owned();
+                out.push(rel);
+            }
+        }
+        Ok(())
+    }
+    let mut out = Vec::new();
+    walk(dir, dir, &mut out)?;
+    out.sort();
+    Ok(out)
+}
+
 /// Copy `src` into `dst`, leaving out Python's bytecode caches: a fixture
 /// tried by hand leaves them beside its sources.
 fn copy_dir(src: &Path, dst: &Path) -> Result<()> {
@@ -260,10 +321,14 @@ pub fn capture_diff(dir: &Path, patch: &Path) -> Result<DiffStat> {
         ":(exclude,glob)**/__pycache__/**",
         ":(exclude,glob)**/*.pyc",
     ];
-    let mut show = vec!["diff", "--cached", "--binary"];
+    // Against the start commit, not HEAD: an agent's own commits are part
+    // of what it changed.
+    let roots = git(dir, &["rev-list", "--max-parents=0", "HEAD"])?;
+    let start = roots.lines().last().unwrap_or("HEAD").to_string();
+    let mut show = vec!["diff", "--cached", "--binary", start.as_str()];
     show.extend(scope);
     std::fs::write(patch, git(dir, &show)?)?;
-    let mut stat = vec!["diff", "--cached", "--numstat"];
+    let mut stat = vec!["diff", "--cached", "--numstat", start.as_str()];
     stat.extend(scope);
     Ok(parse_numstat(&git(dir, &stat)?))
 }
@@ -418,6 +483,75 @@ mod tests {
         assert_eq!(read(&pinned, "AGENTS.override.md"), None);
         // In the start commit, so the agent's diff doesn't show it.
         assert_eq!(git(&pinned, &["status", "--porcelain"]).unwrap(), "");
+    }
+
+    #[test]
+    fn a_git_task_keeps_its_memory_finds_others_work_and_commits_its_solution() {
+        let tmp = tempfile::tempdir().unwrap();
+        let task_dir = tmp.path().join("g");
+        for (rel, text) in [
+            ("fixture/AGENTS.md", "commit only your own files\n"),
+            ("fixture/Home.md", "home\n"),
+            ("others/Home.md", "home, edited by someone else\n"),
+            ("others/Draft.md", "someone's draft\n"),
+            ("solution/Notes/New.md", "a new note\n"),
+            ("hidden/check.py", "print('ok')\n"),
+        ] {
+            let path = task_dir.join(rel);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, text).unwrap();
+        }
+        std::fs::write(
+            task_dir.join("task.toml"),
+            "id = \"g\"\nprompt = \"p\"\n[repo]\nfixture = \"fixture\"\nsolution = \"solution\"\n\
+             keep_memory = true\nuncommitted = \"others\"\nsolution_commit = \"notes: add New\"\n\
+             [check]\nhidden_files = [{ from = \"hidden/check.py\", to = \"check.py\" }]\n\
+             command = \"true\"\n",
+        )
+        .unwrap();
+        let task = Task::load(&task_dir).unwrap();
+        let read = |dir: &Path, name: &str| std::fs::read_to_string(dir.join(name)).unwrap();
+        let pinned = Memory::Pinned("short file\n".into());
+
+        // The task's AGENTS.md stays, whatever the run file pins.
+        let start = tmp.path().join("start");
+        materialize_with(&task, Stage::Start, tmp.path(), &start, &pinned).unwrap();
+        assert_eq!(read(&start, "AGENTS.md"), "commit only your own files\n");
+        // The agent's commits don't depend on the owner's global git config.
+        assert_eq!(
+            git(&start, &["config", "commit.gpgsign"]).unwrap(),
+            "false\n"
+        );
+        // Someone else's work is there, uncommitted.
+        assert_eq!(read(&start, "Home.md"), "home, edited by someone else\n");
+        assert_eq!(
+            git(&start, &["status", "--porcelain"]).unwrap(),
+            " M Home.md\n?? Draft.md\n"
+        );
+        assert_eq!(
+            git(&start, &["rev-list", "--count", "HEAD"]).unwrap(),
+            "1\n"
+        );
+
+        // Solved: the solution is a commit of its own files only.
+        let solved = tmp.path().join("solved");
+        materialize_with(&task, Stage::Solved, tmp.path(), &solved, &pinned).unwrap();
+        assert_eq!(
+            git(&solved, &["log", "--format=%s"]).unwrap(),
+            "notes: add New\ntask start\n"
+        );
+        assert_eq!(
+            git(&solved, &["show", "--name-only", "--format=", "HEAD"]).unwrap(),
+            "Notes/New.md\n"
+        );
+        assert_eq!(
+            git(&solved, &["status", "--porcelain"]).unwrap(),
+            " M Home.md\n?? Draft.md\n"
+        );
+
+        // The saved diff counts the agent's commit as well as its edits.
+        let stat = capture_diff(&solved, &tmp.path().join("p.diff")).unwrap();
+        assert_eq!(stat.files, 3);
     }
 
     #[test]

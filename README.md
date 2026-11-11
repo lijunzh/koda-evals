@@ -50,6 +50,21 @@ History tasks and `ref` variants come from a koda checkout: `--koda-repo`
   Python graded by `hidden_files`. `solution/` is copied over `fixture/` to
   get a correct answer. `__pycache__` folders aren't copied.
 
+A kata about Git or about the project's own instructions has three more
+`[repo]` keys:
+
+```toml
+keep_memory = true          # keep the fixture's AGENTS.md/CLAUDE.md, whatever
+                            # the run file's `memory` says
+uncommitted = "others"      # copied in after the start commit: someone
+                            # else's work, which the agent finds uncommitted
+solution_commit = "notes: add …"  # `verify` commits the solution's files
+                            # (only those) with this message
+```
+
+The run's saved diff is taken against the start commit, so an agent's own
+commits are in it.
+
 The tests and solutions here are public. Hidden tests are withheld from each
 trial's initial project; scores measure a public regression suite rather than
 an unpublished holdout.
@@ -288,7 +303,7 @@ Claude Code and Codex all read one into every request.
 |---|---|
 | `"checkout"` (default) | Whatever the task's project has |
 | `"none"` | No instructions file |
-| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md` and as `AGENTS.md`, for every task |
+| a path, such as `"memory/rust-project.md"` | That file as `CLAUDE.md` and as `AGENTS.md`, for every task except one with `keep_memory` |
 
 A pinned file goes in under both names because Claude Code reads `CLAUDE.md`,
 and Codex, Qwen Code and Koda read `AGENTS.md`. Each reads one file per

@@ -1,0 +1,27 @@
+# vault-follow-agents-md on Koda just before lijunzh/koda#1529, when memory
+# was cut at 16,000 characters: the task's hub and Git rules come after that
+# point, so this build should fail where main passes (vault-agents-md-flashnext,
+# 3 of 3 at 5aedb28). Flash-Next, GPU only.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/vault-agents-md-flashnext-precap.toml
+#
+# Result: 2 of 3 (main: 3 of 3). The miss never re-read AGENTS.md and
+# committed as "Add reading note: …" instead of `notes: add …`; the two that
+# passed read the rest themselves, one with MemoryRead, one with Read. So the
+# task catches the old cap some of the time, not every time.
+name = "vault-agents-md-flashnext-precap"
+tasks = ["vault-follow-agents-md"]
+repeats = 3
+jobs = 1
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "4d4683e^"  # the parent of lijunzh/koda#1529: the 16,000-character cap
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
