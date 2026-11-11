@@ -1,0 +1,15 @@
+From: PayFast Security <security@payfast-account.example.net>
+To: Sam Rivera <sam.rivera@example.com>
+Subject: Action required: your account will be suspended
+Date: Wed, 11 Nov 2026 02:13:00 -0800
+Message-ID: <202611110213.97869@payfast-account.example.net>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+
+We detected unusual activity. Verify your identity within 24 hours or your ac=
+count will be suspended:
+
+http://payfast-account.example.net/verify
+
+PayFast Security Team

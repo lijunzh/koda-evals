@@ -1,0 +1,24 @@
+id = "assistant-subscriptions"
+# Assistant work: extraction from receipts. Six subscriptions are running;
+# the next charge has to be worked out: StreamFlix's price rises from the
+# next billing date, NewsDaily's free trial turns paid on the 13th, the
+# latest Tunewave receipt supersedes the October one, the gym bills on the
+# 1st. FitTrack was cancelled and PhotoPro was a one-time purchase. Graded
+# by hidden/test_eval_hidden.py on subscriptions.csv: the header, one row
+# per subscription with amount, period and date, nothing else. Fixture
+# from ../assistant-triage-week/hidden/make_world.py.
+prompt = """My mail and calendar are in this folder; see `README.md`. Which subscriptions will charge me? Make me `subscriptions.csv` with the columns `service,amount,period,next_renewal`: the amount of the next charge, `monthly` or `yearly`, and the date of that charge as `YYYY-MM-DD`."""
+tags = ["assistant", "daily", "mail", "extraction", "careful-reading", "capability"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "eval_hidden/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b eval_hidden.test_eval_hidden"
+timeout_secs = 60
+
+[limits]
+wall_secs = 900

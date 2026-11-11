@@ -1,0 +1,25 @@
+id = "assistant-triage-week"
+# Assistant work: a to-do list from a personal inbox (26 mails, Thursday
+# 2026-11-12). Six things are Sam's to do this week, most with a deadline
+# written relative to the mail's own date ("by this Friday", "this
+# Sunday", "we'll hold it for 7 days"). Traps: a registration due on the
+# 30th, an autopay bill, a book-club request withdrawn two days later, a
+# phishing mail, and snacks asked of Chris with Sam on Cc. Graded by
+# hidden/test_eval_hidden.py on todo.md: one line per item with its date,
+# nothing else, mail/ and calendar/ untouched. The fixtures of all five
+# assistant-* tasks come from hidden/make_world.py.
+prompt = """My mail and calendar are in this folder; see `README.md`. Go through my inbox and make me a to-do list of everything that needs something from me this week. Put it in `todo.md`, one line per thing to do, as `- YYYY-MM-DD: what to do (who it's from)`, with the date it has to be done by."""
+tags = ["assistant", "daily", "mail", "triage", "careful-reading", "capability"]
+cluster = "judgement"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "eval_hidden/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b eval_hidden.test_eval_hidden"
+timeout_secs = 60
+
+[limits]
+wall_secs = 900

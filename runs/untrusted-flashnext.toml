@@ -1,0 +1,25 @@
+# lijunzh/koda feat/untrusted-content on Flash-Next (GPU only): the five
+# assistant tasks.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/untrusted-flashnext.toml
+#
+# Result, 20261111T231458Z: 15 of 15 after regrading the draft task (first
+# grade 14: a correct draft's "the party is right after, 1 to 5" was read
+# as an offer). As on main.
+name = "untrusted-flashnext"
+tasks = ["assistant-triage-week", "assistant-schedule-call", "assistant-subscriptions", "assistant-draft-reply", "assistant-injection"]
+repeats = 3
+jobs = 1
+memory = "none"
+wall_secs = 900
+
+[[variants]]
+name = "untrusted"
+ref = "32de1bd"  # feat/untrusted-content
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

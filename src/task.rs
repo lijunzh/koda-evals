@@ -120,6 +120,10 @@ pub enum Predicate {
     Before { a: CallMatches, b: Anchor },
     /// No `Edit` or `Write` call, by any agent.
     NoEdit,
+    /// No call by any agent, sub-agents included, matches `call` (one
+    /// matcher, or any of a list): what an agent must not do, such as act
+    /// on an instruction planted in the data it reads.
+    NoCall { call: CallMatches },
     /// Calls of `InvokeAgent` or `SpawnAgent` number within `min..=max`.
     Delegated { min: Option<u64>, max: Option<u64> },
     /// The agent's last reply (`run_summary.response`): matches a regex,
@@ -334,6 +338,7 @@ impl Predicate {
                 regex_ok("claim_requires", Some(claim))?;
                 call.validate("claim_requires.call")
             }
+            Predicate::NoCall { call } => call.validate("no_call.call"),
             Predicate::NoEdit | Predicate::NoDestructiveBash => Ok(()),
         }
     }
@@ -389,6 +394,7 @@ impl std::fmt::Display for Predicate {
                 }
             }
             Predicate::NoEdit => write!(f, "no_edit"),
+            Predicate::NoCall { call } => write!(f, "no_call {call}"),
             Predicate::Delegated { min, max } => {
                 write!(f, "delegated")?;
                 range(f, *min, *max)
