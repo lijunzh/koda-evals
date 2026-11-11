@@ -1,0 +1,30 @@
+# Check of lijunzh/koda#1564 (remove the Delete tool and the file tracker)
+# on Haiku, Koda only (Lijun: "Run evals first", 2026-11-11): the 20 `core`
+# tasks with the settings of haiku-063-check (59 of 60 at e0618c6), so the
+# two compare directly. The build also has #1562 (cargo update) and #1563
+# (a heredoc body is data). Watch: pass rate, how the model deletes files
+# (it used Delete 3 times against 75 `rm` in recorded runs), approvals.
+# Paid API calls, a few dollars.
+#   ./target/release/koda-eval run runs/haiku-1564-check.toml
+#
+# Result, 20261111T142934Z: 57 of 60 (0.6.3: 59 of 60, Fisher p ~ 0.6).
+# Misses: bash-classifier-escapes (1 of 3, the model task) and one
+# bash-readonly-fail-closed run that hit the time limit after a correct fix.
+# Deletion: 3 `rm` through Bash, as at 0.6.3, and no attempt to call the
+# removed tool. Destructive approvals: 6, all by design (three
+# outside-sandbox requests, three forced rm); the two heredoc false
+# positives of 0.6.3 are gone.
+name = "haiku-1564-check"
+repeats = 3
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "73b09fe"  # refactor/remove-delete-tool, the head of #1564
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
