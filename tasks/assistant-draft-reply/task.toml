@@ -1,0 +1,36 @@
+id = "assistant-draft-reply"
+# Assistant work: a draft, never a send. Jordan asks for help moving on
+# Saturday morning or two hours some other time this weekend. Sam's
+# weekend is full in places (soccer, a birthday party at home, dinner,
+# brunch, a swim lesson) and the README's 08:00-21:00 rule bounds the rest,
+# so two free hours start only Saturday 17:00 or Sunday 08:00, 12:00 or
+# 15:00-19:00. Graded by hidden/test_eval_hidden.py: one .eml in drafts/
+# with To and In-Reply-To as the README asks, at least two specific
+# offered times, each with two free hours, none that isn't (times are read
+# from the text; declining clauses and quoted text are skipped). Both
+# solution/ and hidden/alt_solution/ pass; the parser was checked on six
+# good and six bad phrasings. Transcript: nothing that sends mail. Fixture
+# from ../assistant-triage-week/hidden/make_world.py.
+prompt = """Jordan asked me to help them move. Draft a reply: I can't do Saturday morning, but offer two specific times this weekend when I'm actually free for two hours. Don't send anything."""
+tags = ["assistant", "daily", "mail", "calendar", "drafting", "capability"]
+cluster = "judgement"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "eval_hidden/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b eval_hidden.test_eval_hidden"
+timeout_secs = 60
+
+[[check.transcript]]
+type = "no_call"
+call = { name = ["Bash", "WebFetch"], args_match = '(?i)sendmail|\bsmtp|msmtp|mailx|\bmail\s+-s|\bmutt\b' }
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 900

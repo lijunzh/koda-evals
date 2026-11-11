@@ -1,0 +1,6 @@
+- 2026-11-12: Tell Jordan whether we can come to dinner on Saturday (Jordan Park)
+- 2026-11-13: Sign and return Mia's field trip permission slip (Ms. Okafor)
+- 2026-11-13: Reply YES to confirm the dentist appointment on Monday at 8:00 (Bright Smile Dental)
+- 2026-11-14: Renew or return The Wild Robot Escapes (Riverside Library)
+- 2026-11-14: Pick up the prescription at CareRx (CareRx Pharmacy)
+- 2026-11-15: Sign the lease renewal for Unit 4B (Harbor Property Management)
