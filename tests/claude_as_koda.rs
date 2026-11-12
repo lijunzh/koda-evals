@@ -118,6 +118,7 @@ fn flags_keep_the_run_on_defaults_and_inside_the_project() {
     }
     assert!(!args.contains(&"http://x"));
     assert!(!args.contains(&"bypassPermissions"));
+    assert!(!args.contains(&"--mcp-config"));
     let at = |flag: &str| args[args.iter().position(|a| *a == flag).unwrap() + 1];
     assert!(at("--allowedTools").contains("Edit(./**)"));
     assert!(
@@ -137,6 +138,42 @@ fn flags_keep_the_run_on_defaults_and_inside_the_project() {
     assert_eq!(sandbox["allowUnsandboxedCommands"], false);
     let writable = sandbox["filesystem"]["allowWrite"].to_string();
     assert!(writable.contains("/tmp/eval-target"), "{writable}");
+}
+
+/// A task's MCP servers reach Claude Code, alone (strict) and allowed.
+#[test]
+fn a_task_mcp_config_is_passed_and_its_tools_allowed() {
+    let home = fake_home(Path::new(FIXTURE));
+    let config = home.path().join("mcp.json");
+    std::fs::write(
+        &config,
+        r#"{"mcpServers": {"mail": {"command": "python3", "args": ["s.py"]}}}"#,
+    )
+    .unwrap();
+    wrapper(
+        home.path(),
+        &["-p", "check mail", "--mcp-config", config.to_str().unwrap()],
+    );
+    let args = std::fs::read_to_string(home.path().join("args")).unwrap();
+    let args: Vec<&str> = args.lines().collect();
+    let at = |flag: &str| args[args.iter().position(|a| *a == flag).unwrap() + 1];
+    assert_eq!(at("--mcp-config"), config.to_str().unwrap());
+    assert!(args.contains(&"--strict-mcp-config"));
+    assert_eq!(args.iter().filter(|a| **a == "--allowedTools").count(), 1);
+    assert!(
+        at("--allowedTools").split(' ').any(|r| r == "mcp__mail"),
+        "{}",
+        at("--allowedTools")
+    );
+    // --safe-mode would drop the servers; memory stays off through settings.
+    assert!(!args.contains(&"--safe-mode"));
+    assert_eq!(at("--setting-sources"), "");
+    let settings: Value = serde_json::from_str(at("--settings")).unwrap();
+    assert_eq!(settings["autoMemoryEnabled"], false);
+    let excluded = settings["claudeMdExcludes"].to_string();
+    for name in ["/.claude/CLAUDE.md", "/**/CLAUDE.md", "/**/AGENTS.md"] {
+        assert!(excluded.contains(name), "{name}: {excluded}");
+    }
 }
 
 #[test]
