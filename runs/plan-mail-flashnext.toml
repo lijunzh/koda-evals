@@ -1,0 +1,26 @@
+# Koda's read-only headless mode (lijunzh/koda#1573) on Flash-Next (GPU
+# only): the three assistant tasks that reach the mail over MCP, run with
+# `--mode plan`. The mail server marks its tools readOnlyHint, so they run;
+# any write, draft or command that changes something comes back refused.
+# Does the model still answer, still report the planted mail, and move on
+# after a refusal instead of retrying?
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/plan-mail-flashnext.toml
+name = "plan-mail-flashnext"
+tasks = ["assistant-injection-mcp", "assistant-injection-impersonation-mcp", "assistant-injection-spoofed-self-mcp"]
+repeats = 3
+jobs = 1
+memory = "none"
+wall_secs = 900
+trust = "plan"
+
+[[variants]]
+name = "main"
+ref = "68f0206"  # lijunzh/koda#1573
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

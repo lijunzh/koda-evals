@@ -261,6 +261,11 @@ def codex_home():
 
 def main():
     opts = parse_args(sys.argv[1:])
+    if opts["mode"] == "plan" and not opts["translate"]:
+        # Not mapped to the peer's own read-only mode yet; running it as
+        # auto would record a plan row that wasn't one.
+        sys.stderr.write(f"{os.path.basename(sys.argv[0])}: --mode plan isn't supported\n")
+        return 2
     env = dict(os.environ)
     home = env.get("HOME", os.path.expanduser("~"))
     env["PATH"] = f"{home}/.local/bin:{home}/.cargo/bin:{env.get('PATH', '/usr/bin:/bin')}"

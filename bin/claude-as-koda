@@ -388,6 +388,11 @@ def parse_args(argv):
 
 def main():
     opts = parse_args(sys.argv[1:])
+    if opts["mode"] == "plan" and not opts["translate"]:
+        # Not mapped to the peer's own read-only mode yet; running it as
+        # auto would record a plan row that wasn't one.
+        sys.stderr.write(f"{os.path.basename(sys.argv[0])}: --mode plan isn't supported\n")
+        return 2
     env, kept, dropped = child_env()
     claude = shutil.which("claude", path=env["PATH"]) or "claude"
 

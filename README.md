@@ -91,7 +91,7 @@ timeout_secs = 300
 wall_secs = 300
 
 [run]                       # optional
-trust = "auto"              # or "safe"
+trust = "auto"              # or "safe", "plan"
 agents_dir = "agents"       # worker agent configs, relative to the task
 max_context_tokens = 32768  # pin koda's window for this task
 
@@ -207,10 +207,13 @@ task with hidden tests and predicates gets both checks.
 
 ### `[run]`: per-task run settings
 
-- `trust`: koda's trust mode for the run, `auto` (default) or `safe`.
-  Passed as `--mode`. In both, headless koda auto-rejects destructive
-  commands; `safe` also asks (and headless approves) before every mutation,
-  which is what a shell-safety task needs to observe.
+- `trust`: koda's trust mode for the run, `auto` (default), `safe` or
+  `plan`. Passed as `--mode`. In `auto` and `safe`, headless koda
+  auto-rejects destructive commands; `safe` also asks (and headless
+  approves) before every mutation, which is what a shell-safety task needs
+  to observe. `plan` is a read-only run (lijunzh/koda#1573): reads,
+  read-only commands and MCP tools marked `readOnlyHint` run, and every
+  other call comes back refused. A run file's `trust` overrides it.
 - `agents_dir`: a directory of agent JSON configs, relative to the task,
   copied to `<project>/agents/` and committed with the project's start
   commit, so it stays out of the diff. That is koda's project-level agents
@@ -277,6 +280,11 @@ there, against 3h37m on LM Studio. Koda waited 2.2 s for the first token per
 prompt between calls, and output was 38 tokens/s against 30. Older run files
 still name `lm-studio` on port 1234, which is what they ran on; MLX models
 stay on their own servers.
+
+**`trust`** in a run file overrides every task's `[run] trust`, so tasks
+written for `auto` can run read-only with `trust = "plan"`. Only koda takes
+`plan`; `bin/claude-as-koda`, `codex-as-koda` and `qwen-as-koda` refuse it
+rather than run the peer in its normal mode under a `plan` label.
 
 **`jobs`** sets how many runs execute at once, default 1, and `--jobs N`
 overrides it. Wall times are contended above 1. A local model's slots share one

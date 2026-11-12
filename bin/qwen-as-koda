@@ -364,6 +364,11 @@ def child_env(config):
 
 def main():
     opts = parse_args(sys.argv[1:])
+    if opts["mode"] == "plan" and not opts["translate"]:
+        # Not mapped to the peer's own read-only mode yet; running it as
+        # auto would record a plan row that wasn't one.
+        sys.stderr.write(f"{os.path.basename(sys.argv[0])}: --mode plan isn't supported\n")
+        return 2
     if opts["translate"]:
         translator = Translator(opts["mode"], os.getcwd(), sys.stdout)
         with open(opts["translate"]) as stream:
