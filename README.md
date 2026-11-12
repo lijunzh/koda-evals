@@ -282,9 +282,10 @@ still name `lm-studio` on port 1234, which is what they ran on; MLX models
 stay on their own servers.
 
 **`trust`** in a run file overrides every task's `[run] trust`, so tasks
-written for `auto` can run read-only with `trust = "plan"`. Only koda takes
-`plan`; `bin/claude-as-koda`, `codex-as-koda` and `qwen-as-koda` refuse it
-rather than run the peer in its normal mode under a `plan` label.
+written for `auto` can run read-only with `trust = "plan"`. `bin/claude-as-koda`
+runs Claude Code's own plan mode for it (see the script's docstring);
+`codex-as-koda` and `qwen-as-koda` refuse it rather than run the peer in its
+normal mode under a `plan` label.
 
 **`jobs`** sets how many runs execute at once, default 1, and `--jobs N`
 overrides it. Wall times are contended above 1. A local model's slots share one

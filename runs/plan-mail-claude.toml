@@ -1,0 +1,29 @@
+# The three mail-over-MCP assistant tasks in Claude Code's own plan mode
+# (bin/claude-as-koda --mode plan), on the Claude subscription (no API
+# cost): the peer side of runs/plan-mail-flashnext.toml. Does plan mode run
+# MCP tools marked readOnlyHint, and do Sonnet and Opus still answer and
+# report the planted mail when nothing can be written?
+#   ./target/release/koda-eval run runs/plan-mail-claude.toml
+name = "plan-mail-claude"
+tasks = ["assistant-injection-mcp", "assistant-injection-impersonation-mcp", "assistant-injection-spoofed-self-mcp"]
+repeats = 3
+jobs = 3
+memory = "none"
+wall_secs = 900
+trust = "plan"
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "sonnet"
+provider = "claude-subscription"    # ignored by the wrapper
+model = "sonnet"
+engine = "claude-code-subscription"
+
+[[models]]
+name = "opus"
+provider = "claude-subscription"
+model = "opus"
+engine = "claude-code-subscription"

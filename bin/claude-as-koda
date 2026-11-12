@@ -7,7 +7,7 @@ to the Sonnet API run that validates it. It measures task fairness and the
 ceiling, never koda. See README, "Screening on the Claude subscription".
 
 The harness calls `<bin> --version`, then
-  <bin> -p <prompt> --output-format stream-json --mode <auto|safe> \
+  <bin> -p <prompt> --output-format stream-json --mode <auto|safe|plan> \
         --provider <p> --project-root <dir> [--model <m>] [--base-url <u>]
 with the project directory as cwd. Provider, base URL and project root are
 ignored; `--model` goes to Claude Code as is (`opus`, `sonnet` or a full id).
@@ -41,7 +41,14 @@ Captured on 2.1.296 against a stub: the system prompt is the same as under
 settings, agents and skills would load too; the koda checkout has none. The
 variable is read here and never reaches the child.
 
-Trust. Both modes run `dontAsk`: the listed tools are allowed, anything else
+Plan. `--mode plan` runs Claude Code's own `--permission-mode plan`, the
+peer's read-only mode, not a copy of koda's built from allow rules. Only
+Read, Grep, Glob and Agent get allow rules; Edit, Write, Bash and the task's
+MCP tools are left to plan mode. ExitPlanMode isn't in `--tools`, as no
+tool outside TOOLS is, so a run ends with its answer rather than a plan
+to approve.
+
+Trust. `auto` and `safe` run `dontAsk`: the listed tools are allowed, anything else
 is denied, and nothing waits for a prompt. Bash runs in Claude Code's OS
 sandbox: writes only to the project, the cargo target directory and ~/.cargo,
 network only to crates.io. The file tools are outside that sandbox and are
@@ -90,6 +97,8 @@ TOOLS = ["Read", "Edit", "Write", "Bash", "Grep", "Glob", "Agent"]
 # Project-relative rules keep the file tools inside the project; Bash is held
 # there by the sandbox.
 ALLOW_RULES = ["Read", "Edit(./**)", "Write(./**)", "Bash", "Grep", "Glob", "Agent"]
+# `--mode plan` runs Claude Code in its own plan mode with only these.
+PLAN_ALLOW_RULES = ["Read", "Grep", "Glob", "Agent"]
 
 
 def allow_rules(cwd):
@@ -388,11 +397,6 @@ def parse_args(argv):
 
 def main():
     opts = parse_args(sys.argv[1:])
-    if opts["mode"] == "plan" and not opts["translate"]:
-        # Not mapped to the peer's own read-only mode yet; running it as
-        # auto would record a plan row that wasn't one.
-        sys.stderr.write(f"{os.path.basename(sys.argv[0])}: --mode plan isn't supported\n")
-        return 2
     env, kept, dropped = child_env()
     claude = shutil.which("claude", path=env["PATH"]) or "claude"
 
@@ -462,14 +466,22 @@ def main():
         isolation = ["--safe-mode", "--setting-sources", ""]
         extra = None
 
-    mcp_rules = mcp_allow_rules(opts["mcp-config"]) if opts["mcp-config"] else []
+    if opts["mode"] == "plan":
+        # Claude Code's own plan mode decides what runs. Only the read
+        # tools get allow rules: an Edit or Write rule, or `mcp__<server>`,
+        # would let through what plan mode itself might refuse.
+        permission, rules = "plan", list(PLAN_ALLOW_RULES)
+    else:
+        permission = "dontAsk"
+        rules = allow_rules(os.getcwd())
+        rules += mcp_allow_rules(opts["mcp-config"]) if opts["mcp-config"] else []
     args = [claude, "-p", opts["prompt"],
             "--output-format", "stream-json", "--verbose", "--forward-subagent-text",
             *isolation, "--disable-slash-commands",
             "--strict-mcp-config", "--no-session-persistence",
-            "--permission-mode", "dontAsk",
+            "--permission-mode", permission,
             "--tools", ",".join(TOOLS),
-            "--allowedTools", " ".join(allow_rules(os.getcwd()) + mcp_rules),
+            "--allowedTools", " ".join(rules),
             "--settings", sandbox_settings(env, extra)]
     if opts["mcp-config"]:
         args += ["--mcp-config", opts["mcp-config"]]
