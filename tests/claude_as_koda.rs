@@ -176,6 +176,39 @@ fn a_task_mcp_config_is_passed_and_its_tools_allowed() {
     }
 }
 
+/// `--mode plan` is Claude Code's own plan mode: no dontAsk, and allow
+/// rules only for the read tools, so plan mode decides about writes and
+/// MCP tools.
+#[test]
+fn plan_mode_is_claude_codes_plan_mode() {
+    let home = fake_home(Path::new(FIXTURE));
+    let config = home.path().join("mcp.json");
+    std::fs::write(
+        &config,
+        r#"{"mcpServers": {"mail": {"command": "python3", "args": ["s.py"]}}}"#,
+    )
+    .unwrap();
+    wrapper(
+        home.path(),
+        &[
+            "-p",
+            "check mail",
+            "--mode",
+            "plan",
+            "--mcp-config",
+            config.to_str().unwrap(),
+        ],
+    );
+    let args = std::fs::read_to_string(home.path().join("args")).unwrap();
+    let args: Vec<&str> = args.lines().collect();
+    let at = |flag: &str| args[args.iter().position(|a| *a == flag).unwrap() + 1];
+    assert_eq!(at("--permission-mode"), "plan");
+    assert!(!args.contains(&"dontAsk"));
+    let rules: Vec<&str> = at("--allowedTools").split(' ').collect();
+    assert_eq!(rules, ["Read", "Grep", "Glob", "Agent"]);
+    assert_eq!(at("--mcp-config"), config.to_str().unwrap());
+}
+
 #[test]
 fn the_stream_becomes_koda_events() {
     let home = fake_home(Path::new(FIXTURE));

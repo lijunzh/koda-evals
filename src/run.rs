@@ -41,6 +41,10 @@ pub struct RunFile {
     /// that nobody is waiting on gets longer than an interactive one.
     #[serde(default)]
     pub wall_secs: Option<u64>,
+    /// Koda trust mode for every task, overriding each task's `[run]
+    /// trust`: to run tasks written for `auto` read-only, as `plan`.
+    #[serde(default)]
+    pub trust: Option<String>,
     /// The project's instructions file. `"checkout"` (the default) keeps
     /// whatever the task's project has; `"none"` removes it; a path,
     /// relative to this repo, puts that file in its place as `CLAUDE.md`.
@@ -256,6 +260,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
                         art,
                         work,
                         wall_secs: run.wall_secs.unwrap_or(task.spec.limits.wall_secs),
+                        trust: run.trust.as_deref().unwrap_or(&task.spec.run.trust),
                         memory: &memory,
                         memory_label: &memory_label,
                         concurrency,
@@ -366,6 +371,8 @@ struct Job<'a> {
     /// The effective wall-clock limit: the run file's override, else the
     /// task's own.
     wall_secs: u64,
+    /// The effective trust mode: the run file's override, else the task's.
+    trust: &'a str,
     memory: &'a Memory,
     memory_label: &'a str,
     /// Runs executed at once, recorded on the row.
@@ -388,6 +395,7 @@ impl Job<'_> {
             koda_repo: &opts.koda_repo,
             keys,
             wall_secs: self.wall_secs,
+            trust: self.trust,
             jobs: self.concurrency,
             memory: self.memory,
             memory_label: self.memory_label,
@@ -429,6 +437,15 @@ fn validate(run: &RunFile) -> Result<()> {
     if run.jobs == Some(0) {
         bail!("run {:?}: jobs must be at least 1", run.name);
     }
+    if let Some(trust) = &run.trust
+        && !crate::task::TRUST_MODES.contains(&trust.as_str())
+    {
+        bail!(
+            "run {:?}: trust {trust:?} must be one of {}",
+            run.name,
+            crate::task::TRUST_MODES.join(", ")
+        );
+    }
     let mut names: Vec<&str> = run.variants.iter().map(|v| v.name.as_str()).collect();
     names.sort_unstable();
     names.dedup();
@@ -457,6 +474,8 @@ struct RunOne<'a> {
     keys: &'a BTreeMap<String, String>,
     /// The effective wall-clock limit.
     wall_secs: u64,
+    /// The effective trust mode.
+    trust: &'a str,
     /// Runs executed at once, for the configuration identity.
     jobs: usize,
     /// The project's instructions, and their label for the row.
@@ -478,7 +497,7 @@ impl RunOne<'_> {
         project::materialize_with(task, Stage::Start, self.koda_repo, &project, self.memory)?;
 
         let transcript_path = self.art.join("transcript.ndjson");
-        let trust = task.spec.run.trust.as_str();
+        let trust = self.trust;
         let mut cmd = Command::new(self.bin);
         cmd.arg("-p")
             .arg(&task.spec.prompt)
@@ -893,6 +912,21 @@ provider = "anthropic"
         )
         .unwrap();
         assert_eq!(run.wall_secs, Some(3600));
+    }
+
+    #[test]
+    fn run_file_trust_overrides_and_is_checked() {
+        let parse = |extra: &str| -> RunFile {
+            toml::from_str(&format!(
+                "name = \"x\"\n{extra}\n[[variants]]\nname = \"main\"\n[[models]]\nname = \"m\"\nprovider = \"anthropic\"\n"
+            ))
+            .unwrap()
+        };
+        assert_eq!(parse("").trust, None);
+        let run = parse("trust = \"plan\"");
+        assert_eq!(run.trust.as_deref(), Some("plan"));
+        validate(&run).unwrap();
+        assert!(validate(&parse("trust = \"yolo\"")).is_err());
     }
 
     #[test]

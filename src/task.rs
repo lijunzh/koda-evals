@@ -448,7 +448,10 @@ impl std::fmt::Display for Predicate {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RunSettings {
-    /// Koda trust mode: `auto` (default) or `safe`.
+    /// Koda trust mode: `auto` (default), `safe` or `plan`. `plan` is a
+    /// read-only run (lijunzh/koda#1573): reads and MCP tools marked
+    /// `readOnlyHint` run, anything else is refused. A run file's `trust`
+    /// overrides it.
     #[serde(default = "default_trust")]
     pub trust: String,
     /// Directory of agent JSON configs, relative to the task, copied to
@@ -524,7 +527,7 @@ fn default_trust() -> String {
     "auto".into()
 }
 
-const TRUST_MODES: [&str; 2] = ["auto", "safe"];
+pub const TRUST_MODES: [&str; 3] = ["auto", "safe", "plan"];
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1180,7 +1183,7 @@ b = { name = "Edit" }
         assert_eq!(task.spec.run.trust, "safe");
         assert_eq!(task.agents_dir(), Some(dir.join("agents")));
 
-        let dir = with_check(tmp.path(), hidden, "[run]\ntrust = \"plan\"");
+        let dir = with_check(tmp.path(), hidden, "[run]\ntrust = \"yolo\"");
         let err = Task::load(&dir).unwrap_err();
         assert!(format!("{err:#}").contains("run.trust"), "{err:#}");
     }
