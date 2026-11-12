@@ -94,6 +94,10 @@ wall_secs = 300
 trust = "auto"              # or "safe"
 agents_dir = "agents"       # worker agent configs, relative to the task
 max_context_tokens = 32768  # pin koda's window for this task
+
+[run.mcp.mail]              # optional: a stdio MCP server the agent gets
+command = "python3"
+args = ["-I", "{task}/hidden/mail_server.py", "{task}/hidden/mailbox"]
 ```
 
 ### Grading: hidden tests, transcript predicates, or both
@@ -218,6 +222,17 @@ task with hidden tests and predicates gets both checks.
   happens after a compaction, which a 1M window never reaches; pair it with
   a `compactions` predicate (`min = 1`) so a run that never compacted
   doesn't pass. Claude Code and Codex variants can't be held to it.
+- `mcp.<name>`: a stdio MCP server (`command`, `args`) the agent gets for
+  this task, for data it must reach through a tool rather than a file
+  read. `{task}` becomes the task directory's absolute path, so the server
+  and its data live in `hidden/`, outside the agent's project. The harness
+  writes the servers to `mcp.json` in the run's work directory, also
+  outside the project, and passes `--mcp-config <file>`. Koda takes the
+  flag since lijunzh/koda#1572 (`acc6eb6`); `bin/claude-as-koda` passes it
+  to Claude Code with `--strict-mcp-config` and an `mcp__<name>` allow
+  rule; the Codex and Qwen wrappers refuse it rather than run without the
+  servers. Tool names differ by agent (koda `mail__list_messages`, Claude
+  Code `mcp__mail__list_messages`), so predicates list both.
 
 ## Run files
 

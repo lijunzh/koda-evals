@@ -20,7 +20,11 @@ other than "none", the child is killed before the first model call finishes.
 
 Nothing from the machine or the project configures the run: --safe-mode and
 an empty --setting-sources turn off user and project settings, CLAUDE.md,
-skills, plugins, hooks, MCP servers and auto memory. The files stay in the
+skills, plugins, hooks, MCP servers and auto memory. A task with its own
+MCP servers (the harness's --mcp-config) runs without --safe-mode, which
+would drop them too; there settings stay off through --setting-sources, and
+CLAUDE.md, AGENTS.md and auto memory through settings (see main()). The
+files stay in the
 project (deleting them would show in the diff), and the model may read them
 with its own tools: on the 2026-10-30 ceiling run 7 of 16 history-task runs
 read CLAUDE.md with sed. That is comparable, not an advantage: koda loads a
@@ -105,6 +109,19 @@ def allow_rules(cwd):
 CRATES_HOSTS = ["crates.io", "index.crates.io", "static.crates.io"]
 
 TOOL_NAMES = {"Agent": "InvokeAgent", "Task": "InvokeAgent", "AskUserQuestion": "AskUser"}
+
+def mcp_allow_rules(path):
+    """Allow rules for the servers in a task's `--mcp-config` file.
+
+    The file is the harness's, in the `{"mcpServers": ...}` shape Claude
+    Code reads, so it is passed on as is, and `--strict-mcp-config` (always
+    set) loads only its servers. Under `dontAsk` a tool no rule allows is
+    refused, so each server gets `mcp__<name>`, which allows all its tools.
+    """
+    with open(path) as f:
+        names = sorted(json.load(f).get("mcpServers", {}))
+    return [f"mcp__{n}" for n in names]
+
 
 def child_env():
     """The child's environment, and the names of what was kept and dropped."""
@@ -353,13 +370,14 @@ class Translator:
 
 
 def parse_args(argv):
-    opts = {"prompt": "", "model": "", "mode": "auto", "translate": None, "version": False}
+    opts = {"prompt": "", "model": "", "mode": "auto", "translate": None, "version": False,
+            "mcp-config": None}
     i = 0
     while i < len(argv):
         arg = argv[i]
         if arg == "--version":
             opts["version"] = True
-        elif arg in ("-p", "--model", "--mode", "--translate"):
+        elif arg in ("-p", "--model", "--mode", "--translate", "--mcp-config"):
             opts[{"-p": "prompt"}.get(arg, arg[2:])] = argv[i + 1]
             i += 1
         elif arg in ("--output-format", "--provider", "--base-url", "--project-root"):
@@ -413,18 +431,43 @@ def main():
                 os.path.join(claude_dir, "rules", "**"),
             ],
         }
+    elif opts["mcp-config"]:
+        # --safe-mode drops even an explicit --mcp-config (checked on
+        # 2.1.296: init lists no servers with it, `mail` connected without
+        # it), so a task with MCP servers runs without it. An empty
+        # --setting-sources still keeps user and project settings, hooks
+        # and plugins out, and `--tools` keeps the Skill tool out. What's
+        # left is memory: no auto memory and no CLAUDE.md or AGENTS.md,
+        # the user's or the project's, as under --safe-mode.
+        isolation = ["--setting-sources", ""]
+        claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
+        cwd = os.getcwd()
+        extra = {
+            "autoMemoryEnabled": False,
+            "claudeMdExcludes": [
+                os.path.join(claude_dir, "CLAUDE.md"),
+                os.path.join(claude_dir, "AGENTS.md"),
+                os.path.join(claude_dir, "rules", "**"),
+                *(os.path.join(root, "**", name)
+                  for root in sorted({os.path.abspath(cwd), os.path.realpath(cwd)})
+                  for name in ("CLAUDE.md", "CLAUDE.local.md", "AGENTS.md")),
+            ],
+        }
     else:
         isolation = ["--safe-mode", "--setting-sources", ""]
         extra = None
 
+    mcp_rules = mcp_allow_rules(opts["mcp-config"]) if opts["mcp-config"] else []
     args = [claude, "-p", opts["prompt"],
             "--output-format", "stream-json", "--verbose", "--forward-subagent-text",
             *isolation, "--disable-slash-commands",
             "--strict-mcp-config", "--no-session-persistence",
             "--permission-mode", "dontAsk",
             "--tools", ",".join(TOOLS),
-            "--allowedTools", " ".join(allow_rules(os.getcwd())),
+            "--allowedTools", " ".join(allow_rules(os.getcwd()) + mcp_rules),
             "--settings", sandbox_settings(env, extra)]
+    if opts["mcp-config"]:
+        args += ["--mcp-config", opts["mcp-config"]]
     if opts["model"]:
         args += ["--model", opts["model"]]
 

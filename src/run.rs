@@ -516,6 +516,12 @@ impl RunOne<'_> {
         if let Some(url) = &self.model.base_url {
             cmd.args(["--base-url", url]);
         }
+        // Outside the project, so the agent's file tools never list it.
+        if let Some(mcp) = task.mcp_config()? {
+            let path = self.work.join("mcp.json");
+            std::fs::write(&path, serde_json::to_string_pretty(&mcp)?)?;
+            cmd.arg("--mcp-config").arg(&path);
+        }
         let agent = proc::run_with_limit(&mut cmd, Duration::from_secs(self.wall_secs))?;
         // koda's own log says why a turn failed ("LLM inference failed" on
         // stderr doesn't). Keep it with the run's other evidence.

@@ -242,6 +242,10 @@ def parse_args(argv):
         elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit"):
             opts[{"-p": "prompt", "--base-url": "base_url"}.get(arg, arg[2:])] = argv[i + 1]
             i += 1
+        elif arg == "--mcp-config":
+            # Not passed on yet; running without the task's servers would
+            # fail it for the wrong reason.
+            sys.exit("codex-as-koda: a task's --mcp-config servers aren't supported yet")
         elif arg in ("--output-format", "--provider", "--project-root"):
             i += 1
         i += 1

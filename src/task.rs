@@ -462,6 +462,24 @@ pub struct RunSettings {
     /// `KODA_MAX_CONTEXT_TOKENS` and recorded as the row's window. Claude
     /// Code and Codex variants can't take it.
     pub max_context_tokens: Option<u64>,
+    /// MCP servers the agent gets for this task, by name. The harness
+    /// writes them to a `{"mcpServers": ...}` file outside the project and
+    /// passes `--mcp-config <file>`, which koda takes since
+    /// lijunzh/koda#1572 and `bin/claude-as-koda` passes to Claude Code.
+    /// For data the agent must reach through a tool, not a file read.
+    #[serde(default)]
+    pub mcp: std::collections::BTreeMap<String, McpServer>,
+}
+
+/// A stdio MCP server. `{task}` in `command` or `args` becomes the task
+/// directory's absolute path, so a server and its data can live in the
+/// task's `hidden/`, where the agent's project never has them.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct McpServer {
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
 }
 
 impl Default for RunSettings {
@@ -470,7 +488,35 @@ impl Default for RunSettings {
             trust: default_trust(),
             agents_dir: None,
             max_context_tokens: None,
+            mcp: Default::default(),
         }
+    }
+}
+
+impl Task {
+    /// The task's MCP servers as `--mcp-config` JSON, or `None` without any.
+    pub fn mcp_config(&self) -> Result<Option<serde_json::Value>> {
+        if self.spec.run.mcp.is_empty() {
+            return Ok(None);
+        }
+        let dir = std::path::absolute(&self.dir)
+            .with_context(|| format!("{}: absolute path", self.dir.display()))?;
+        let dir = dir.to_str().context("task path isn't UTF-8")?;
+        let fill = |s: &str| s.replace("{task}", dir);
+        let servers: serde_json::Map<String, serde_json::Value> = self
+            .spec
+            .run
+            .mcp
+            .iter()
+            .map(|(name, server)| {
+                let args: Vec<String> = server.args.iter().map(|a| fill(a)).collect();
+                (
+                    name.clone(),
+                    serde_json::json!({ "command": fill(&server.command), "args": args }),
+                )
+            })
+            .collect();
+        Ok(Some(serde_json::json!({ "mcpServers": servers })))
     }
 }
 
