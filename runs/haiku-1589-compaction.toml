@@ -1,0 +1,27 @@
+# Was haiku-1589-check's slow compact-reasoning-summary (27 min against 12 at
+# 0.6.4) the change or the model? (Lijun: "rerun just compact-reasoning-summary
+# three times", 2026-11-13; about $1.20-1.80.) The two builds of those runs,
+# three repeats each, two at a time. The harness runs one build's repeats
+# before the next's (0.6.4's third beside #1589's first), so load is alike but
+# drift across the hour is not shared evenly. 0.6.4 has no `koda exec`, so it runs through bin/koda-06-exec and
+# writes protocol 1. Paid API calls.
+#   KODA_06_BIN=~/.cache/koda-eval/bin/bddb2430a5b0a6c9b93f9414b1d65dd306bd05ec/koda \
+#     ./target/release/koda-eval run runs/haiku-1589-compaction.toml
+name = "haiku-1589-compaction"
+repeats = 3
+tasks = ["compact-reasoning-summary"]
+jobs = 2
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda-0.6.4"
+bin = "~/repo/koda-evals/bin/koda-06-exec"  # runs bddb243, haiku-064-recheck's build
+
+[[variants]]
+name = "koda-1589"
+ref = "09bf99b"  # haiku-1589-check's build
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

@@ -8,7 +8,8 @@ notes are not needed and must not be copied into commits or public docs.
 ## Rules
 
 - **koda is a black box here.** Talk to it only through the `koda` binary and
-  its `stream-json` output. Never depend on koda's crates. A change to the
+  its `koda exec --json` output (the client protocol). Never depend on
+  koda's crates. A change to the
   event JSON is a contract change between two repos. The one exception is
   `src/keys.rs`, which reads API keys from koda's keystore
   (`<config dir>/db/koda.db`, table `kv_store`, rows `apikey:<ENV_NAME>`) so
