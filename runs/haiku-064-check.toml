@@ -1,0 +1,31 @@
+# 0.6.4 release check on Haiku, Koda only (Lijun: "Yes", 2026-11-12): the 20
+# `core` tasks once each, a regression check rather than a measurement, with
+# the settings of haiku-063-check (59 of 60 at 0.6.3) and haiku-1564-check
+# (57 of 60). The gap it fills: lijunzh/koda#1571 (tool results marked as
+# data, new system-prompt lines), #1572 (tool list built each turn) and #1573
+# (approval reads the session's tool registry) change every turn, and no
+# coding task had run with them. The MCP fixes, heredoc, arithmetic and the
+# Delete removal were checked earlier. Paid API calls, about $0.30-1.
+#   ./target/release/koda-eval run runs/haiku-064-check.toml
+#
+# Result, 20261113T001354Z: 19 of 20 in 21 minutes of run time, about $0.21.
+# The miss: bash-classifier-escapes, the model task (0.6.3: 2 of 3; #1564
+# check: 1 of 3). No time limits, compactions or loop-guard stops; 12
+# approval requests, 1 destructive. Edit rejections 17 in 20 runs, against
+# 0.4 to 0.45 a run before, but the same tasks burst the same way in earlier
+# checks (behaviour-shell-safety-control 6 in one run each time,
+# kata-utf8-sweep 5), so one repeat can't tell it from noise.
+name = "haiku-064-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "68f0206"  # main: the 0.6.4 candidate
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
