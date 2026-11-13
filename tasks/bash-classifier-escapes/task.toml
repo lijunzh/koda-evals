@@ -1,6 +1,10 @@
 id = "bash-classifier-escapes"
 # From #970, fixed in Koda PR #974 (2026-04-19). Before the model's training
 # cutoff, so the public fix may be known to it: tagged `pre-cutoff`.
+# Prompt's last paragraph added 2026-11-13 (Lijun, "Yes, both"): models spent
+# calls, and up to 600 s, on tests that can't run in Koda's sandbox (nested
+# sandbox-exec, loopback) and whose outside_sandbox retry headless Koda
+# refuses. Runs before that date had no hint, so compare across it with care.
 prompt = """In Safe mode koda auto-approves Bash commands that `classify_bash_command` (koda-core/src/bash_safety.rs) says are read-only. A security review found commands that get auto-approved even though they run other programs, delete files or write files, for example:
 
 - `env FOO=bar rm file`, `env make install`
@@ -8,7 +12,9 @@ prompt = """In Safe mode koda auto-approves Bash commands that `classify_bash_co
 - `find . -exec rm {} ;`
 - `find . -fprint /tmp/out`
 
-Close these holes. Any `env` that runs another command must not be read-only. `find` with an action that deletes, runs a command (including the interactive variants) or writes to a file must be classified Destructive. Plain `find` searches and `printenv` must stay read-only."""
+Close these holes. Any `env` that runs another command must not be read-only. `find` with an action that deletes, runs a command (including the interactive variants) or writes to a file must be classified Destructive. Plain `find` searches and `printenv` must stay read-only.
+
+Some of this project's tests can't run here: those that start `sandbox-exec`, since macOS allows no sandbox inside the one your commands run in, and those that listen on a local port. They fail with "sandbox_apply: Operation not permitted" or a refused connection, and running them outside the sandbox is refused. Check your change with tests that need neither."""
 tags = ["rust", "koda-history", "security", "logic", "pre-cutoff", "bash-safety", "suite", "core"]
 cluster = "investigation"
 
