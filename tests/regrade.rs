@@ -1,5 +1,6 @@
-//! `koda-eval regrade`: a saved run graded again from its transcript, with
-//! its stored hidden-test outcome. No agent and no model.
+//! `koda-eval record` and `regrade`: a saved run recorded from its transcript
+//! and graded again from the record, with its stored hidden-test outcome. No
+//! agent and no model.
 
 use std::path::Path;
 use std::process::Command;
@@ -65,19 +66,55 @@ fn transcript(edit_tool: &str) -> String {
     .collect()
 }
 
-fn regrade(root: &Path) -> String {
-    let out = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
+fn koda_eval(root: &Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_koda-eval"))
         .arg("--root")
         .arg(root)
-        .args(["regrade", "demo"])
+        .args(args)
         .output()
-        .unwrap();
+        .unwrap()
+}
+
+/// Record the transcripts (forced, as after re-translating one), then
+/// regrade from the records.
+fn regrade(root: &Path) -> String {
+    let out = koda_eval(root, &["record", "demo", "--force"]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = koda_eval(root, &["regrade", "demo"]);
     assert!(
         out.status.success(),
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
     String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
+#[test]
+fn regrade_reads_records_and_names_the_command_when_one_is_missing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = results_dir(tmp.path(), &transcript("Edit"));
+    let out = koda_eval(tmp.path(), &["regrade", "demo"]);
+    assert!(!out.status.success());
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("koda-eval record"), "{err}");
+    // Recording writes one record, then none: the run is already recorded.
+    let out = koda_eval(tmp.path(), &["record", "demo"]);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("1 record(s) written"));
+    let out = koda_eval(tmp.path(), &["record", "demo"]);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("0 record(s) written"));
+    // The record alone grades: koda's stream can go.
+    std::fs::remove_file(dir.join(TASK).join("codex.m.r1").join("transcript.ndjson")).unwrap();
+    let out = koda_eval(tmp.path(), &["regrade", "demo"]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(row(&dir)["pass"], true);
 }
 
 fn row(dir: &Path) -> Value {

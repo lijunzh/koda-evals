@@ -547,7 +547,10 @@ impl RunOne<'_> {
         keep_koda_log(&config, self.art);
         keep_koda_db(&config, self.art);
 
+        // Koda's stream is read once, here; grading and regrading use the
+        // record.
         let transcript = Transcript::read(&transcript_path)?;
+        transcript.save(&self.art.join(crate::transcript::RECORD_FILE))?;
         let diff = project::capture_diff(&project, &self.art.join("diff.patch"))?;
         if self.stop.load(Ordering::SeqCst) {
             bail!("not graded: another run's cleanup failed");

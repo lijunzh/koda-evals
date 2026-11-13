@@ -143,7 +143,7 @@ fn parse_rows(text: &str, dir: Option<&Path>) -> Result<Vec<Row>> {
 }
 
 /// Fill the trouble signals a row lacks from its artifacts (`koda.log`,
-/// `transcript.ndjson`), so an old results directory reports like a new one.
+/// `record.json`), so an old results directory reports like a new one.
 /// A field the row has, even a `null`, is kept; `results.jsonl` is not
 /// rewritten.
 fn backfill(row: &mut Value, dir: &Path) {
@@ -158,7 +158,7 @@ fn backfill(row: &mut Value, dir: &Path) {
     {
         found = fields;
     }
-    if let Ok(transcript) = Transcript::read(&art.join("transcript.ndjson")) {
+    if let Ok(Some(transcript)) = Transcript::for_artifacts(&art) {
         found.insert(
             "edits_attempted".into(),
             transcript.edits_attempted().into(),
@@ -990,6 +990,9 @@ mod tests {
             "{\"type\":\"tool_call_start\",\"id\":\"a\",\"name\":\"Write\",\"args\":{},\"is_sub_agent\":false}\n",
         )
         .unwrap();
+        // Reports read the record, which `koda-eval record` writes once for
+        // a directory saved before records existed.
+        assert!(Transcript::record_artifacts(&art, false).unwrap());
         let text = r#"{"task":"t","variant":"v","model":"m","pass":false,"artifacts":"t/v.m.r1","config":{"window":64000},"agent":{"wall_ms":100000},"behaviour":{"compactions":{"attempts":0},"summary_chars_max":7}}
 {"task":"u","variant":"v","model":"m","pass":false,"artifacts":"u/v.m.r1","behaviour":{"compactions":{"attempts":0}}}
 "#;
