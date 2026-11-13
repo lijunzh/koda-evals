@@ -2,7 +2,7 @@
 //!
 //! A run is every task × variant × model × repeat, one at a time by default
 //! or several at once, from the run file's `jobs` or `--jobs N`. Each one gets a fresh project and a fresh koda config
-//! directory, runs `koda -p … --output-format stream-json` under a
+//! directory, runs `koda exec … --json` under a
 //! wall-clock limit, and then the task's hidden tests decide pass or fail.
 //! Runs share nothing: each one's cargo target directory is a clone of the
 //! task's cache (see `project::seed_target`), so dependencies compile once
@@ -499,9 +499,9 @@ impl RunOne<'_> {
         let transcript_path = self.art.join("transcript.ndjson");
         let trust = self.trust;
         let mut cmd = Command::new(self.bin);
-        cmd.arg("-p")
+        cmd.arg("exec")
             .arg(&task.spec.prompt)
-            .args(["--output-format", "stream-json", "--mode", trust])
+            .args(["--json", "--mode", trust])
             .args(["--provider", &self.model.provider])
             .arg("--project-root")
             .arg(&project)

@@ -3,10 +3,14 @@
 
 koda is a black box here, so the only proof that this reader matches it is its
 actual output. This runs the given `koda` against a local stub of an
-OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-v1.ndjson.
+OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-v<N>.ndjson.
 Nothing leaves the machine: no model, no API key.
 
-    bin/capture-koda-wire ~/repo/koda/target/debug/koda
+    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # protocol 2, koda 0.7+
+    bin/capture-koda-wire <koda 0.6> 1                       # protocol 1
+
+Protocol 2 is `koda exec --json`; protocol 1 was `koda -p --output-format
+stream-json`. The same run captured in both must grade the same.
 
 The capture is one scripted turn with a retry, tool results of both
 outcomes, a question, a rejected destructive command, a sub-agent that has one
@@ -22,7 +26,7 @@ import sys
 import tempfile
 import threading
 
-FIXTURE = pathlib.Path(__file__).parent.parent / "tests/fixtures/koda-wire-v1.ndjson"
+FIXTURES = pathlib.Path(__file__).parent.parent / "tests/fixtures"
 WINDOW = "12000"
 LOOP_REPEATS = 5
 FILES = 40
@@ -160,9 +164,16 @@ def serve(stub):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], ["1"], ["2"]):
         sys.exit(__doc__)
     koda = sys.argv[1]
+    protocol = sys.argv[2] if len(sys.argv) == 3 else "2"
+    fixture = FIXTURES / f"koda-wire-v{protocol}.ndjson"
+    command = (
+        ["-p", "Fix the parser", "--output-format", "stream-json"]
+        if protocol == "1"
+        else ["exec", "Fix the parser", "--json"]
+    )
     server = serve(Stub())
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp).resolve()
@@ -174,8 +185,7 @@ def main():
         # The harness's command line, plus the small window.
         out = subprocess.run(
             [
-                koda, "-p", "Fix the parser",
-                "--output-format", "stream-json", "--mode", "auto",
+                koda, *command, "--mode", "auto",
                 "--provider", "lmstudio", "--model", "stub",
                 "--base-url", f"http://127.0.0.1:{server.server_address[1]}",
                 "--project-root", str(project),
@@ -191,8 +201,8 @@ def main():
     server.shutdown()
     if out.returncode != 0:
         sys.exit(f"koda exited {out.returncode}\n{out.stderr}\n{out.stdout[-2000:]}")
-    FIXTURE.write_text(out.stdout.replace(str(root), "/work"))
-    print(f"wrote {FIXTURE.name} ({out.stdout.count(chr(10))} lines)")
+    fixture.write_text(out.stdout.replace(str(root), "/work"))
+    print(f"wrote {fixture.name} ({out.stdout.count(chr(10))} lines)")
 
 
 if __name__ == "__main__":

@@ -53,7 +53,7 @@ without model credentials or that optional binary.
 
 ## Harness changes
 
-Koda is a black box: use its binary and `stream-json` contract, without linking
+Koda is a black box: use its binary and its `koda exec --json` contract, without linking
 its crates. The existing keystore reader in `src/keys.rs` is the only exception.
 Wire-format changes need coordination with Koda and an updated sanitized
 compatibility fixture. See [Tests](README.md#tests) for the capture command.

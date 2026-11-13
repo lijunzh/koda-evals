@@ -142,6 +142,47 @@ fn an_unsupported_protocol_fails_when_every_check_passes() {
     assert!(run.stdout.contains("| 0/1 | 0% |"), "{}", run.stdout);
 }
 
+/// `koda exec --json` from koda 0.7, as `bin/capture-koda-wire` recorded it.
+const CAPTURED_V2: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/koda-wire-v2.ndjson"
+);
+
+#[test]
+fn a_koda_exec_run_is_graded_from_its_protocol() {
+    let run = score(Path::new(CAPTURED_V2));
+    let row = &run.row;
+    assert_eq!(row["pass"], true, "{row:#}");
+    assert_eq!(row["failure"], Value::Null, "{row:#}");
+    assert_eq!(row["behaviour"]["protocol_version"], 2, "{row:#}");
+    assert_eq!(row["behaviour"]["turn_end_kind"], "complete", "{row:#}");
+    assert_eq!(row["behaviour"]["blocked_actions"], 1, "{row:#}");
+    assert_eq!(row["behaviour"]["compactions"]["attempts"], 3, "{row:#}");
+    assert_eq!(row["summary"]["usage"]["api_calls"], 18, "{row:#}");
+}
+
+#[test]
+fn a_newer_koda_protocol_fails_too() {
+    let started = r#"{"jsonrpc":"2.0","method":"session/started","params":{"protocolVersion":3}}"#;
+    let turn =
+        r#"{"jsonrpc":"2.0","method":"turn/completed","params":{"turn":{"status":"completed"}}}"#;
+    let tmp = tempfile::tempdir().unwrap();
+    let stream = tmp.path().join("stream.ndjson");
+    std::fs::write(&stream, format!("{started}\n{turn}\n")).unwrap();
+    let run = score(&stream);
+    assert_eq!(
+        run.row["check"]["transcript"]["pass"], true,
+        "{:#}",
+        run.row
+    );
+    assert_eq!(run.row["pass"], false, "{:#}", run.row);
+    assert_eq!(
+        run.row["failure"], "unsupported protocol 3",
+        "{:#}",
+        run.row
+    );
+}
+
 #[test]
 fn a_hello_with_no_readable_version_fails_too() {
     let run = score_hello(r#"{"type":"hello"}"#);
@@ -378,10 +419,10 @@ fn a_capture_of_real_koda_scores_through_the_runner() {
 
     let behaviour = &row["behaviour"];
     assert_eq!(behaviour["protocol_version"], 1, "{behaviour:#}");
-    assert_eq!(behaviour["compactions"]["attempts"], 4, "{behaviour:#}");
+    assert_eq!(behaviour["compactions"]["attempts"], 3, "{behaviour:#}");
     assert_eq!(behaviour["compactions"]["with_summary"], 1, "{behaviour:#}");
     assert_eq!(behaviour["loop_guard_warnings"], 1, "{behaviour:#}");
     assert_eq!(behaviour["edit_rejections"], 1, "{behaviour:#}");
     assert_eq!(behaviour["delegations"], 1, "{behaviour:#}");
-    assert_eq!(row["summary"]["usage"]["api_calls"], 19, "{row:#}");
+    assert_eq!(row["summary"]["usage"]["api_calls"], 18, "{row:#}");
 }

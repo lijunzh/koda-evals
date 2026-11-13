@@ -5,9 +5,12 @@ whether each task's hidden tests pass, with tokens and time. It compares koda
 builds (a branch against `main`) and models (a local model against a remote
 API) on the same tasks, so changes to koda are decided by measurement.
 
-`koda-eval` drives prebuilt `koda` binaries through
-`koda -p … --output-format stream-json`. It never links koda's crates, so any
-two koda builds can be compared.
+`koda-eval` drives prebuilt `koda` binaries through `koda exec … --json`, which
+prints koda's client protocol. It never links koda's crates, so any two koda
+builds can be compared, from koda 0.7 on. A build without `koda exec` (0.6 and
+earlier, which had `--output-format stream-json`) needs a koda-evals from before
+the switch; runs saved from it still regrade, since grading reads each run's
+record.
 
 ## Getting started
 
@@ -689,14 +692,18 @@ A koda built without that feature treats `--provider mock` as unknown and
 falls back to its default local server, so every run fails with "agent
 failed" and no tokens.
 
-`tests/fixtures/koda-wire-v1.ndjson` is what a real koda wrote against a local
-stub of an OpenAI-compatible server, and `cargo test` always reads it, through
-the reader and through the runner. Nothing compares it with today's koda, so
-record it again whenever the protocol changes. It takes a plain koda build, no
-model and no key:
+`tests/fixtures/koda-wire-v2.ndjson` is what a real koda wrote with
+`koda exec --json` against a local stub of an OpenAI-compatible server, and
+`cargo test` always reads it, through the reader and through the runner.
+`koda-wire-v1.ndjson` is the same scripted run from koda 0.6's `stream-json`,
+which the peer wrappers still write, and a test checks that the two grade the
+same. Nothing compares them with today's koda, so record the v2 one again
+whenever the protocol changes. It takes a plain koda build, no model and no
+key:
 
 ```bash
-bin/capture-koda-wire ~/repo/koda/target/debug/koda
+bin/capture-koda-wire ~/repo/koda/target/debug/koda          # protocol 2
+bin/capture-koda-wire <a koda 0.6 build> 1                   # protocol 1
 ```
 
 ## Status

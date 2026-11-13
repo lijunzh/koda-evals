@@ -7,7 +7,7 @@ to the Sonnet API run that validates it. It measures task fairness and the
 ceiling, never koda. See README, "Screening on the Claude subscription".
 
 The harness calls `<bin> --version`, then
-  <bin> -p <prompt> --output-format stream-json --mode <auto|safe|plan> \
+  <bin> exec <prompt> --json --mode <auto|safe|plan> \
         --provider <p> --project-root <dir> [--model <m>] [--base-url <u>]
 with the project directory as cwd. Provider, base URL and project root are
 ignored; `--model` goes to Claude Code as is (`opus`, `sonnet` or a full id).
@@ -386,6 +386,14 @@ def parse_args(argv):
         arg = argv[i]
         if arg == "--version":
             opts["version"] = True
+        elif arg == "exec" and i == 0 and len(argv) > 1:
+            # `koda exec <prompt> --json …`, which the harness calls since
+            # koda 0.7.0. The output stays koda's protocol 1, which capture
+            # still reads.
+            opts["prompt"] = argv[1]
+            i += 1
+        elif arg == "--json":
+            pass
         elif arg in ("-p", "--model", "--mode", "--translate", "--mcp-config"):
             opts[{"-p": "prompt"}.get(arg, arg[2:])] = argv[i + 1]
             i += 1

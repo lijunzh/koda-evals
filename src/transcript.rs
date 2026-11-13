@@ -19,10 +19,15 @@
 //! event type the agent sent. The names come from koda's protocol 1 and are
 //! now the harness's own, changed only by bumping [`RECORD_SCHEMA`].
 //!
-//! Capture reads koda's protocol 1 and the shape before it, which sent
-//! `is_sub_agent`, no `outcome`, and compaction and the loop guard as `info`
-//! and `warn` text. The peer wrappers (`bin/*-as-koda`) write protocol 1, so
-//! that reader stays when koda moves on.
+//! Capture reads three shapes. Protocol 2 is koda 0.7's client protocol, from
+//! `koda exec --json`: JSON-RPC notifications where a tool call is an item
+//! that starts and completes. Protocol 1 is koda 0.6's `stream-json`, which
+//! the peer wrappers (`bin/*-as-koda`) still write. The shape before protocol 1
+//! sent `is_sub_agent`, no `outcome`, and compaction and the loop guard as
+//! `info` and `warn` text. Each becomes the same record: protocol 2's
+//! messages are read into protocol 1's event names, and what protocol 1 never
+//! had stays out (a result for a call that didn't run or a sub-agent made),
+//! so a run grades the same whichever protocol carried it.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -33,8 +38,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-/// The newest koda wire protocol capture understands.
-const PROTOCOL_VERSION: u64 = 1;
+/// The newest koda protocol capture understands.
+const PROTOCOL_VERSION: u64 = 2;
 
 /// The record's own format version. Bump it when a field changes meaning,
 /// and convert saved records in the same change.
@@ -126,6 +131,59 @@ pub struct Transcript {
     pub summary: Option<Value>,
     /// Count of every event type the agent sent, plus `unparsed_line`.
     pub counts: BTreeMap<String, u64>,
+    /// Protocol 2 tool calls with an approval request, until they complete.
+    #[serde(skip)]
+    asked: std::collections::HashSet<String>,
+}
+
+/// Protocol 1's name for a protocol 2 tool effect.
+fn effect_v1(effect: &str) -> String {
+    let mut chars = effect.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().chain(chars).collect(),
+        None => String::new(),
+    }
+}
+
+/// Protocol 2's usage in protocol 1's names.
+fn usage_v1(u: &Value) -> Value {
+    json!({
+        "prompt_tokens": u["inputTokens"],
+        "completion_tokens": u["outputTokens"],
+        "cache_read_tokens": u["cachedInputTokens"],
+        "cache_creation_tokens": u["cacheCreationTokens"],
+        "thinking_tokens": u["reasoningTokens"],
+        "api_calls": u["modelCalls"],
+    })
+}
+
+/// `exec/summary` as protocol 1's `run_summary`, which the record keeps.
+fn summary_v1(s: &Value) -> Value {
+    let by_agent: serde_json::Map<String, Value> = s["usageByAgent"]
+        .as_object()
+        .map(|m| m.iter().map(|(k, v)| (k.clone(), usage_v1(v))).collect())
+        .unwrap_or_default();
+    let turn_end = match s["turnStatus"].as_str() {
+        Some("completed") => json!({ "kind": "complete" }),
+        Some("interrupted") => json!({ "kind": "cancelled" }),
+        Some(_) => json!({ "kind": "error" }),
+        None => Value::Null,
+    };
+    json!({
+        "type": "run_summary",
+        "session_id": s["sessionId"],
+        "success": s["success"],
+        "error": s["error"],
+        "provider": s["provider"],
+        "model": s["model"],
+        "response": s["response"],
+        "turn_end": turn_end,
+        "elapsed_ms": s["durationMs"],
+        "usage": usage_v1(&s["usage"]),
+        "usage_by_agent": by_agent,
+        "tool_calls": s["toolCalls"],
+        "sub_agent_tool_calls": s["subAgentToolCalls"],
+    })
 }
 
 /// One `tool_call_start`.
@@ -159,6 +217,10 @@ impl Transcript {
                 *t.counts.entry("unparsed_line".into()).or_default() += 1;
                 continue;
             };
+            if value.get("jsonrpc").is_some() {
+                t.capture_v2(&value);
+                continue;
+            }
             let kind = value["type"].as_str().unwrap_or("untyped").to_string();
             if kind == "run_summary" {
                 t.summary = Some(value);
@@ -174,6 +236,110 @@ impl Transcript {
         t
     }
 
+    /// One protocol 2 message (a JSON-RPC notification or request) into the
+    /// record, as protocol 1's events. A message is counted by the protocol 1
+    /// event it becomes, else by its method.
+    fn capture_v2(&mut self, m: &Value) {
+        let method = m["method"].as_str().unwrap_or("unparsed_line");
+        let p = &m["params"];
+        let text = |v: &Value| v.as_str().unwrap_or("").to_string();
+        if method == "exec/summary" {
+            self.summary = Some(summary_v1(p));
+            return;
+        }
+        let item = &p["item"];
+        let event = match (method, item["type"].as_str()) {
+            ("session/started", _) => {
+                if self.protocol_version.is_none() && self.unsupported_protocol.is_none() {
+                    let version = &p["protocolVersion"];
+                    self.protocol_version = version.as_u64();
+                    self.unsupported_protocol = match version.as_u64() {
+                        Some(v) if v == PROTOCOL_VERSION => None,
+                        _ => Some(format!("unsupported protocol {version}")),
+                    };
+                }
+                None
+            }
+            ("item/started", Some("toolCall")) => Some(json!({
+                "type": "tool_call_start",
+                "id": text(&item["id"]),
+                "name": text(&item["tool"]),
+                "args": item["arguments"],
+                "sub_agent": p["parentItemId"].is_string(),
+            })),
+            ("item/completed", Some("toolCall")) => {
+                let id = text(&item["id"]);
+                let asked = self.asked.remove(&id);
+                match item["status"].as_str() {
+                    // Protocol 1 reported a sub-agent's calls without results.
+                    _ if p["parentItemId"].is_string() && item["status"] != "declined" => None,
+                    Some(status @ ("completed" | "failed")) => Some(json!({
+                        "type": "tool_call_result",
+                        "id": id,
+                        "name": text(&item["tool"]),
+                        "output": item["output"],
+                        "outcome": if status == "completed" { "success" } else { "error" },
+                    })),
+                    // Refused without being asked, with what it would have
+                    // done: a block. (A sub-agent's refused InvokeAgent has
+                    // no detail, and protocol 1 had nothing for it.)
+                    Some("declined") if !asked && item["detail"].is_string() => Some(json!({
+                        "type": "action_blocked",
+                        "tool_name": text(&item["tool"]),
+                        "detail": text(&item["detail"]),
+                    })),
+                    _ => None,
+                }
+            }
+            ("item/completed", Some("agentMessage")) => Some(json!({ "type": "text_done" })),
+            ("item/started", Some("contextCompaction")) => {
+                // Protocol 1 had no start for these.
+                if matches!(item["trigger"].as_str(), Some("window" | "idle")) {
+                    None
+                } else {
+                    Some(json!({ "type": "compaction", "status": "started" }))
+                }
+            }
+            ("item/completed", Some("contextCompaction")) => {
+                let mut c = json!({ "type": "compaction", "status": text(&item["status"]) });
+                if item["summaryTokens"].is_number() {
+                    c["summary_tokens"] = item["summaryTokens"].clone();
+                }
+                Some(c)
+            }
+            ("item/toolCall/requestApproval", _) => {
+                self.asked.insert(text(&p["itemId"]));
+                Some(json!({
+                    "type": "approval_request",
+                    "tool_name": text(&p["tool"]),
+                    "effect": effect_v1(p["effect"].as_str().unwrap_or("")),
+                    "detail": text(&p["detail"]),
+                }))
+            }
+            ("item/tool/requestUserInput", _) => Some(json!({ "type": "ask_user_request" })),
+            ("turn/loopGuard", _) => Some(json!({ "type": "loop_guard" })),
+            ("turn/completed", _) => Some(json!({
+                "type": "turn_end",
+                "reason": { "kind": match p["turn"]["status"].as_str() {
+                    Some("completed") => "complete",
+                    Some("interrupted") => "cancelled",
+                    _ => "error",
+                } },
+            })),
+            _ => None,
+        };
+        let kind = match &event {
+            Some(e) => e["type"].as_str().unwrap_or(method).to_string(),
+            None => method.to_string(),
+        };
+        *self.counts.entry(kind).or_default() += 1;
+        if let Some(mut event) = event {
+            event["seq"] = self.stream_len.into();
+            self.events.push(event);
+        }
+        self.stream_len += 1;
+    }
+
     /// One wire event in the record's shape, or `None` for what checks
     /// don't read. Pre-protocol-1 text for compaction and the loop guard
     /// becomes the typed events here.
@@ -184,7 +350,7 @@ impl Transcript {
                 if self.protocol_version.is_none() && self.unsupported_protocol.is_none() {
                     self.protocol_version = e["protocol_version"].as_u64();
                     self.unsupported_protocol = match &e["protocol_version"] {
-                        v if v.as_u64().is_some_and(|v| v <= PROTOCOL_VERSION) => None,
+                        v if v.as_u64().is_some_and(|v| v <= 1) => None,
                         Value::Null => Some("unsupported protocol".to_string()),
                         v => Some(format!("unsupported protocol {v}")),
                     };
@@ -752,7 +918,7 @@ not json
         assert_eq!(of("read-ok").args["file_path"], "notes_0.txt");
 
         // A result is matched to its call, and says how it went.
-        assert!(t.result_output("read-ok").unwrap().starts_with("note 0:"));
+        assert!(t.result_output("read-ok").unwrap().contains("note 0:"));
         assert!(!t.result_failed("read-ok"));
         assert!(t.result_failed("edit-bad"));
         assert!(t.result_failed("bash-fails"));
@@ -771,7 +937,8 @@ not json
         let b = t.behaviour(false);
         assert_eq!(b["protocol_version"], 1);
         assert_eq!(b["turn_end_kind"], "complete");
-        assert_eq!(b["compactions"]["attempts"], 4);
+        // Koda 0.6.4's count; the capture of 0.6.0 tried once more.
+        assert_eq!(b["compactions"]["attempts"], 3);
         assert_eq!(b["compactions"]["with_summary"], 1);
         assert_eq!(b["loop_guard_warnings"], 1);
         assert_eq!(b["edit_rejections"], 1);
@@ -783,6 +950,66 @@ not json
 
         let summary = t.summary.as_ref().unwrap();
         assert_eq!(summary["usage_by_agent"]["explore"]["api_calls"], 3);
+    }
+
+    /// The same scripted run, as koda 0.7 wrote it with `koda exec --json`.
+    const CAPTURED_V2: &str = include_str!("../tests/fixtures/koda-wire-v2.ndjson");
+
+    #[test]
+    fn reads_what_koda_exec_wrote() {
+        let t = Transcript::parse(CAPTURED_V2);
+        assert_eq!(t.count("unparsed_line"), 0);
+        assert_eq!(t.protocol_version(), Some(2));
+        assert_eq!(t.unsupported_protocol(), None);
+        assert_eq!(t.turn_end_kind(), Some("complete"));
+        assert_eq!(t.final_message(), Some("Done."));
+        let of = |id: &str| t.tool_calls().find(|c| c.id == id).unwrap();
+        assert!(of("child-1").is_sub_agent);
+        assert!(t.result_failed("bash-fails"));
+        assert_eq!(t.result_output("rm"), None, "rejected, so no result");
+        assert_eq!(
+            t.approval_requests().collect::<Vec<_>>(),
+            [("Bash", "Destructive", "rm -rf target")]
+        );
+        assert_eq!(
+            t.blocked_actions().collect::<Vec<_>>(),
+            [("Bash", "rm -rf notes")]
+        );
+        let summary = t.summary.as_ref().unwrap();
+        assert_eq!(summary["usage_by_agent"]["explore"]["api_calls"], 3);
+    }
+
+    /// What grading reads, less what depends on the protocol: positions,
+    /// stream length, line counts and the version.
+    fn graded(t: &Transcript) -> Value {
+        let mut a = answers(t);
+        for call in a["calls"].as_array_mut().unwrap() {
+            call[0] = Value::Null;
+        }
+        for key in ["final_index", "len", "counts"] {
+            a[key] = Value::Null;
+        }
+        a["behaviour"]["protocol_version"] = Value::Null;
+        for key in ["elapsed_ms", "session_id"] {
+            a["summary"][key] = Value::Null;
+        }
+        a
+    }
+
+    /// The PR 4 check: one scripted run, captured from koda 0.6's
+    /// `stream-json` and koda 0.7's `koda exec --json`
+    /// (`bin/capture-koda-wire`), grades the same, and the order of what
+    /// grading compares (calls before the final message) holds in both.
+    #[test]
+    fn the_same_run_records_alike_through_both_protocols() {
+        let v1 = Transcript::parse(CAPTURED);
+        let v2 = Transcript::parse(CAPTURED_V2);
+        assert_eq!(v1.protocol_version(), Some(1));
+        assert_eq!(graded(&v2), graded(&v1));
+        for t in [&v1, &v2] {
+            let last_call = t.tool_calls().map(|c| c.index).max().unwrap();
+            assert!(t.final_message_index().unwrap() > last_call);
+        }
     }
 
     #[test]

@@ -1,8 +1,9 @@
 //! `koda-eval`: runs koda binaries on fixed coding tasks and records
 //! whether each task's hidden tests pass, with tokens and time.
 //!
-//! It reads koda only through `koda -p … --output-format stream-json`, so
-//! any two koda builds can be compared without linking koda's crates.
+//! It reads koda only through `koda exec … --json`, so any two koda builds
+//! that have it (0.7 and later) can be compared without linking koda's
+//! crates.
 
 mod build;
 mod check;
