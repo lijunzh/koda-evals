@@ -1,0 +1,24 @@
+#!/bin/sh
+# Run a koda from before `koda exec` (0.6 and earlier) under this harness.
+#
+# The runner calls `<bin> exec <prompt> --json …`; koda 0.6 takes
+# `-p <prompt> --output-format stream-json …` and writes protocol 1, which
+# capture still reads. Everything else passes through. The koda to run is
+# $KODA_06_BIN, from the environment koda-eval runs in (its `--version` probe
+# comes before a model's env):
+#
+#   KODA_06_BIN=~/.cache/koda-eval/bin/<sha>/koda koda-eval run <run file>
+#
+# with the variant's `bin = "~/repo/koda-evals/bin/koda-06-exec"`.
+set -eu
+koda="${KODA_06_BIN:?set KODA_06_BIN to a koda 0.6 binary}"
+case "$koda" in "~/"*) koda="$HOME/${koda#\~/}" ;; esac
+[ "${1:-}" = exec ] || exec "$koda" "$@"
+shift
+prompt="$1"
+shift
+for arg in "$@"; do
+  shift
+  [ "$arg" = --json ] || set -- "$@" "$arg"
+done
+exec "$koda" -p "$prompt" --output-format stream-json "$@"
