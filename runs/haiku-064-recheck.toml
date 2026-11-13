@@ -8,10 +8,12 @@
 # data, new system-prompt lines), #1572 (tool list built each turn) and #1573
 # (approval reads the session's tool registry) change every turn, and no
 # coding task had run with them. The MCP fixes, heredoc, arithmetic and the
-# Delete removal were checked earlier. Paid API calls; the first run cost about $0.21.
+# Delete removal were checked earlier. Paid API calls; the first run cost
+# about $0.48 (first quoted as $0.21).
 #   ./target/release/koda-eval run runs/haiku-064-recheck.toml
 #
-# Result, 20261113T020633Z: 20 of 20, about $0.30, 24 minutes of run time;
+# Result, 20261113T020633Z: 20 of 20, about $0.95 (first quoted as $0.30, with
+# calls over 100K tokens priced at Haiku's lower rate), 24 minutes of run time;
 # bash-classifier-escapes passed this time. No time limits, compactions or
 # blocked actions; 11 approval requests, 1 destructive; 14 edit rejections in
 # 20 runs. The tree is main at 1b73bab, the merge of lijunzh/koda#1574.

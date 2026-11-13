@@ -2,13 +2,15 @@
 # tasks once each on lijunzh/koda#1589, `koda exec --json` in place of
 # `stream-json`, read through this branch's protocol 2 capture. A regression
 # check, not a measurement, with the settings of haiku-064-recheck (20 of 20
-# at 0.6.4). Paid API calls; that run cost about $0.30.
+# at 0.6.4). Paid API calls; that run cost about $0.95 (first quoted as $0.30).
 #   ./target/release/koda-eval run runs/haiku-1589-check.toml
 #
 # Result, 20261113T161919Z: 20 of 20, as at 0.6.4; every record read from
-# protocol 2 (protocol_version 2, no unparsed lines). About $0.40 by token
-# count against the 0.6.4 run's $0.30: 235 model calls against 210, most of
-# the difference in compact-reasoning-summary (106 calls against 82). Agent
+# protocol 2 (protocol_version 2, no unparsed lines). About $1.45 against
+# the 0.6.4 run's $0.95, priced per call (91 and 68 calls over 100K tokens, at
+# Haiku's 5x rate; first quoted as $0.40 and $0.30, all at the lower rate):
+# 235 model calls against 210, most of the difference in
+# compact-reasoning-summary (106 calls against 82). Agent
 # time 41 minutes against 24, all in two runs' Bash commands that Haiku chose
 # and Koda timed out: a `find /` over the disk (120 s, kata-api-migration-tests)
 # and `cargo test --workspace` on the task's project (600 s, then rerun in the
