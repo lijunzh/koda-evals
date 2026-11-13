@@ -1,0 +1,31 @@
+# 0.6.4 release check again, after the checklist's dependency update
+# (lijunzh/koda#1574: rmcp 3.10, errno, rustls-webpki; Lijun: "Yes, merge and
+# check", 2026-11-12). Same tasks and settings as haiku-064-check, which ran
+# before the update. Original note: the 20
+# `core` tasks once each, a regression check rather than a measurement, with
+# the settings of haiku-063-check (59 of 60 at 0.6.3) and haiku-1564-check
+# (57 of 60). The gap it fills: lijunzh/koda#1571 (tool results marked as
+# data, new system-prompt lines), #1572 (tool list built each turn) and #1573
+# (approval reads the session's tool registry) change every turn, and no
+# coding task had run with them. The MCP fixes, heredoc, arithmetic and the
+# Delete removal were checked earlier. Paid API calls; the first run cost about $0.21.
+#   ./target/release/koda-eval run runs/haiku-064-recheck.toml
+#
+# Result, 20261113T020633Z: 20 of 20, about $0.30, 24 minutes of run time;
+# bash-classifier-escapes passed this time. No time limits, compactions or
+# blocked actions; 11 approval requests, 1 destructive; 14 edit rejections in
+# 20 runs. The tree is main at 1b73bab, the merge of lijunzh/koda#1574.
+name = "haiku-064-recheck"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "bddb243"  # head of lijunzh/koda#1574; main plus it is the 0.6.4 candidate
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
