@@ -3,10 +3,21 @@
 # three times", 2026-11-13; about $1.20-1.80.) The two builds of those runs,
 # three repeats each, two at a time. The harness runs one build's repeats
 # before the next's (0.6.4's third beside #1589's first), so load is alike but
-# drift across the hour is not shared evenly. 0.6.4 has no `koda exec`, so it runs through bin/koda-06-exec and
-# writes protocol 1. Paid API calls.
+# drift across the hour is not shared evenly. 0.6.4 has no `koda exec`, so it
+# runs through bin/koda-06-exec and writes protocol 1. Paid API calls.
 #   KODA_06_BIN=~/.cache/koda-eval/bin/bddb2430a5b0a6c9b93f9414b1d65dd306bd05ec/koda \
 #     ./target/release/koda-eval run runs/haiku-1589-compaction.toml
+#
+# Result, 20261113T172309Z: the model, not the build. 6 of 6 passed. Wall
+# time 10m09s, 23m37s, 16m53s at 0.6.4 (mean 16m53s; 61, 85, 91 model
+# calls) and 10m12s, 16m40s, 14m06s at #1589 (mean 13m39s; 69, 59, 81). No
+# run reached for `cargo test --workspace` through Bash, which cost the slow
+# check run 600 s; whole-package `cargo test` through the Cargo tool failed
+# in 5 of 6 runs on both builds alike. The check run's 27 minutes and 106
+# calls sit just past 0.6.4's own spread here. About $4.00, priced per call:
+# 347 of the 446 calls had prompts over 100K tokens, which Haiku 5.5 bills
+# at 5x ($0.50/$2.50 per MTok, not $0.10/$0.50); the $1.20-1.80 estimate
+# priced them all at the lower rate.
 name = "haiku-1589-compaction"
 repeats = 3
 tasks = ["compact-reasoning-summary"]
