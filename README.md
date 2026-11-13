@@ -33,7 +33,8 @@ cargo run -- list                    # tasks with cluster, grade and tags
 cargo run -- verify [TASK...]        # fail-first check (all tasks by default)
 cargo run -- run runs/<name>.toml    # run a run file, then print its report
 cargo run -- report <name|dir>       # the report again: a run name (latest) or a results dir
-cargo run -- regrade <name|dir>      # grade saved transcripts again, then the report
+cargo run -- regrade <name|dir>      # grade saved runs again from their records, then the report
+cargo run -- record <name|dir>...    # write record.json for runs saved before records existed
 ```
 
 History tasks and `ref` variants come from a koda checkout: `--koda-repo`
@@ -573,9 +574,28 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
   - `check`: `hidden` (exit, hidden tests passed and failed, compile
     error, output tail) and `transcript` (each predicate's verdict); either
     is `null` when the task doesn't have that part.
-- Per run: `transcript.ndjson`, `stderr.log`, `diff.patch`, `check.log`,
-  `koda.log` (koda's own log, kept as evidence) and `koda.db` (the whole
-  conversation, compacted rows included).
+- Per run: `record.json` (what grading reads, below), `transcript.ndjson`
+  (koda's raw stream), `stderr.log`, `diff.patch`, `check.log`, `koda.log`
+  (koda's own log, kept as evidence) and `koda.db` (the whole conversation,
+  compacted rows included).
+
+### The record: `record.json`
+
+Koda's wire protocol keeps changing, so grading never reads it after a run.
+When a run ends, the harness parses its `transcript.ndjson` once and saves
+what checks use as `record.json`, in the harness's own format with its own
+schema version: tool calls with their arguments, outcomes and position in
+the stream, approvals, blocked actions, questions, compactions, loop-guard
+stops, turn ends, the run summary, the protocol named in `hello`, and a count
+of every event type. Regrading and reports read the record alone, so a run
+saved under an older koda protocol grades the same as a new one, and a new
+protocol changes only the capture code in `src/transcript.rs`. Codex's
+`rollout-trace` crate does the same. The record keeps each event's position,
+so a check's "at event N" points at line N of `transcript.ndjson`.
+
+Capture reads koda's protocol 1 and the shape before it. The peer wrappers
+write protocol 1, so that reader stays when koda moves on, and an archived
+run from any of those protocols can be recorded after it's unpacked.
 - `meta.json`: the run file, each koda binary's `--version`, ref and commit,
   and `rustc --version`.
 - `report.md`: the report below.
@@ -631,9 +651,9 @@ repeats, a gap of a few points is noise.
 ### `regrade`: after a grading fix
 
 A fix to a transcript predicate, or to a wrapper's translation of an agent's
-events, changes no run, so `regrade` grades the saved transcripts again
-instead of rerunning them. It checks each row's `transcript.ndjson` against
-the task's current predicates, and keeps the stored hidden-test outcome,
+events, changes no run, so `regrade` grades the saved runs again instead of
+rerunning them. It checks each row's `record.json` against the task's
+current predicates, and keeps the stored hidden-test outcome,
 since the project those tests ran in is gone. Then it rewrites the report.
 A row whose verdict changes keeps the old one under `regraded`.
 
@@ -646,7 +666,12 @@ bin/codex-as-koda --translate <run>/stderr.log --mode safe --exit 1 --cancelled
 ```
 
 Without the fix, that reproduces the saved transcript byte for byte. Keep
-the old one as `transcript.orig.ndjson`.
+the old one as `transcript.orig.ndjson`. Then write the record again from
+the new transcript, `cargo run -- record <dir> --force`, and regrade.
+
+A results directory saved before records existed gets them once with
+`cargo run -- record <dir>`; `regrade` names that command when a record is
+missing.
 
 ## Tests
 

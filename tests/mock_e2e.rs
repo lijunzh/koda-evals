@@ -140,6 +140,35 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     assert_eq!(fixed["diff"]["files"], 1, "{fixed:#}");
     let artifacts = dir.join(fixed["artifacts"].as_str().unwrap());
     assert!(artifacts.join("transcript.ndjson").is_file());
+    // The run saved its record, and grading the record alone gives the
+    // same verdict.
+    let record: Value =
+        serde_json::from_str(&std::fs::read_to_string(artifacts.join("record.json")).unwrap())
+            .unwrap();
+    assert_eq!(record["schema"], 1, "{record:#}");
+    assert_eq!(record["protocol_version"], 1, "{record:#}");
+    assert!(
+        record["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["type"] == "tool_call_start"),
+        "{record:#}"
+    );
+    std::fs::remove_file(artifacts.join("transcript.ndjson")).unwrap();
+    let regraded = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
+        .arg("--root")
+        .arg(root)
+        .args(["regrade"])
+        .arg(dir)
+        .output()
+        .unwrap();
+    assert!(
+        regraded.status.success(),
+        "{}",
+        String::from_utf8_lossy(&regraded.stderr)
+    );
+    assert!(String::from_utf8_lossy(&regraded.stdout).starts_with("0 row(s) changed verdict"));
     assert!(
         std::fs::read_to_string(artifacts.join("diff.patch"))
             .unwrap()

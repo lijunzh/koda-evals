@@ -598,7 +598,7 @@ fn check_one(p: &Predicate, t: &Transcript, diff: Option<&DiffStat>) -> (bool, S
             }
             // Without a `text_done` the reply never ended; every call
             // counts as before it.
-            let anchor = t.final_message_index().unwrap_or(t.events.len());
+            let anchor = t.final_message_index().unwrap_or(t.stream_len);
             let last = t
                 .top_level_calls()
                 .filter(|c| c.index < anchor && call_matches_any(c, call))

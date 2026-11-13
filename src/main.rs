@@ -76,12 +76,22 @@ enum Cmd {
         /// A results directory, or a run name (its latest results).
         what: PathBuf,
     },
-    /// Grade a results directory again from its saved transcripts, against
+    /// Grade a results directory again from its saved records, against
     /// the tasks' current checks, and rewrite its report. The stored hidden
     /// test outcomes stand. For a grading fix that changes no run.
     Regrade {
         /// A results directory, or a run name (its latest results).
         what: PathBuf,
+    },
+    /// Write each run's `record.json` from its `transcript.ndjson`: once for
+    /// a results directory saved before records existed, or with `--force`
+    /// after re-translating a wrapper's transcript.
+    Record {
+        /// Results directories, or run names (their latest results).
+        what: Vec<PathBuf>,
+        /// Rewrite records that already exist.
+        #[arg(long)]
+        force: bool,
     },
 }
 
@@ -142,6 +152,14 @@ fn real_main() -> Result<ExitCode> {
         Cmd::Report { what } => {
             let dir = report::locate(&cli.root, &what)?;
             report::report(&dir)?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Cmd::Record { what, force } => {
+            for what in &what {
+                let dir = report::locate(&cli.root, what)?;
+                let written = regrade::record(&dir, force)?;
+                println!("{}: {written} record(s) written", dir.display());
+            }
             Ok(ExitCode::SUCCESS)
         }
         Cmd::Regrade { what } => {

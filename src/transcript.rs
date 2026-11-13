@@ -1,30 +1,52 @@
-//! The agent's `transcript.ndjson`: koda's `stream-json` events, parsed
-//! once and queried by the transcript predicates (`check.rs`) and the
-//! behaviour signals on every results row.
+//! A run's record: what the agent did, in the harness's own format, queried
+//! by the transcript predicates (`check.rs`) and the behaviour signals on
+//! every results row.
 //!
-//! Event kinds the harness reads: `tool_call_start` {id, name, args,
-//! parent_id}, `tool_call_result` {id, name, output, outcome}, `text_done`,
-//! `approval_request` {tool_name, detail, effect}, `action_blocked`
-//! {tool_name, detail}, `ask_user_request`, `compaction` {status,
-//! summary_tokens}, `loop_guard`, `turn_end` {reason: {kind}}, and the final
-//! `run_summary`. Everything else is only counted, so an unknown type is
-//! skipped: koda's protocol allows new notifications without a version change.
+//! Koda's wire protocol will keep changing, so grading never reads it after
+//! the run. At capture, [`Transcript::read`] parses the agent's
+//! `transcript.ndjson` once and keeps only what checks use, normalized; the
+//! run saves that as `record.json` ([`RECORD_FILE`]), and regrading and
+//! reports read the record alone. A new koda protocol changes the capture
+//! code here, never the saved runs. Codex's `rollout-trace` crate does the
+//! same: its own schema, and consumers read the reduced form.
 //!
-//! koda before protocol 1 sent `is_sub_agent`, no `outcome`, and compaction
-//! and the loop guard as `info` and `warn` text. Run files compare older
-//! binaries, and `bin/claude-as-koda` writes that shape, so those still parse.
+//! The record keeps these event kinds, in order: `tool_call_start` {id, name,
+//! args, sub_agent}, `tool_call_result` {id, name, output, outcome?},
+//! `text_done`, `approval_request` {tool_name, effect, detail},
+//! `action_blocked` {tool_name, detail}, `ask_user_request`, `compaction`
+//! {status, summary_tokens?}, `loop_guard`, `turn_end` {reason: {kind}};
+//! plus the run summary, the protocol `hello` named, and a count of every
+//! event type the agent sent. The names come from koda's protocol 1 and are
+//! now the harness's own, changed only by bumping [`RECORD_SCHEMA`].
+//!
+//! Capture reads koda's protocol 1 and the shape before it, which sent
+//! `is_sub_agent`, no `outcome`, and compaction and the loop guard as `info`
+//! and `warn` text. The peer wrappers (`bin/*-as-koda`) write protocol 1, so
+//! that reader stays when koda moves on.
 
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::LazyLock;
 
-use anyhow::Result;
+use anyhow::{Context, Result, bail};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-/// The newest koda wire protocol this reader understands.
+/// The newest koda wire protocol capture understands.
 const PROTOCOL_VERSION: u64 = 1;
+
+/// The record's own format version. Bump it when a field changes meaning,
+/// and convert saved records in the same change.
+pub const RECORD_SCHEMA: u64 = 1;
+
+/// Where a run's record lives in its artifacts directory.
+pub const RECORD_FILE: &str = "record.json";
+
+/// The token count in a pre-protocol-1 "✅ Compacted 12 messages (~300
+/// token summary)" line.
+static SUMMARY_TOKENS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"~\s*(\d+)\s*token").unwrap());
 
 /// Tools that hand work to a child agent or session.
 pub const DELEGATION_TOOLS: &[&str] = &["InvokeAgent", "SpawnAgent"];
@@ -84,20 +106,32 @@ fn is_shell_read(command: &str) -> bool {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Transcript {
-    /// Every parsed event in order, `run_summary` excluded.
+    /// [`RECORD_SCHEMA`] when written.
+    pub schema: u64,
+    /// `protocol_version` from the agent's `hello`. `None` before protocol 1.
+    pub protocol_version: Option<u64>,
+    /// Set when `hello` named a protocol capture can't read; the checks
+    /// then mean nothing.
+    pub unsupported_protocol: Option<String>,
+    /// The kept events in order (see the module doc), normalized. Each has
+    /// a `seq`: its position among the agent's events, so a check's "at
+    /// event N" points at the same line of `transcript.ndjson`.
     pub events: Vec<Value>,
+    /// How many events the agent sent (`run_summary` and unparsed lines
+    /// aside): the position after the last one.
+    pub stream_len: usize,
     /// The `run_summary` line, if koda got that far.
     pub summary: Option<Value>,
-    /// Count of every event type, plus `unparsed_line`.
+    /// Count of every event type the agent sent, plus `unparsed_line`.
     pub counts: BTreeMap<String, u64>,
 }
 
 /// One `tool_call_start`.
 #[derive(Debug, Clone, Copy)]
 pub struct ToolCall<'a> {
-    /// Position in `events`, for ordering.
+    /// Position in the agent's stream, for ordering.
     pub index: usize,
     /// The call's `id`, which its `tool_call_result` repeats.
     pub id: &'a str,
@@ -107,13 +141,19 @@ pub struct ToolCall<'a> {
 }
 
 impl Transcript {
+    /// Capture: parse an agent's `transcript.ndjson` into a record.
     pub fn read(path: &Path) -> Result<Self> {
         let text = String::from_utf8_lossy(&std::fs::read(path)?).into_owned();
         Ok(Self::parse(&text))
     }
 
+    /// Capture: parse koda's event stream (protocol 1, or the shape before
+    /// it) into a record. The only place that reads koda's wire format.
     pub fn parse(text: &str) -> Self {
-        let mut t = Transcript::default();
+        let mut t = Transcript {
+            schema: RECORD_SCHEMA,
+            ..Transcript::default()
+        };
         for line in text.lines().filter(|l| !l.trim().is_empty()) {
             let Ok(value) = serde_json::from_str::<Value>(line) else {
                 *t.counts.entry("unparsed_line".into()).or_default() += 1;
@@ -122,19 +162,158 @@ impl Transcript {
             let kind = value["type"].as_str().unwrap_or("untyped").to_string();
             if kind == "run_summary" {
                 t.summary = Some(value);
-            } else {
-                *t.counts.entry(kind).or_default() += 1;
-                t.events.push(value);
+                continue;
             }
+            *t.counts.entry(kind.clone()).or_default() += 1;
+            if let Some(mut event) = t.capture(&kind, &value) {
+                event["seq"] = t.stream_len.into();
+                t.events.push(event);
+            }
+            t.stream_len += 1;
         }
         t
     }
 
+    /// One wire event in the record's shape, or `None` for what checks
+    /// don't read. Pre-protocol-1 text for compaction and the loop guard
+    /// becomes the typed events here.
+    fn capture(&mut self, kind: &str, e: &Value) -> Option<Value> {
+        let text = |key: &str| e[key].as_str().unwrap_or("").to_string();
+        Some(match kind {
+            "hello" => {
+                if self.protocol_version.is_none() && self.unsupported_protocol.is_none() {
+                    self.protocol_version = e["protocol_version"].as_u64();
+                    self.unsupported_protocol = match &e["protocol_version"] {
+                        v if v.as_u64().is_some_and(|v| v <= PROTOCOL_VERSION) => None,
+                        Value::Null => Some("unsupported protocol".to_string()),
+                        v => Some(format!("unsupported protocol {v}")),
+                    };
+                }
+                return None;
+            }
+            "tool_call_start" => json!({
+                "type": kind,
+                "id": text("id"),
+                "name": text("name"),
+                "args": e["args"],
+                "sub_agent": e["parent_id"].is_string()
+                    || e["is_sub_agent"].as_bool().unwrap_or(false),
+            }),
+            "tool_call_result" => {
+                let mut r = json!({
+                    "type": kind,
+                    "id": text("id"),
+                    "name": text("name"),
+                    "output": e["output"],
+                });
+                if let Some(outcome) = e["outcome"].as_str() {
+                    r["outcome"] = outcome.into();
+                }
+                r
+            }
+            "text_done" | "ask_user_request" | "loop_guard" => json!({ "type": kind }),
+            "approval_request" => json!({
+                "type": kind,
+                "tool_name": text("tool_name"),
+                "effect": text("effect"),
+                "detail": text("detail"),
+            }),
+            "action_blocked" => json!({
+                "type": kind,
+                "tool_name": text("tool_name"),
+                "detail": text("detail"),
+            }),
+            "compaction" => {
+                let mut c = json!({ "type": kind, "status": text("status") });
+                if e["summary_tokens"].is_number() {
+                    c["summary_tokens"] = e["summary_tokens"].clone();
+                }
+                c
+            }
+            "turn_end" => json!({
+                "type": kind,
+                "reason": { "kind": e["reason"]["kind"] },
+            }),
+            // Before protocol 1: "📦 Context at N% — compacting before
+            // sending..." per attempt and "✅ Compacted N messages (~T token
+            // summary)" per summary.
+            "info" => {
+                let message = text("message");
+                if message.contains("compacting before sending") {
+                    json!({ "type": "compaction", "status": "started" })
+                } else if message.contains("Compacted ") && message.contains(" messages") {
+                    let tokens = SUMMARY_TOKENS
+                        .captures(&message)
+                        .and_then(|c| c[1].parse::<u64>().ok())
+                        .unwrap_or(0);
+                    json!({ "type": "compaction", "status": "completed", "summary_tokens": tokens })
+                } else {
+                    return None;
+                }
+            }
+            // Before protocol 1: "Loop detected: ..." when the guard injected
+            // feedback and "Loop guard: ... stopping" when it gave up.
+            "warn" => {
+                let message = text("message");
+                if message.starts_with("Loop detected") || message.starts_with("Loop guard") {
+                    json!({ "type": "loop_guard" })
+                } else {
+                    return None;
+                }
+            }
+            _ => return None,
+        })
+    }
+
+    /// Read a saved record. A schema newer than this harness is an error.
+    pub fn load(path: &Path) -> Result<Self> {
+        let text = std::fs::read_to_string(path).with_context(|| path.display().to_string())?;
+        let t: Transcript =
+            serde_json::from_str(&text).with_context(|| path.display().to_string())?;
+        if t.schema == 0 || t.schema > RECORD_SCHEMA {
+            bail!(
+                "{}: record schema {} (this harness reads up to {RECORD_SCHEMA})",
+                path.display(),
+                t.schema
+            );
+        }
+        Ok(t)
+    }
+
+    pub fn save(&self, path: &Path) -> Result<()> {
+        std::fs::write(path, serde_json::to_string(self)?)
+            .with_context(|| path.display().to_string())
+    }
+
+    /// The saved record in a run's artifacts directory, if it has one.
+    pub fn for_artifacts(art: &Path) -> Result<Option<Self>> {
+        let path = art.join(RECORD_FILE);
+        if path.exists() {
+            Self::load(&path).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Write `record.json` from `transcript.ndjson` in a run's artifacts
+    /// directory. Skips one already recorded unless `force`. Returns whether
+    /// it wrote.
+    pub fn record_artifacts(art: &Path, force: bool) -> Result<bool> {
+        let raw = art.join("transcript.ndjson");
+        let path = art.join(RECORD_FILE);
+        if !raw.exists() || (path.exists() && !force) {
+            return Ok(false);
+        }
+        Self::read(&raw)?.save(&path)?;
+        Ok(true)
+    }
+
+    /// Events of one kind with their position in the agent's stream.
     fn of_type<'a>(&'a self, kind: &'a str) -> impl Iterator<Item = (usize, &'a Value)> + 'a {
         self.events
             .iter()
-            .enumerate()
-            .filter(move |(_, e)| e["type"] == kind)
+            .filter(move |e| e["type"] == kind)
+            .map(|e| (e["seq"].as_u64().unwrap_or(0) as usize, e))
     }
 
     /// Every `tool_call_start`, top level and sub-agent, in order.
@@ -144,8 +323,7 @@ impl Transcript {
             id: e["id"].as_str().unwrap_or(""),
             name: e["name"].as_str().unwrap_or(""),
             args: &e["args"],
-            is_sub_agent: e["parent_id"].is_string()
-                || e["is_sub_agent"].as_bool().unwrap_or(false),
+            is_sub_agent: e["sub_agent"].as_bool().unwrap_or(false),
         })
     }
 
@@ -175,12 +353,6 @@ impl Transcript {
         })
     }
 
-    /// Messages of `info` or `warn` events.
-    pub fn messages<'a>(&'a self, kind: &'a str) -> impl Iterator<Item = &'a str> + 'a {
-        self.of_type(kind)
-            .filter_map(|(_, e)| e["message"].as_str())
-    }
-
     /// `tool_call_result` events for one tool.
     fn results_of<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a Value> + 'a {
         self.of_type("tool_call_result")
@@ -197,9 +369,7 @@ impl Transcript {
 
     /// `protocol_version` from `hello`. `None` before protocol 1.
     pub fn protocol_version(&self) -> Option<u64> {
-        self.of_type("hello")
-            .next()
-            .and_then(|(_, e)| e["protocol_version"].as_u64())
+        self.protocol_version
     }
 
     /// The output of the `tool_call_result` for the call with this `id`.
@@ -232,12 +402,7 @@ impl Transcript {
     /// doesn't know: a newer one, or a version it can't read. `None` with no
     /// `hello`, since koda before protocol 1 sent none.
     pub fn unsupported_protocol(&self) -> Option<String> {
-        let (_, hello) = self.of_type("hello").next()?;
-        match &hello["protocol_version"] {
-            version if version.as_u64().is_some_and(|v| v <= PROTOCOL_VERSION) => None,
-            Value::Null => Some("unsupported protocol".to_string()),
-            version => Some(format!("unsupported protocol {version}")),
-        }
+        self.unsupported_protocol.clone()
     }
 
     /// Whether the call with this `id` reported an `error` outcome.
@@ -304,39 +469,22 @@ impl Transcript {
     /// Behaviour signals for the results row. Every signal here is read
     /// from the event stream; `time_limit_hit` is the harness's own
     /// observation. A signal with nothing to read it from is `null`.
-    /// Compactions that got a summary: a `compaction` line with status
-    /// `completed` and a `summary_tokens`, or, before protocol 1, a
-    /// "✅ Compacted N messages ..." info line.
+    /// Compactions that got a summary: a `compaction` with status
+    /// `completed` and a `summary_tokens`.
     pub fn compactions_with_summary(&self) -> usize {
         self.compactions("completed")
             .filter(|e| e["summary_tokens"].is_number())
             .count()
-            + self
-                .messages("info")
-                .filter(|m| m.contains("Compacted ") && m.contains(" messages"))
-                .count()
     }
 
     pub fn behaviour(&self, time_limit_hit: bool) -> Value {
-        // A `compaction` line with status `started` per attempt, and
-        // `completed` with a `summary_tokens` for one that got a summary.
-        // Before protocol 1 the same facts were text: an `info` "📦 Context
-        // at N% — compacting before sending..." and a "✅ Compacted N
-        // messages ...". A run has one form or the other.
-        let attempts = self.compactions("started").count()
-            + self
-                .messages("info")
-                .filter(|m| m.contains("compacting before sending"))
-                .count();
+        // A `compaction` with status `started` per attempt, and `completed`
+        // with a `summary_tokens` for one that got a summary. Capture turned
+        // pre-protocol-1 text into the same events.
+        let attempts = self.compactions("started").count();
         let with_summary = self.compactions_with_summary();
-        // Loop guard: a `loop_guard` line each time it acts. Before protocol
-        // 1, "Loop detected: ..." when it injected feedback and "Loop guard:
-        // ... stopping" when it gave up.
-        let loop_guard = self.count("loop_guard") as usize
-            + self
-                .messages("warn")
-                .filter(|m| m.starts_with("Loop detected") || m.starts_with("Loop guard"))
-                .count();
+        // Loop guard: a `loop_guard` each time it acts.
+        let loop_guard = self.of_type("loop_guard").count();
         // An Edit the tool refused: validation ("Validation error: File
         // '...' has been modified on disk since you last read it",
         // "'old_str' not found") or execution ("Error: ... has changed on
@@ -481,6 +629,107 @@ not json
         assert!(!t.result_failed("e"));
         assert!(!t.result_failed("no such call"));
         assert_eq!(t.final_message(), Some("Done."));
+    }
+
+    /// Everything grading reads, so a saved record can be compared with the
+    /// stream it came from.
+    fn answers(t: &Transcript) -> Value {
+        let calls: Vec<Value> = t
+            .tool_calls()
+            .map(|c| {
+                json!([
+                    c.index,
+                    c.id,
+                    c.name,
+                    c.args,
+                    c.is_sub_agent,
+                    t.result_output(c.id),
+                    t.result_failed(c.id)
+                ])
+            })
+            .collect();
+        json!({
+            "behaviour": t.behaviour(false),
+            "calls": calls,
+            "approvals": t.approval_requests().collect::<Vec<_>>(),
+            "blocked": t.blocked_actions().collect::<Vec<_>>(),
+            "final": t.final_message(),
+            "final_index": t.final_message_index(),
+            "len": t.stream_len,
+            "unsupported": t.unsupported_protocol(),
+            "counts": t.counts,
+            "summary": t.summary,
+        })
+    }
+
+    #[test]
+    fn a_saved_record_answers_like_the_stream_it_came_from() {
+        let dir = tempfile::tempdir().unwrap();
+        for stream in [SAMPLE, SAMPLE_V1, CAPTURED] {
+            let parsed = Transcript::parse(stream);
+            let path = dir.path().join(RECORD_FILE);
+            parsed.save(&path).unwrap();
+            let loaded = Transcript::load(&path).unwrap();
+            assert_eq!(loaded.schema, RECORD_SCHEMA);
+            assert_eq!(answers(&loaded), answers(&parsed));
+        }
+    }
+
+    #[test]
+    fn the_record_keeps_only_what_checks_read_but_counts_everything() {
+        let t = Transcript::parse(SAMPLE_V1);
+        // hello, session_ready, turn_start, retry, sub_agent_start and
+        // turn_summary aren't kept; the skipped compaction is.
+        assert!(t.events.iter().all(|e| {
+            ![
+                "hello",
+                "session_ready",
+                "turn_start",
+                "retry",
+                "sub_agent_start",
+                "turn_summary",
+            ]
+            .contains(&e["type"].as_str().unwrap())
+        }));
+        assert_eq!(t.count("retry"), 1);
+        assert_eq!(t.count("compaction"), 5);
+        // Pre-protocol-1 text became typed events.
+        let old = Transcript::parse(SAMPLE);
+        let kinds: Vec<&str> = old
+            .events
+            .iter()
+            .filter_map(|e| e["type"].as_str())
+            .collect();
+        assert_eq!(kinds.iter().filter(|k| **k == "compaction").count(), 3);
+        assert_eq!(kinds.iter().filter(|k| **k == "loop_guard").count(), 1);
+        assert!(!kinds.contains(&"info") && !kinds.contains(&"warn"));
+        assert_eq!(old.count("info"), 3);
+    }
+
+    #[test]
+    fn a_record_from_a_newer_harness_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(RECORD_FILE);
+        let mut t = Transcript::parse(SAMPLE_V1);
+        t.schema = RECORD_SCHEMA + 1;
+        t.save(&path).unwrap();
+        let err = Transcript::load(&path).unwrap_err().to_string();
+        assert!(err.contains("record schema"), "{err}");
+    }
+
+    #[test]
+    fn recording_a_run_skips_one_already_recorded() {
+        let dir = tempfile::tempdir().unwrap();
+        let art = dir.path();
+        assert!(
+            !Transcript::record_artifacts(art, false).unwrap(),
+            "no transcript"
+        );
+        std::fs::write(art.join("transcript.ndjson"), SAMPLE_V1).unwrap();
+        assert!(Transcript::record_artifacts(art, false).unwrap());
+        assert!(!Transcript::record_artifacts(art, false).unwrap());
+        assert!(Transcript::record_artifacts(art, true).unwrap());
+        assert!(Transcript::for_artifacts(art).unwrap().is_some());
     }
 
     /// What koda really wrote; `bin/capture-koda-wire` records it.
