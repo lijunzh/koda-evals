@@ -236,15 +236,20 @@ fn a_failed_cleanup_stops_parallel_workers_before_they_grade() {
     std::fs::write(&run_file, format!("repeats = 4\n{run}")).unwrap();
 
     // The first `koda` finishes at once, and the `ps` that cleans up after it
-    // fails. The second is still running then, and its own cleanup succeeds.
+    // fails. The second waits until that failure has happened (the fake `ps`
+    // leaves `failed`), so its own cleanup comes after it and succeeds. A
+    // fixed sleep here raced a slow CI runner.
     let (lock, fast) = (root.join("lock"), root.join("fast"));
     let koda = format!(
         "#!/bin/sh\n\
          if [ \"$1\" = --version ]; then echo 'koda 9.9.9'; exit 0; fi\n\
-         if mkdir '{}' 2>/dev/null; then touch '{}'; else sleep 2; fi\n\
+         if mkdir '{}' 2>/dev/null; then touch '{}'; else\n\
+         n=0; while [ ! -e '{}' ] && [ $n -lt 250 ]; do sleep 0.1; n=$((n + 1)); done\n\
+         fi\n\
          cat '{CAPTURED}'\n",
         lock.display(),
         fast.display(),
+        root.join("failed").display(),
     );
     std::fs::write(root.join("koda"), koda).unwrap();
 
@@ -296,9 +301,10 @@ fn a_run_graded_while_a_cleanup_fails_is_not_scored() {
         &format!(
             "[check]\n\
              hidden = [{{ file = \"README.md\", test = \"hidden/test.rs\" }}]\n\
-             command = \"touch '{}'; sleep 2; echo 'test eval_hidden::a ... ok'\"\n\
+             command = \"touch '{}'; n=0; while [ ! -e '{}' ] && [ $n -lt 250 ]; do sleep 0.1; n=$((n + 1)); done; echo 'test eval_hidden::a ... ok'\"\n\
              timeout_secs = 30\n",
             grading.display(),
+            root.join("failed").display(),
         ),
     );
     std::fs::write(root.join("tasks/wire/task.toml"), task).unwrap();
