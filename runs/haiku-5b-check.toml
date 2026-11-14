@@ -1,0 +1,35 @@
+# Client API PR 5b check (Lijun: "yes, run it now", 2026-11-13): the 20 `core`
+# tasks once each on lijunzh/koda#1597, `koda exec` through the in-process
+# client host (approvalPolicy never). A regression check against
+# haiku-1589-check (20 of 20, about $1.45 priced per call), with its settings.
+# The 100K-window variant (does compacting before Haiku's 100K price step cost
+# less?) isn't about the migration and was left for later. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-5b-check.toml
+#
+# Result, 20261114T020718Z: 19 of 20. The host path held: 20 turns, each with
+# one turn/completed and exec/summary success; 12 approval requests, each
+# answered by the host and followed by serverRequest/resolved, 1 refused as
+# destructive (a Bash command ending in `rm -f`, compact-reasoning-summary); no
+# errors or retries, time limits or compactions. The miss is the model's:
+# bash-classifier-escapes classified `env …` by the command env runs, so
+# `env PATH=/tmp ls /` stayed read-only and one of three hidden tests failed.
+# That task's prompt gained its sandbox paragraph (#59) after
+# haiku-1589-check, so the two runs didn't see the same prompt. About $1.61
+# priced per call (235 calls, 93 over 100K tokens), against $1.45 (235, 91);
+# compact-reasoning-summary was $1.43 of it (101 calls, peak context 325,861).
+# Agent time 35 minutes against 41. At Haiku's default window nothing
+# compacts, so this run didn't exercise compaction through the host.
+name = "haiku-5b-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "694411a"  # main after lijunzh/koda#1597
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
