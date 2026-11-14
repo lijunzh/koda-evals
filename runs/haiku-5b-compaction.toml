@@ -1,0 +1,38 @@
+# Compaction through the client host (Lijun: "Test the compact then",
+# 2026-11-13): haiku-5b-check's build with the window pinned at 117,000 tokens,
+# so compaction starts near 99,500 (85%) and prompts mostly stay under Haiku
+# 5.5's 100K price step. At Haiku's default window nothing compacts, so
+# haiku-5b-check left compaction through the host (lijunzh/koda#1597)
+# unexercised. Only the two `core` tasks whose context passed 99.5K there:
+# compact-reasoning-summary (peak 325,861) and bash-readonly-fail-closed
+# (115,215). Paid API calls; estimated $0.15-0.40 (their 5b calls repriced at
+# the lower rate came to $0.36).
+#   ./target/release/koda-eval run runs/haiku-5b-compaction.toml
+#
+# Result, 20261114T023503Z: 2 of 2, about $0.12 priced per call (82 calls, 1
+# over 100K tokens). compact-reasoning-summary compacted once through the host:
+# contextCompaction started and completed inside the turn under its turnId
+# (trigger threshold at 86%, 34 messages removed, a 2,674-token summary, 23 s),
+# then the turn went on and closed with one turn/completed. $0.08 and 7m31s
+# against $1.43 and 18m45s at the default window in haiku-5b-check (one run
+# each; its earlier reruns cost $0.42-0.97). The call over 100K was the one at
+# 100,336 that set off the compaction. bash-readonly-fail-closed peaked at
+# 83,217 (71%) and didn't compact this time: $0.04 against $0.09. Two things
+# for 5c, both older than 5b: the context-usage `warning` sent during the turn
+# has no turnId, though headless.md says every message in a turn carries one,
+# and it tells a headless run to "Run /compact".
+name = "haiku-5b-compaction"
+repeats = 1
+tasks = ["compact-reasoning-summary", "bash-readonly-fail-closed"]
+jobs = 2
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "694411a"  # main after lijunzh/koda#1597, haiku-5b-check's build
+
+[[models]]
+name = "haiku-100k"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+env = { KODA_MAX_CONTEXT_TOKENS = "117000" }
