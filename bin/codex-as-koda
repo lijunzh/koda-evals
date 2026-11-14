@@ -19,8 +19,9 @@ fresh home defaults to the `openai` provider, and Codex 0.166 then refuses the
 `--oss` turn ("This chat uses lmstudio, but your current provider is openai"),
 so `model_provider=lmstudio` is set too.
 Codex reads the project's AGENTS.md, which is where the harness puts a pinned
-`memory` file. Codex has no probe for a local model's window, so the model's
-KODA_MAX_CONTEXT_TOKENS, which pins koda's, becomes its model_context_window.
+`memory` file. Codex has no probe for a local model's window, so koda's
+--max-context-tokens, which the harness passes from the run file, becomes its
+model_context_window.
 
 **Koda's events out.** The transcript predicates read koda's event stream, so
 Codex's `--json` events are translated, the way `bin/claude-as-koda` does for
@@ -231,7 +232,7 @@ class Translator:
 
 def parse_args(argv):
     opts = {"prompt": "", "model": "", "mode": "auto", "base_url": "", "translate": None,
-            "version": False, "exit": "0", "cancelled": False}
+            "version": False, "exit": "0", "cancelled": False, "max_context_tokens": ""}
     i = 0
     while i < len(argv):
         arg = argv[i]
@@ -247,8 +248,12 @@ def parse_args(argv):
             pass
         elif arg == "--cancelled":
             opts["cancelled"] = True
-        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit"):
-            opts[{"-p": "prompt", "--base-url": "base_url"}.get(arg, arg[2:])] = argv[i + 1]
+        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit",
+                     "--max-context-tokens"):
+            opts[{"-p": "prompt"}.get(arg, arg[2:].replace("-", "_"))] = argv[i + 1]
+            i += 1
+        elif arg == "--reasoning-effort":
+            # Not passed on: Codex's effort names differ from koda's.
             i += 1
         elif arg == "--mcp-config":
             # Not passed on yet; running without the task's servers would
@@ -313,10 +318,10 @@ def main():
             "-C", os.getcwd()]
     if opts["model"]:
         args += ["-m", opts["model"]]
-    window = env.get("KODA_MAX_CONTEXT_TOKENS", "")
+    window = opts["max_context_tokens"]
     if window:
         if not window.isdigit():
-            print(f"codex-as-koda: KODA_MAX_CONTEXT_TOKENS={window} is not a number",
+            print(f"codex-as-koda: --max-context-tokens {window} is not a number",
                   file=sys.stderr)
             return 2
         args += ["-c", f"model_context_window={window}"]

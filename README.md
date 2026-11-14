@@ -224,7 +224,7 @@ task with hidden tests and predicates gets both checks.
   directory; its user-level one is `$HOME/.config/koda/agents/`, not the
   run's `XDG_CONFIG_HOME`, so the fresh config directory can't carry it.
 - `max_context_tokens`: the context window koda runs this task at, passed
-  as `KODA_MAX_CONTEXT_TOKENS`. It overrides the window a run file pins for
+  as `--max-context-tokens`. It overrides the window a run file pins for
   the model, and the row records it as its window. For tasks about what
   happens after a compaction, which a 1M window never reaches; pair it with
   a `compactions` predicate (`min = 1`) so a run that never compacted
@@ -270,9 +270,15 @@ name = "local"
 provider = "llama-cpp"
 base_url = "http://localhost:8080/v1"
 model = "<model id>"
-env = { KODA_MAX_CONTEXT_TOKENS = "131072" }   # pins the window; recorded on every row
+max_context_tokens = 131072                    # pins the window (--max-context-tokens); recorded on every row
+# reasoning_effort = "high"                     # --reasoning-effort
 # engine = "mlx"                                # when provider@host isn't the engine
 ```
+
+Settings go to koda as flags, as koda reads its settings from flags and
+`config.toml`, not the environment. Older run files that set
+`KODA_MAX_CONTEXT_TOKENS` or `KODA_REASONING_EFFORT` in a model's `env` still
+work: the harness moves them into these two fields.
 
 **Serve a local GGUF model with llama-server,** through `bin/serve-gguf
 <model id>` (`bin/serve-gguf list` shows the ids it knows, `stop` stops it).
@@ -404,7 +410,7 @@ What keeps the peers' setup like Koda's:
   own config directory, so `~/.codex` (config, history, memories, a global
   `AGENTS.md`) never reaches a run.
 - **Same window.** Codex has no probe for a local model's window, so
-  `codex-as-koda` passes the model's `KODA_MAX_CONTEXT_TOKENS` as Codex's
+  `codex-as-koda` passes koda's `--max-context-tokens` as Codex's
   `model_context_window`.
 - **Graded the same way.** Both wrappers translate their agent's events into
   Koda's, so the transcript predicates read every agent alike. Codex's shell
@@ -426,9 +432,10 @@ in place of Koda, so a Qwen model can be run in the harness its own team ships.
 It answers whether a behaviour seen under Koda is the model's or Koda's: for
 example, Qwen3.8-27B checking finished work until the time limit (2026-11-04).
 Name it as a variant's `bin`, beside or instead of a Koda variant, on a
-local model (`llama-cpp` or `lm-studio`: it uses only the base URL); `KODA_MAX_CONTEXT_TOKENS` and `KODA_REASONING_EFFORT` in the
-model's `env` become Qwen Code's `contextWindowSize` and the `reasoning_effort`
-it sends. macOS only: the run is held to the project, the cargo target and
+local model (`llama-cpp` or `lm-studio`: it uses only the base URL); the
+model's `max_context_tokens` and `reasoning_effort`, which reach it as koda's
+flags, become Qwen Code's `contextWindowSize` and the `reasoning_effort` it
+sends. macOS only: the run is held to the project, the cargo target and
 ~/.cargo by `sandbox-exec`, since Qwen Code runs with approvals off. Its
 `claude-code` and `codex` agents are stubbed out, so a delegation stays on the
 same model. The script's header has the rest, including the tool mapping.
@@ -547,7 +554,7 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
   - `config`, the row's configuration identity, so rows from different run
     files compare: `engine` (the model's `engine`, else
     `provider@host` from `base_url`, else the provider), `window`
-    (`KODA_MAX_CONTEXT_TOKENS` from the model's env, else `null`),
+    (the model's `max_context_tokens`, else `null`),
     `wall_secs` (the effective limit), `trust`, `jobs`, and the task's
     `cluster` and `grade`.
   - `behaviour`, read from the event stream: `compactions` (`attempts`,

@@ -178,8 +178,6 @@ fn run(home: &Path, args: &[&str]) -> Output {
         .env("HOME", home)
         .env("XDG_CONFIG_HOME", home.join("config"))
         .env("CARGO_TARGET_DIR", home.join("target"))
-        .env("KODA_MAX_CONTEXT_TOKENS", "262144")
-        .env("KODA_REASONING_EFFORT", "xhigh")
         .env("ANTHROPIC_API_KEY", "not-for-qwen")
         .output()
         .unwrap()
@@ -199,6 +197,10 @@ fn qwen_gets_its_settings_a_clean_env_and_a_sandbox() {
             "qwen38",
             "--base-url",
             "http://localhost:9/v1",
+            "--max-context-tokens",
+            "262144",
+            "--reasoning-effort",
+            "xhigh",
         ],
     );
     assert!(

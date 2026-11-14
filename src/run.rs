@@ -116,9 +116,50 @@ pub struct Model {
     /// (`lm-studio@localhost:1234`). Set it when that isn't the engine,
     /// e.g. two servers behind one proxy.
     pub engine: Option<String>,
+    /// The context window to pin, in tokens, passed as koda's
+    /// `--max-context-tokens` (a task's own `max_context_tokens` wins).
+    pub max_context_tokens: Option<u64>,
+    /// The reasoning effort, passed as koda's `--reasoning-effort`.
+    pub reasoning_effort: Option<String>,
     /// Extra environment for this model's runs, e.g. `KODA_MOCK_RESPONSES`.
+    /// `KODA_MAX_CONTEXT_TOKENS` and `KODA_REASONING_EFFORT` here, as older
+    /// run files write them, become the two fields above: koda reads its
+    /// settings from flags and `config.toml`, not the environment.
     #[serde(default)]
     pub env: BTreeMap<String, String>,
+}
+
+/// The settings older run files put in a model's `env`, moved into its
+/// fields, so every variant gets them as flags. Both spellings at once is
+/// an error, as is a window that isn't a number.
+fn settings_from_env(run: &mut RunFile) -> Result<()> {
+    for model in &mut run.models {
+        if let Some(raw) = model.env.remove("KODA_MAX_CONTEXT_TOKENS") {
+            if model.max_context_tokens.is_some() {
+                bail!(
+                    "model {:?}: max_context_tokens is set twice, in env and as a field",
+                    model.name
+                );
+            }
+            let tokens = raw.trim().replace('_', "").parse().map_err(|_| {
+                anyhow::anyhow!(
+                    "model {:?}: KODA_MAX_CONTEXT_TOKENS={raw:?} is not a number of tokens",
+                    model.name
+                )
+            })?;
+            model.max_context_tokens = Some(tokens);
+        }
+        if let Some(effort) = model.env.remove("KODA_REASONING_EFFORT") {
+            if model.reasoning_effort.is_some() {
+                bail!(
+                    "model {:?}: reasoning_effort is set twice, in env and as a field",
+                    model.name
+                );
+            }
+            model.reasoning_effort = Some(effort);
+        }
+    }
+    Ok(())
 }
 
 pub struct Options {
@@ -135,8 +176,9 @@ pub struct Options {
 pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
     let text = std::fs::read_to_string(run_path)
         .with_context(|| format!("read {}", run_path.display()))?;
-    let run: RunFile =
+    let mut run: RunFile =
         toml::from_str(&text).with_context(|| format!("parse {}", run_path.display()))?;
+    settings_from_env(&mut run)?;
     validate(&run)?;
     let (memory, memory_label) = resolve_memory(run.memory.as_deref(), &opts.root)?;
     // Koda reads its global memory from `$HOME`, not from the run's
@@ -515,17 +557,13 @@ impl RunOne<'_> {
             .env_remove("KODA_MODEL")
             .env_remove("KODA_BASE_URL")
             .env_remove("KODA_MODE")
+            .env_remove("KODA_MAX_CONTEXT_TOKENS")
+            .env_remove("KODA_REASONING_EFFORT")
             // Debug text is the evidence for a failed row; a model's own
             // `env` can still override this.
             .env("RUST_LOG", "koda_core=debug,koda_cli=info")
             .envs(self.keys)
             .envs(&self.model.env)
-            .envs(
-                task.spec
-                    .run
-                    .max_context_tokens
-                    .map(|n| ("KODA_MAX_CONTEXT_TOKENS", n.to_string())),
-            )
             .stdin(Stdio::null())
             .stdout(File::create(&transcript_path)?)
             .stderr(File::create(self.art.join("stderr.log"))?);
@@ -534,6 +572,14 @@ impl RunOne<'_> {
         }
         if let Some(url) = &self.model.base_url {
             cmd.args(["--base-url", url]);
+        }
+        // Settings go as flags, not environment: koda reads its settings
+        // from flags and config.toml (lijunzh/koda, CF-3).
+        if let Some(tokens) = task.spec.run.max_context_tokens.or(window_of(self.model)) {
+            cmd.args(["--max-context-tokens", &tokens.to_string()]);
+        }
+        if let Some(effort) = &self.model.reasoning_effort {
+            cmd.args(["--reasoning-effort", effort]);
         }
         // Outside the project, so the agent's file tools never list it.
         if let Some(mcp) = task.mcp_config()? {
@@ -680,13 +726,10 @@ fn host_of(url: &str) -> Option<&str> {
     (!host.is_empty()).then_some(host)
 }
 
-/// The context window pinned through the model's environment, if any.
-/// `null` means koda used the provider's own figure.
+/// The context window the run file pins for the model, if any. `null`
+/// means koda used the provider's own figure.
 fn window_of(model: &Model) -> Option<u64> {
-    model
-        .env
-        .get("KODA_MAX_CONTEXT_TOKENS")
-        .and_then(|v| v.trim().parse().ok())
+    model.max_context_tokens
 }
 
 /// Copy koda's log file(s) from the run's config dir into `art/koda.log`.
@@ -803,6 +846,8 @@ mod tests {
             model: None,
             base_url: base_url.map(str::to_string),
             engine: engine.map(str::to_string),
+            max_context_tokens: None,
+            reasoning_effort: None,
             env: BTreeMap::new(),
         }
     }
@@ -834,16 +879,40 @@ mod tests {
         assert_eq!(host_of("http:///v1"), None);
     }
 
+    fn run_with_model(model_toml: &str) -> RunFile {
+        toml::from_str(&format!(
+            "name = \"r\"\n[[variants]]\nname = \"main\"\nbin = \"koda\"\n\
+             [[models]]\nname = \"m\"\nprovider = \"lm-studio\"\n{model_toml}"
+        ))
+        .unwrap()
+    }
+
+    /// Older run files pin the window and effort in the model's `env`;
+    /// they become fields, which go to every variant as flags.
     #[test]
-    fn window_comes_from_the_model_env() {
-        let mut m = model("lm-studio", None, None);
-        assert_eq!(window_of(&m), None);
-        m.env
-            .insert("KODA_MAX_CONTEXT_TOKENS".into(), "131072".into());
-        assert_eq!(window_of(&m), Some(131_072));
-        m.env
-            .insert("KODA_MAX_CONTEXT_TOKENS".into(), "lots".into());
-        assert_eq!(window_of(&m), None);
+    fn settings_in_env_become_fields() {
+        let mut run = run_with_model(
+            "env = { KODA_MAX_CONTEXT_TOKENS = \"131_072\", KODA_REASONING_EFFORT = \"high\", KODA_MOCK_RESPONSES = \"x\" }",
+        );
+        settings_from_env(&mut run).unwrap();
+        let m = &run.models[0];
+        assert_eq!(window_of(m), Some(131_072));
+        assert_eq!(m.reasoning_effort.as_deref(), Some("high"));
+        assert_eq!(m.env.keys().collect::<Vec<_>>(), ["KODA_MOCK_RESPONSES"]);
+
+        let mut run = run_with_model("max_context_tokens = 65536\nreasoning_effort = \"low\"");
+        settings_from_env(&mut run).unwrap();
+        assert_eq!(window_of(&run.models[0]), Some(65_536));
+        assert_eq!(run.models[0].reasoning_effort.as_deref(), Some("low"));
+    }
+
+    #[test]
+    fn a_bad_or_doubled_setting_is_refused() {
+        let mut run = run_with_model("env = { KODA_MAX_CONTEXT_TOKENS = \"lots\" }");
+        assert!(settings_from_env(&mut run).is_err());
+        let mut run =
+            run_with_model("max_context_tokens = 1\nenv = { KODA_MAX_CONTEXT_TOKENS = \"2\" }");
+        assert!(settings_from_env(&mut run).is_err());
     }
 
     #[test]
