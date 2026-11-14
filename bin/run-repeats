@@ -37,7 +37,10 @@ field() { # run file, key: the first `key = "value"` in it
 load() { # configuration name, run file
   if [ "$(field "$2" provider)" = "llama-cpp" ]; then
     local ctx
-    ctx="$(sed -n 's/.*KODA_MAX_CONTEXT_TOKENS *= *"\([0-9]*\)".*/\1/p' "$2" | head -1)"
+    # `max_context_tokens = N`, or `KODA_MAX_CONTEXT_TOKENS = "N"` in an
+    # older run file's env.
+    ctx="$(sed -n -e 's/^ *max_context_tokens *= *\([0-9_]*\).*/\1/p' \
+      -e 's/.*KODA_MAX_CONTEXT_TOKENS *= *"\([0-9_]*\)".*/\1/p' "$2" | head -1 | tr -d _)"
     bin/serve-gguf "$(field "$2" model)" $ctx
     return
   fi

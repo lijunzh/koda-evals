@@ -16,11 +16,11 @@ Studio by default, with approvals off (`--approval-mode yolo`), like koda's
 XDG_CONFIG_HOME, so nothing from ~/.qwen reaches it: no settings, memory,
 skills, extensions or sessions. The settings written there select the model
 and nothing else; every other setting is Qwen Code's default, since the
-question is what a user gets. Two model settings come from the run file's
-`env`, the way koda reads them:
-- KODA_MAX_CONTEXT_TOKENS becomes the model's `contextWindowSize`. Qwen Code
+question is what a user gets. Two model settings come as koda's flags, which
+the harness passes from the run file:
+- --max-context-tokens becomes the model's `contextWindowSize`. Qwen Code
   doesn't probe a local server for its window.
-- KODA_REASONING_EFFORT is sent as `reasoning_effort` (through `extra_body`),
+- --reasoning-effort is sent as `reasoning_effort` (through `extra_body`),
   the field koda sends. Without it nothing is sent and the server's default
   applies.
 Qwen Code reads AGENTS.md as its context file, which is where the harness puts
@@ -262,7 +262,8 @@ class Translator:
 
 def parse_args(argv):
     opts = {"prompt": "", "model": "", "mode": "auto", "base_url": "", "translate": None,
-            "exit": "0", "cancelled": False, "version": False}
+            "exit": "0", "cancelled": False, "version": False,
+            "max_context_tokens": "", "reasoning_effort": ""}
     i = 0
     while i < len(argv):
         arg = argv[i]
@@ -278,8 +279,9 @@ def parse_args(argv):
             pass
         elif arg == "--cancelled":
             opts["cancelled"] = True
-        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit"):
-            opts[{"-p": "prompt", "--base-url": "base_url"}.get(arg, arg[2:])] = argv[i + 1]
+        elif arg in ("-p", "--model", "--mode", "--base-url", "--translate", "--exit",
+                     "--max-context-tokens", "--reasoning-effort"):
+            opts[{"-p": "prompt"}.get(arg, arg[2:].replace("-", "_"))] = argv[i + 1]
             i += 1
         elif arg == "--mcp-config":
             # Not passed on yet; running without the task's servers would
@@ -291,15 +293,13 @@ def parse_args(argv):
     return opts
 
 
-def settings(model, base_url, env):
+def settings(model, base_url, window="", effort=""):
     """Qwen Code's settings.json for this run: the model, and nothing else."""
     generation = {"timeout": 3_600_000}
-    window = env.get("KODA_MAX_CONTEXT_TOKENS", "")
     if window:
         if not window.isdigit():
-            raise ValueError(f"KODA_MAX_CONTEXT_TOKENS={window} is not a number")
+            raise ValueError(f"--max-context-tokens {window} is not a number")
         generation["contextWindowSize"] = int(window)
-    effort = env.get("KODA_REASONING_EFFORT", "")
     if effort:
         generation["extra_body"] = {"reasoning_effort": effort}
     return {
@@ -405,7 +405,8 @@ def main():
         return 2
 
     try:
-        conf = settings(opts["model"], opts["base_url"] or DEFAULT_BASE_URL, os.environ)
+        conf = settings(opts["model"], opts["base_url"] or DEFAULT_BASE_URL,
+                        opts["max_context_tokens"], opts["reasoning_effort"])
     except ValueError as err:
         print(f"qwen-as-koda: {err}", file=sys.stderr)
         return 2

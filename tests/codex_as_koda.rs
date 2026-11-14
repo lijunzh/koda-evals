@@ -43,7 +43,6 @@ fn wrapper(home: &Path, args: &[&str]) -> Output {
         .current_dir(home)
         .env("HOME", home)
         .env("XDG_CONFIG_HOME", home.join("config"))
-        .env("KODA_MAX_CONTEXT_TOKENS", "131072")
         .env("CARGO_TARGET_DIR", "/tmp/eval-target")
         .output()
         .unwrap()
@@ -84,6 +83,10 @@ fn codex_gets_a_fresh_home_the_window_and_the_server() {
             "http://localhost:1234/v1",
             "--provider",
             "lm-studio",
+            "--max-context-tokens",
+            "131072",
+            "--reasoning-effort",
+            "high",
         ],
     );
     assert!(

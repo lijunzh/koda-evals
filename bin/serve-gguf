@@ -16,7 +16,7 @@
 #   provider = "llama-cpp"
 #   base_url = "http://localhost:8080/v1"
 # The context defaults to what that model's runs have used; pin the same
-# window with KODA_MAX_CONTEXT_TOKENS in the run file. One model at a time:
+# window with max_context_tokens in the run file. One model at a time:
 # starting a model stops the one before. Logs go to
 # results/llama-server-<name>-<utc>.log (results/ is gitignored). Before it
 # starts a model it runs bin/gpu-check and refuses while a game, another
