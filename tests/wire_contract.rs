@@ -76,7 +76,10 @@ fn koda_eval(root: &Path, run_file: &Path) -> Command {
         .arg(root)
         .arg("run")
         .arg(run_file)
-        .env("XDG_CACHE_HOME", root.join("cache"));
+        .env("XDG_CACHE_HOME", root.join("cache"))
+        // Without this the harness reads keys from the real
+        // `~/.config/koda/db/koda.db`; a test must never touch it.
+        .env("XDG_CONFIG_HOME", root.join("config"));
     cmd
 }
 
