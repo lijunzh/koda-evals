@@ -1,0 +1,23 @@
+# The routine `core` check on Haiku (19 tasks once each), for PR and release
+# checks: copy it, set `ref` and the name, and note why it ran. The window is
+# capped at 117,000 tokens so every call stays below Haiku's 100K price step
+# (bash-readonly-fail-closed reached 115K at the default window). A release
+# that touches compaction or MCP adds its check by trigger (README, `core`).
+# Koda 0.7.0's `inputTokens` counts cached input, so read token columns with
+# that in mind until the harness subtracts it. Paid: each run needs Lijun's yes.
+#   ./target/release/koda-eval run runs/haiku-core.toml
+name = "haiku-core"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "main"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
