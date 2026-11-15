@@ -1,0 +1,24 @@
+# The routine `core` check on Haiku (21 tasks once each), for PR and release
+# checks: copy it, set `ref` and the name, and note why it ran. The window is
+# capped at 117,000 tokens so Koda compacts just below Haiku's 100K price
+# step (Lijun, 2026-11-15): compact-reasoning-summary then costs about $0.08
+# in 7.5 minutes instead of $1.43 in 19, and compaction runs, which it never
+# does at Haiku's default 1M window. The other tasks stay well under the cap.
+# Koda 0.7.0's `inputTokens` counts cached input, so read token columns with
+# that in mind until the harness subtracts it. Paid: each run needs Lijun's yes.
+#   ./target/release/koda-eval run runs/haiku-core.toml
+name = "haiku-core"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "main"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000

@@ -317,17 +317,29 @@ run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
 tasks included, so don't use that for a score. Changing what the suite holds,
 or how one of its tasks is graded, starts a new baseline.
 
-**`core` is the routine subset:** 20 of the 31, for PR checks and local-model
-checks; the full `suite` runs before a release. It keeps all 13 behaviour
-tasks and controls, the three tasks a local model still misses
-(`bash-classifier-escapes`, `bash-readonly-fail-closed`,
+**`core` is the routine subset:** 21 tasks, for PR checks and local-model
+checks; the full `suite` runs before a release. It keeps 20 of the suite's
+31: all 13 behaviour tasks and controls, the three tasks a local model still
+misses (`bash-classifier-escapes`, `bash-readonly-fail-closed`,
 `compact-reasoning-summary`) and one task per remaining kind of bug
 (`kata-utf8-sweep` and `loop-guard-char-boundary` for byte-boundary slicing,
 `kata-api-migration-tests`, `provider-flag-base-url`). It leaves out tasks
 that repeat a kind already covered or that every model passes in seconds.
-On Flash-Next at 0.6.0 its tasks took about 168 minutes a repeat against
-the suite's 291. Every `core` task is a `suite` task, so a `core` run
-compares task by task with full suite runs.
+On Flash-Next at 0.6.0 those took about 168 minutes a repeat against the
+suite's 291. Those 20 compare task by task with full suite runs.
+
+The 21st, `assistant-injection-mcp`, isn't a `suite` task: it is in `core`
+(2026-11-15) because no other routine task reaches a tool through MCP, which
+Koda's host now serves. It took about a minute on Flash-Next. Leave it out
+when comparing a `core` run with a suite run.
+
+**Haiku `core` runs cap the window at 117,000 tokens**
+(`runs/haiku-core.toml`), so Koda compacts just below Haiku's 100K price
+step. At Haiku's default 1M window nothing compacts, and
+`compact-reasoning-summary` ran to a 326K context: $1.43 and 19 minutes of
+the 0.7.0 candidate's earlier check's $1.61. Capped, it cost $0.08 in 7.5
+minutes (2026-11-13), and the run also exercises compaction, which no other
+`core` task does on Haiku.
 
 ### `memory`: the project's instructions
 
