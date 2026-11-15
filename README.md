@@ -317,21 +317,23 @@ run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
 tasks included, so don't use that for a score. Changing what the suite holds,
 or how one of its tasks is graded, starts a new baseline.
 
-**`core` is the routine subset:** 21 tasks, for PR checks and local-model
-checks; the full `suite` runs before a release. It keeps 20 of the suite's
-31: all 13 behaviour tasks and controls, the three tasks a local model still
-misses (`bash-classifier-escapes`, `bash-readonly-fail-closed`,
+**`core` is the routine subset:** 20 of the 31, for PR checks and local-model
+checks; the full `suite` runs before a release. It keeps all 13 behaviour
+tasks and controls, the three tasks a local model still misses
+(`bash-classifier-escapes`, `bash-readonly-fail-closed`,
 `compact-reasoning-summary`) and one task per remaining kind of bug
 (`kata-utf8-sweep` and `loop-guard-char-boundary` for byte-boundary slicing,
 `kata-api-migration-tests`, `provider-flag-base-url`). It leaves out tasks
 that repeat a kind already covered or that every model passes in seconds.
-On Flash-Next at 0.6.0 those took about 168 minutes a repeat against the
-suite's 291. Those 20 compare task by task with full suite runs.
+On Flash-Next at 0.6.0 its tasks took about 168 minutes a repeat against
+the suite's 291. Every `core` task is a `suite` task, so a `core` run
+compares task by task with full suite runs.
 
-The 21st, `assistant-injection-mcp`, isn't a `suite` task: it is in `core`
-(2026-11-15) because no other routine task reaches a tool through MCP, which
-Koda's host now serves. It took about a minute on Flash-Next. Leave it out
-when comparing a `core` run with a suite run.
+`core` holds what a coding agent's core does; compaction is part of that, so
+`compact-reasoning-summary` stays. MCP isn't (Lijun, 2026-11-15): Koda's own
+client tests start real MCP servers through the host, and a release that
+changes MCP gets the three MCP assistant tasks as a targeted check, as 0.6.4
+did (`runs/flashnext-064-mcp-check.toml`).
 
 **Haiku `core` runs cap the window at 117,000 tokens**
 (`runs/haiku-core.toml`), so Koda compacts just below Haiku's 100K price

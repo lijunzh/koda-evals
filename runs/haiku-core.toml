@@ -1,4 +1,4 @@
-# The routine `core` check on Haiku (21 tasks once each), for PR and release
+# The routine `core` check on Haiku (20 tasks once each), for PR and release
 # checks: copy it, set `ref` and the name, and note why it ran. The window is
 # capped at 117,000 tokens so Koda compacts just below Haiku's 100K price
 # step (Lijun, 2026-11-15): compact-reasoning-summary then costs about $0.08
