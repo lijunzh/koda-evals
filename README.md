@@ -317,31 +317,34 @@ run file with neither `tasks` nor `tags` sweeps all of `tasks/`, measurement
 tasks included, so don't use that for a score. Changing what the suite holds,
 or how one of its tasks is graded, starts a new baseline.
 
-**`core` is the routine subset:** 20 of the 31, for PR checks and local-model
+**`core` is the routine subset:** 19 of the 31, for PR checks and local-model
 checks; the full `suite` runs before a release. It keeps all 13 behaviour
-tasks and controls, the three tasks a local model still misses
-(`bash-classifier-escapes`, `bash-readonly-fail-closed`,
-`compact-reasoning-summary`) and one task per remaining kind of bug
-(`kata-utf8-sweep` and `loop-guard-char-boundary` for byte-boundary slicing,
-`kata-api-migration-tests`, `provider-flag-base-url`). It leaves out tasks
-that repeat a kind already covered or that every model passes in seconds.
-On Flash-Next at 0.6.0 its tasks took about 168 minutes a repeat against
-the suite's 291. Every `core` task is a `suite` task, so a `core` run
+tasks and controls, the two investigation tasks a local model still misses
+(`bash-classifier-escapes`, `bash-readonly-fail-closed`) and one task per
+remaining kind of bug (`kata-utf8-sweep` and `loop-guard-char-boundary` for
+byte-boundary slicing, `kata-api-migration-tests`, `provider-flag-base-url`).
+It leaves out tasks that repeat a kind already covered or that every model
+passes in seconds. Every `core` task is a `suite` task, so a `core` run
 compares task by task with full suite runs.
 
-`core` holds what a coding agent's core does; compaction is part of that, so
-`compact-reasoning-summary` stays. MCP isn't (Lijun, 2026-11-15): Koda's own
-client tests start real MCP servers through the host, and a release that
-changes MCP gets the three MCP assistant tasks as a targeted check, as 0.6.4
-did (`runs/flashnext-064-mcp-check.toml`).
+**Checks by trigger, not in `core` (Lijun, 2026-11-15):**
+- **Compaction:** a release that touches it (the compaction code, the summary
+  call, context accounting, how history is stored, or how the host runs a
+  compaction) gets `behaviour-spec-after-compact` on Haiku. Its 32K window
+  makes it compact two or three times, and it passes only if a long spec's
+  rules survive, in about 1.5 minutes a run.
+  `compact-reasoning-summary` left `core`: it is an investigation of Koda's
+  own compaction code, whose time goes to debugging and building Koda (19
+  minutes and $1.43 on Haiku at the default window, 7.5 minutes capped) while
+  it compacts once at most. It stays in `suite`.
+- **MCP:** a release that changes it gets the three MCP assistant tasks, as
+  0.6.4 did (`runs/flashnext-064-mcp-check.toml`). Koda's own client tests
+  start real MCP servers through the host on every PR.
 
 **Haiku `core` runs cap the window at 117,000 tokens**
-(`runs/haiku-core.toml`), so Koda compacts just below Haiku's 100K price
-step. At Haiku's default 1M window nothing compacts, and
-`compact-reasoning-summary` ran to a 326K context: $1.43 and 19 minutes of
-the 0.7.0 candidate's earlier check's $1.61. Capped, it cost $0.08 in 7.5
-minutes (2026-11-13), and the run also exercises compaction, which no other
-`core` task does on Haiku.
+(`runs/haiku-core.toml`), so every call stays below Haiku's 100K price step:
+`bash-readonly-fail-closed` reached 115K at the default window
+(haiku-5b-check).
 
 ### `memory`: the project's instructions
 

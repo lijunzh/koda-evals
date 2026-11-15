@@ -17,7 +17,7 @@ prompt = """Long sessions against a local reasoning model on an OpenAI-compatibl
 Find and fix the cause. An empty reply must not be stored as a summary, compaction should work for models that reason before they answer, and whatever happens to the summary, koda must not send a request past the window. The latest user message must still be in it.
 
 Some of this project's tests can't run here: those that start `sandbox-exec`, since macOS allows no sandbox inside the one your commands run in, and those that listen on a local port. They fail with "sandbox_apply: Operation not permitted" or a refused connection, and running them outside the sandbox is refused. Check your change with tests that need neither."""
-tags = ["rust", "koda-history", "logic", "investigation", "suite", "core"]
+tags = ["rust", "koda-history", "logic", "investigation", "suite"]
 cluster = "investigation"
 
 [repo]
