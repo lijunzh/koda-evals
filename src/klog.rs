@@ -131,6 +131,11 @@ pub fn parse(text: &str) -> LogSignals {
 
 /// The message of a `tracing` line (everything after `<target>:`), or
 /// `None` for a line that doesn't start like one.
+///
+/// Spans may come between the level and the target, as
+/// `session{session_id=…}:turn{… turn_id=…}: koda_core::inference: …`
+/// (koda 6i-a); their fields can hold spaces. The target is the first
+/// word that is a module path ending in `:`; span names never hold `::`.
 fn message(line: &str) -> Option<&str> {
     let (time, rest) = line.trim_start().split_once(' ')?;
     if !time.starts_with(|c: char| c.is_ascii_digit()) || !time.contains('T') {
@@ -140,8 +145,26 @@ fn message(line: &str) -> Option<&str> {
     if !matches!(level, "TRACE" | "DEBUG" | "INFO" | "WARN" | "ERROR") {
         return None;
     }
-    let (target, message) = rest.trim_start().split_once(' ')?;
-    target.ends_with(':').then_some(message.trim_start())
+    let rest = rest.trim_start();
+    let mut at = 0;
+    for word in rest.split(' ') {
+        let end = at + word.len();
+        if is_target(word) {
+            return Some(rest.get(end..).unwrap_or("").trim_start());
+        }
+        at = end + 1;
+    }
+    None
+}
+
+/// `koda_core::inference:`: a module path, then a colon.
+fn is_target(word: &str) -> bool {
+    word.strip_suffix(':').is_some_and(|path| {
+        path.contains("::")
+            && path.split("::").all(|part| {
+                !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            })
+    })
 }
 
 /// The `key=value` pairs of a message; quoted values lose their quotes.
@@ -270,6 +293,17 @@ model call purpose="turn" context_tokens=999999 (an echoed file, not a log line)
         // Nothing in the log: every field null.
         let v = LogSignals::default().to_json(Some(64_000), 100_000);
         assert!(v.as_object().unwrap().values().all(Value::is_null), "{v}");
+    }
+
+    /// Spans before the target, with spaces in their fields, as koda logs
+    /// a session's lines since its log database.
+    #[test]
+    fn lines_with_spans_before_the_target_are_read() {
+        let log = "2026-11-15T12:47:35.378092Z  INFO session{session_id=s1}:turn{session_id=s1 turn_id=t1}: koda_core::inference_helpers: model call purpose=\"turn\" context_tokens=1200\n\
+2026-11-15T12:47:35.379489Z  INFO session{session_id=s1}:turn{session_id=s1 turn_id=t1}: koda_core::inference: turn end outcome=\"complete\" ends_with_question=true\n";
+        let s = parse(log);
+        assert_eq!(s.peak_context_tokens, Some(1200));
+        assert_eq!(s.ended_with_question, Some(true));
     }
 
     #[test]

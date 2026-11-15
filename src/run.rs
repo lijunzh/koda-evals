@@ -533,6 +533,7 @@ impl RunOne<'_> {
         let project = self.work.join("project");
         let config = self.work.join("config");
         std::fs::create_dir_all(&config)?;
+        ask_for_log_file(&config)?;
         let shared = util::cache_dir().join("target").join(task.id());
         let target = self.work.join("target");
         project::seed_target(&shared, &target)?;
@@ -560,7 +561,8 @@ impl RunOne<'_> {
             .env_remove("KODA_MAX_CONTEXT_TOKENS")
             .env_remove("KODA_REASONING_EFFORT")
             // Debug text is the evidence for a failed row; a model's own
-            // `env` can still override this.
+            // `env` can still override this. It sets the log file's level:
+            // koda writes one only when `log_dir` asks (below).
             .env("RUST_LOG", "koda_core=debug,koda_cli=info")
             .envs(self.keys)
             .envs(&self.model.env)
@@ -732,10 +734,34 @@ fn window_of(model: &Model) -> Option<u64> {
     model.max_context_tokens
 }
 
-/// Copy koda's log file(s) from the run's config dir into `art/koda.log`.
-/// Best effort: a missing log is not an error.
+/// Where the run's koda writes its log file: koda writes `koda.log` there
+/// when `log_dir` is set (lijunzh/koda 6i-a).
+fn koda_log_dir(config: &Path) -> PathBuf {
+    config.join("koda").join("logs")
+}
+
+/// Ask the run's koda for a log file. Koda's log database keeps a
+/// session's newest 1,000 lines, and `klog` needs every `model call`; the
+/// file has them all. Set in the run's `config.toml`, not with `-c`: a
+/// koda from before `log_dir` reports an unknown key in the file and runs
+/// on (writing `koda-<pid>.log` as it always did), where an unknown `-c`
+/// key would stop it.
+fn ask_for_log_file(config: &Path) -> Result<()> {
+    let dir = config.join("koda");
+    std::fs::create_dir_all(&dir)?;
+    let path = koda_log_dir(config).display().to_string();
+    std::fs::write(
+        dir.join("config.toml"),
+        format!("log_dir = {}\n", toml::Value::String(path)),
+    )?;
+    Ok(())
+}
+
+/// Copy koda's log file from the run's config dir into `art/koda.log`:
+/// `koda.log`, or the `koda-<pid>.log` files a koda from before its log
+/// database wrote. Best effort: a missing log is not an error.
 fn keep_koda_log(config: &Path, art: &Path) {
-    let logs = config.join("koda").join("logs");
+    let logs = koda_log_dir(config);
     let Ok(entries) = std::fs::read_dir(&logs) else {
         return;
     };
@@ -743,8 +769,7 @@ fn keep_koda_log(config: &Path, art: &Path) {
     for entry in entries.flatten() {
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name.starts_with("koda-")
-            && name.ends_with(".log")
+        if (name == "koda.log" || (name.starts_with("koda-") && name.ends_with(".log")))
             && let Ok(bytes) = std::fs::read(entry.path())
         {
             out.extend_from_slice(&bytes);
@@ -838,6 +863,28 @@ fn command_line(cmd: &mut Command) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The run's koda is asked for a log file, in its `config.toml`, and
+    /// the harness keeps `koda.log` from there.
+    #[test]
+    fn the_run_asks_koda_for_a_log_file_and_keeps_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config");
+        ask_for_log_file(&config).unwrap();
+        let file: toml::Table =
+            toml::from_str(&std::fs::read_to_string(config.join("koda/config.toml")).unwrap())
+                .unwrap();
+        let logs = koda_log_dir(&config);
+        assert_eq!(file["log_dir"].as_str(), Some(logs.to_str().unwrap()));
+
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::write(logs.join("koda.log"), "model call purpose=\"turn\"\n").unwrap();
+        let art = dir.path().join("art");
+        std::fs::create_dir_all(&art).unwrap();
+        keep_koda_log(&config, &art);
+        let kept = std::fs::read_to_string(art.join("koda.log")).unwrap();
+        assert!(kept.contains("model call"));
+    }
 
     fn model(provider: &str, base_url: Option<&str>, engine: Option<&str>) -> Model {
         Model {

@@ -72,6 +72,8 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     let out = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
         .arg("--root")
         .arg(root)
+        // Never the real ~/.config/koda: the harness reads keys there.
+        .env("XDG_CONFIG_HOME", root.join("config"))
         .arg("run")
         .arg(&run_file)
         .env("XDG_CACHE_HOME", root.join("cache"))
@@ -159,6 +161,8 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     let regraded = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
         .arg("--root")
         .arg(root)
+        // Never the real ~/.config/koda: the harness reads keys there.
+        .env("XDG_CONFIG_HOME", root.join("config"))
         .args(["regrade"])
         .arg(dir)
         .output()
@@ -194,6 +198,8 @@ env = {{ KODA_MOCK_RESPONSES = {gives_up:?} }}
     let again = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
         .arg("--root")
         .arg(root)
+        // Never the real ~/.config/koda: the harness reads keys there.
+        .env("XDG_CONFIG_HOME", root.join("config"))
         .args(["report", "e2e"])
         .output()
         .unwrap();
@@ -268,6 +274,8 @@ env = {{ KODA_MOCK_RESPONSES = {acts:?} }}
     let out = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
         .arg("--root")
         .arg(root)
+        // Never the real ~/.config/koda: the harness reads keys there.
+        .env("XDG_CONFIG_HOME", root.join("config"))
         .arg("run")
         .arg(&run_file)
         .env("XDG_CACHE_HOME", root.join("cache"))

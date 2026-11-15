@@ -21,6 +21,8 @@ fn eval(root: &Path, args: &[&str]) {
     let out = Command::new(env!("CARGO_BIN_EXE_koda-eval"))
         .arg("--root")
         .arg(root)
+        // Never the real ~/.config/koda: the harness reads keys there.
+        .env("XDG_CONFIG_HOME", root.join("config"))
         .args(args)
         .env("XDG_CACHE_HOME", root.join("cache"))
         .output()
