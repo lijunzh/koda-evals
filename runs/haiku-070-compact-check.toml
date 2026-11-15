@@ -1,0 +1,30 @@
+# 0.7.0 release check, compaction (Lijun: "Yes, run it", 2026-11-15): one run
+# of behaviour-spec-after-compact on the release commit. 0.7.0 moved
+# compaction into the host as a turn of its own (6a-2) and the session store
+# it writes to into koda-state (8f), so a real model checks once that the
+# rules in a long spec survive compaction. The task pins a 32K window, so it
+# compacts; on Haiku it took 1m29s-1m48s a run with 2-3 compactions
+# (spec-after-compact-haiku, 20261109T170022Z). Paid API calls, about
+# $0.10-0.15.
+#   ./target/release/koda-eval run runs/haiku-070-compact-check.toml
+#
+# Result, 20261115T225520Z: passed, 2m51s. Four compactions, all
+# threshold-triggered and completed, at 86-97% of the window, removing 10-19
+# messages each with summaries of 1.5-2.1K tokens; peak context 94%, no call
+# past the window; 26 model calls. The baseline (20261109T170022Z) did 2-3
+# compactions a run in about 1m40s: this run did more model calls and so
+# compacted more, a single run within what that variance allows.
+name = "haiku-070-compact-check"
+tasks = ["behaviour-spec-after-compact"]
+repeats = 1
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "25882c9"  # release/0.7.0: main after lijunzh/koda#1643, with cargo update
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
