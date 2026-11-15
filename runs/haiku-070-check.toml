@@ -1,0 +1,34 @@
+# 0.7.0 release check (Lijun: "is good to check before a minor release",
+# 2026-11-15): the 20 `core` tasks once each on the 0.7.0 candidate, the
+# dependency-update commit of the release PR. Everything since haiku-5b-check
+# changed what `koda exec` runs on (the TUI on the client, the crate split,
+# koda serve, paged turns, host-read @ mentions, Read's binary refusal), with
+# no intended change to the turn loop, so it should pass as 5b did. A
+# regression check against haiku-5b-check (19 of 20, about $1.61 priced per
+# call), with its settings. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-070-check.toml
+#
+# Result, 20261115T222816Z: 19 of 19 graded, in about 10 minutes.
+# compact-reasoning-summary was stopped unfinished at Lijun's request: it was
+# the last task left and its place in `core` is under review (it was most of
+# 5b's cost). provider-flag-base-url, which 8e-3's provider changes touch,
+# passed; so did bash-classifier-escapes, the 5b miss. The report's tokens
+# look about 17x 5b's because koda 0.7.0's `inputTokens` counts cache reads
+# and writes too (8b); caching held: bash-readonly-fail-closed read 997,681
+# of 1,058,911 input tokens from cache and wrote 61,188, leaving about 42
+# uncached against 5b's 48. The harness's token columns need to subtract the
+# cached counts for 0.7.0 runs (the cached-token follow-up).
+name = "haiku-070-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "25882c9"  # release/0.7.0: main after lijunzh/koda#1643, with cargo update
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
