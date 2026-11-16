@@ -1,0 +1,31 @@
+# 0.7.3 release check (Lijun: "Release 0.7.3", 2026-11-16, with the cost
+# stated): the 19 `core` tasks once each on the 0.7.3 candidate, main at
+# lijunzh/koda 0b0cd0a (after the cargo update, #1680). Since 0.7.2: Read v2
+# step 3 (notebooks #1673, PDFs #1674, checked by read-pdf-whole and
+# read-pdf-pages on Haiku and Flash-Next), Read's description and its new
+# `pages` parameter (sent on every turn, so a core check), koda exec printing
+# a failed turn's error (#1679), docs, and zip 9.6.1. Nothing touched
+# compaction or the MCP client, so no trigger checks. Settings from
+# runs/haiku-core.toml (window capped at 117K). Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-073-check.toml
+#
+# Result, 20261116T210226Z: 19 of 19, no compactions, peak context 47% of
+# the window (bash-readonly-fail-closed, 55K). Slowest: bash-readonly-fail-
+# closed 3m04s and bash-classifier-escapes 2m31s, both building and testing
+# an old Koda checkout; the behaviour tasks 6-17 s. 3.16M prompt tokens, of
+# which 2.87M read from cache and 289K written to it, 82K out: about $0.11.
+name = "haiku-073-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "0b0cd0a"  # main after lijunzh/koda#1680
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
