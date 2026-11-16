@@ -4,6 +4,14 @@
 # `pages`), once each, at lijunzh/koda#1674's branch. Paid API calls, a few
 # cents.
 #   ./target/release/koda-eval run runs/haiku-read-pdf-check.toml
+#
+# Result, 20261116T170520Z (Lijun: "Run it", 2026-11-16): 2 of 2, about a
+# cent. read-pdf-whole: Read returned "a PDF, 3 pages", the document block
+# inside the tool result, and Haiku set 40, 12 and 2,500 from it in 9 s and
+# 5 calls with no API error: Anthropic takes a PDF there. read-pdf-pages:
+# Read refused 15 pages whole; Haiku read "1-10" then "11-15" as page images
+# and set 6, 375 and 640 KiB in 13 s and 7 calls, peak context 52K (44% of
+# 117K). Together 72K tokens written to cache, 242K read, 3K out.
 name = "haiku-read-pdf-check"
 tasks = ["read-pdf-whole", "read-pdf-pages"]
 repeats = 1
