@@ -71,12 +71,18 @@ if curl -s --max-time 2 "http://localhost:$PORT/health" >/dev/null 2>&1; then
   exit 1
 fi
 log="results/llama-server-${name//\//-}-$(date -u +%Y%m%dT%H%M%SZ).log"
+# A vision projector beside the model (mmproj-*.gguf) is loaded with it, so
+# the model takes images; /props then reports "modalities": {"vision":
+# true}, which Koda reads. Without one the model is served text only.
+vision=()
+mmproj="$(find "$(dirname "$gguf")" -maxdepth 1 -name 'mmproj-*.gguf' | sort | head -1)"
+[ -n "$mmproj" ] && vision=(--mmproj "$mmproj")
 # --jinja: the model's own chat template, which also splits reasoning into
 # reasoning_content. -ngl 999: every layer on the GPU.
-nohup llama-server -m "$gguf" --jinja -c "$ctx" -ngl 999 \
+nohup llama-server -m "$gguf" ${vision[@]+"${vision[@]}"} --jinja -c "$ctx" -ngl 999 \
   --port "$PORT" --alias "$name" >"$log" 2>&1 &
 echo $! >"$PIDFILE"
-echo "serve-gguf: $name, context $ctx, pid $!, log $log"
+echo "serve-gguf: $name, context $ctx, pid $!, log $log${mmproj:+, vision $(basename "$mmproj")}"
 
 for _ in $(seq 1 600); do
   if curl -sf --max-time 2 "http://localhost:$PORT/health" >/dev/null 2>&1; then
