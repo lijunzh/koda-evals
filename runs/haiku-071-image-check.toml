@@ -1,0 +1,27 @@
+# 0.7.1 release check for Read v2 (Lijun: "Merged. Test for me.",
+# 2026-11-15): read-image-limits once on Haiku at main after
+# lijunzh/koda#1657, the first Koda that shows the model an image file. The
+# values are only in a 2400x1500 whiteboard PNG, so a pass needs Read to
+# return the image, scaled, inside the Anthropic tool result. Paid API calls,
+# a few cents.
+#   ./target/release/koda-eval run runs/haiku-071-image-check.toml
+#
+# Result, 20261116T033824Z: passed, in 8 seconds and 5 model calls. Haiku
+# read src/lib.rs, searched, then read docs/limits.png, which came back as
+# "an image, 1568×980, scaled from 2400×1500", and set 5 (it named the
+# struck-through 3), 425 and 768 * 1024. 16,060 tokens written to cache,
+# 55,483 read from it, 1,291 out: about a cent.
+name = "haiku-071-image-check"
+repeats = 1
+tasks = ["read-image-limits"]
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "6fa268a"  # main after lijunzh/koda#1657
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
