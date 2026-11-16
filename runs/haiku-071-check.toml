@@ -19,6 +19,8 @@
 # measures. Slowest: bash-readonly-fail-closed 5m17s (it builds and tests
 # Koda), bash-classifier-escapes 2m40s, provider-flag-base-url 1m50s; the 14
 # behaviour tasks 6-11 s each.
+# Released as v0.7.1 on 2026-11-16 (lijunzh/koda 2f723be, #1667: the version
+# bump and CHANGELOG only, so the code checked is the code released).
 name = "haiku-071-check"
 repeats = 1
 tags = ["core"]
