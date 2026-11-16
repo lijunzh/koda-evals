@@ -121,7 +121,7 @@ pub struct Model {
     pub max_context_tokens: Option<u64>,
     /// The reasoning effort, passed as koda's `--reasoning-effort`.
     pub reasoning_effort: Option<String>,
-    /// Extra environment for this model's runs, e.g. `KODA_MOCK_RESPONSES`.
+    /// Extra environment for this model's runs, e.g. `RUST_LOG`.
     /// `KODA_MAX_CONTEXT_TOKENS` and `KODA_REASONING_EFFORT` here, as older
     /// run files write them, become the two fields above: koda reads its
     /// settings from flags and `config.toml`, not the environment.

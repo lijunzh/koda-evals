@@ -47,7 +47,7 @@ cargo run --locked -- list
 
 The default tests use fixtures and stand-in programs, without calling models.
 The optional `mock_e2e` test returns early unless `KODA_EVAL_TEST_BIN` points to
-a Koda binary built with its mock provider. See [Tests](README.md#tests) for
+a Koda binary; a scripted local stub server stands in for the model. See [Tests](README.md#tests) for
 that separate integration check. CI runs the default checks on Linux and macOS,
 without model credentials or that optional binary.
 
