@@ -1,0 +1,21 @@
+# Read v2 step 3 on Haiku: read-pdf-whole (3 pages: the PDF goes whole, as a
+# document block inside the Anthropic tool result, the first time Koda sends
+# one) and read-pdf-pages (15 pages, values on page 14: page images through
+# `pages`), once each, at lijunzh/koda#1674's branch. Paid API calls, a few
+# cents.
+#   ./target/release/koda-eval run runs/haiku-read-pdf-check.toml
+name = "haiku-read-pdf-check"
+tasks = ["read-pdf-whole", "read-pdf-pages"]
+repeats = 1
+jobs = 2
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "070dc50"  # feat/read-pdfs (lijunzh/koda#1674, on #1673)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000

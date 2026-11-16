@@ -1,0 +1,34 @@
+# Read v2 step 3 (lijunzh/koda#1674): the values are only in a 3-page PDF,
+# docs/rate-limiter-review.pdf, on its last page. Read returns a PDF of up to
+# 10 pages whole, so on Claude this checks the PDF reaching the model inside
+# the Anthropic tool result as a document block. A vision model on
+# llama-server gets page images, a text-only model the text. Bash on the PDF
+# fails the run. Release check for 0.7.3, not part of `suite`.
+id = "read-pdf-whole"
+prompt = """Fill in the three TODO values in `src/lib.rs` from the review."""
+tags = ["rust", "kata", "pdf", "read-v2"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/limits.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "before"
+a = { name = "Read", args_match = "rate-limiter-review\\.pdf" }
+b = "final_message"
+
+# The values come from Read, not from poppler or a script through Bash: no
+# Bash call names a .pdf file or a poppler tool. (Not a bare "pdf": the run's
+# work folder is named after the task, so every path holds "read-pdf".)
+[[check.transcript]]
+type = "no_call"
+call = { name = "Bash", args_match = "(?i)\\.pdf\\b|pdfto|pdfinfo|pdfimages" }
+
+[limits]
+wall_secs = 300
