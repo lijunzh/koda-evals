@@ -1,0 +1,38 @@
+# 0.7.1 release check (Lijun: "Run it", 2026-11-16): the 19 `core` tasks
+# once each on the 0.7.1 candidate, main at lijunzh/koda c3c189c (after #1666).
+# `cargo update` changed nothing, so the candidate is main itself. Since
+# haiku-070-check: Read v2 (images; checked by haiku-071-image-check), the
+# crate splits (koda-server), one TrustMode, per-subcommand flags, resume and
+# -i, /new /rename /status /init, plan mode in the TUI, fork, and the
+# test-support removal. Nothing intended to change the turn loop outside Plan
+# mode, and nothing touched compaction or the MCP client, so no trigger
+# checks. Settings from runs/haiku-core.toml (window capped at 117K). Paid API
+# calls.
+#   ./target/release/koda-eval run runs/haiku-071-check.toml
+#
+# Result, 20261116T140154Z: 18 of 19 in about 8 minutes, no compactions (peak
+# 70% of the window, bash-readonly-fail-closed). The miss is
+# bash-classifier-escapes: hidden tests 2 of 3; Haiku left `env PATH=/tmp ls /`
+# read-only, which the prompt names ("Any `env` that runs another command must
+# not be read-only"). The same task Haiku missed at 0.5.1 and in 5b and passed
+# at 0.7.0; it fixes an old Koda checkout, so nothing in 0.7.1 changes what it
+# measures. Slowest: bash-readonly-fail-closed 5m17s (it builds and tests
+# Koda), bash-classifier-escapes 2m40s, provider-flag-base-url 1m50s; the 14
+# behaviour tasks 6-11 s each.
+# Released as v0.7.1 on 2026-11-16 (lijunzh/koda 2f723be, #1667: the version
+# bump and CHANGELOG only, so the code checked is the code released).
+name = "haiku-071-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "c3c189c"  # main after lijunzh/koda#1666
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
