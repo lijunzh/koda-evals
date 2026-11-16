@@ -1,0 +1,36 @@
+# Read v2 step 3 (lijunzh/koda#1674): the values are only in a 15-page PDF,
+# docs/design-review.pdf, on page 14 ("9. Final limits"). Read returns at most
+# 10 pages whole, so the agent must read in ranges with `pages`. Page 4 lists
+# draft values marked superseded (3, 250 ms, 512 KiB), so reading only the
+# start gives wrong answers. Claude gets page images; a vision model on
+# llama-server page images; a text-only model the pages' text. Bash on the
+# PDF (pdftotext, a script) fails the run, so a pass came through Read.
+# Release check for 0.7.3, not part of `suite`.
+id = "read-pdf-pages"
+prompt = """Fill in the three TODO limits in `src/lib.rs` with the final values from the design review."""
+tags = ["rust", "kata", "pdf", "read-v2"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/limits.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "before"
+a = { name = "Read", args_match = "design-review\\.pdf" }
+b = "final_message"
+
+# The values come from Read, not from poppler or a script through Bash: no
+# Bash call names a .pdf file or a poppler tool. (Not a bare "pdf": the run's
+# work folder is named after the task, so every path holds "read-pdf".)
+[[check.transcript]]
+type = "no_call"
+call = { name = "Bash", args_match = "(?i)\\.pdf\\b|pdfto|pdfinfo|pdfimages" }
+
+[limits]
+wall_secs = 300

@@ -1,0 +1,31 @@
+# Read v2 step 3 on Flash-Next (llama-server with its vision projector, so
+# Koda learns from /props that it takes images but not PDFs): Read returns
+# PDF pages as images. read-pdf-whole (3 pages, read whole) and
+# read-pdf-pages (15 pages, the values on page 14, so `pages` is needed),
+# once each, at lijunzh/koda#1674's branch. Local, no API cost.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-read-pdf.toml
+#
+# Result, 20261116T164505Z (regraded after the no-Bash predicate was narrowed:
+# the work folder's name holds "read-pdf", so `cat -n src/lib.rs` had matched
+# a bare "pdf"): 2 of 2. read-pdf-whole: Read returned pages 1-3 as images
+# (1212x1568 each), 59 s. read-pdf-pages: Read refused 15 pages whole, the
+# model read "1-8" then "9-15" as images and set 6, 375 and 640 KiB, past
+# page 4's draft values; 2m34s, 40K peak context.
+name = "flashnext-read-pdf"
+tasks = ["read-pdf-whole", "read-pdf-pages"]
+repeats = 1
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 900
+
+[[variants]]
+name = "koda"
+ref = "070dc50"  # feat/read-pdfs (lijunzh/koda#1674, on #1673)
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
