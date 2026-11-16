@@ -1,0 +1,30 @@
+id = "read-image-limits"
+# Read v2 (lijunzh/koda#1657): the values the agent needs are only in a
+# picture. docs/limits.png is a whiteboard photo, 2400x1500, so Koda scales it
+# to 1568 wide before the model sees it. Its "Retries" line has 3 struck
+# through and 5 written beside it, and the body cap is in KiB, so the answer
+# needs reading the picture, not just finding digits. A model that can't see
+# images can't pass: nothing else in the project names the values. The
+# transcript predicate checks the agent opened the image with Read, so a pass
+# can't come from another route (OCR through Bash, say). Release check for
+# 0.7.1, not part of `suite`.
+prompt = """Fill in the three TODO limits in `src/lib.rs` with the values from the design review."""
+tags = ["rust", "kata", "image", "read-v2"]
+cluster = "kata"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden = [{ file = "src/lib.rs", test = "hidden/limits.rs" }]
+command = "cargo test --lib eval_hidden"
+timeout_secs = 300
+
+[[check.transcript]]
+type = "before"
+a = { name = "Read", args_match = "limits\\.png" }
+b = "final_message"
+
+[limits]
+wall_secs = 300
