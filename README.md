@@ -704,17 +704,14 @@ missing.
 
 ```bash
 cargo test
-# End to end through a real koda driven by its mock provider. The mock
-# exists only under koda's test-support feature; build into a separate
-# target dir so other koda builds don't replace it.
-cargo build -p koda-cli --features koda-core/test-support \
-  --manifest-path ~/repo/koda/Cargo.toml --target-dir ~/.cache/koda-eval/koda-test-support
-KODA_EVAL_TEST_BIN=~/.cache/koda-eval/koda-test-support/debug/koda cargo test --test mock_e2e
+# End to end through a real koda, its model calls answered by a scripted
+# stub of an OpenAI-compatible server on a local port. Any koda build works.
+cargo build -p koda-cli --manifest-path ~/repo/koda/Cargo.toml
+KODA_EVAL_TEST_BIN=~/repo/koda/target/debug/koda cargo test --test mock_e2e
 ```
 
-A koda built without that feature treats `--provider mock` as unknown and
-falls back to its default local server, so every run fails with "agent
-failed" and no tokens.
+Before koda dropped its `test-support` feature (lijunzh/koda, November 2026),
+this test drove koda's mock provider, which only a test build had.
 
 `tests/fixtures/koda-wire-v2.ndjson` is what a real koda wrote with
 `koda exec --json` against a local stub of an OpenAI-compatible server, and
