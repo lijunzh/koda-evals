@@ -1,0 +1,39 @@
+# 0.7.5 release check (Lijun: "Merge and release", 2026-11-16, with the
+# cost stated): the 19 `core` tasks once each on the 0.7.5 candidate,
+# lijunzh/koda main 3fb28de (the cargo update, #1696). Since 0.7.4: the
+# koda-tui, koda-oss and koda-git crate splits (#1689, #1690); every git
+# command Koda runs itself hardened through koda-git; TUI notifications
+# (#1691); the default branch in the git context and untracked files in
+# /diff (#1692); the --oss download notice (#1693); `koda --worktree` and
+# sub-agent worktrees outside the project (#1694); commit and PR
+# attribution in the git context (#1695). The git context changes the
+# system prompt of every run in a repository, so a core check. Settings
+# from runs/haiku-core.toml (window capped at 117K). Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-075-check.toml
+#
+# Result, 20261117T045354Z: 19 of 19, no compactions, peak context 67% of
+# the window (bash-readonly-fail-closed, 78K, a longer run than 0.7.4's
+# 61K). bash-classifier-escapes passed this time; its 0.7.1 and 0.7.4 miss
+# (`env PATH=/tmp ls /`) is Haiku's, not Koda's. Slowest:
+# bash-readonly-fail-closed 4m35s, bash-classifier-escapes 2m14s,
+# provider-flag-base-url 2m09s; the behaviour tasks 5-18 s. 3.48M prompt
+# tokens, of which 3.16M read from cache and 324K written to it, 89K out:
+# about $0.12.
+# Released as v0.7.5 on 2026-11-16 (lijunzh/koda 03c8b3a, #1697: the
+# version bump and CHANGELOG only, on top of 3fb28de squashed as #1696, so
+# the code checked is the code released).
+name = "haiku-075-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "3fb28de"  # lijunzh/koda#1696 (main after #1692-#1695 + cargo update)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
