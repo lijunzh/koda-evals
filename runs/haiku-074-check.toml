@@ -1,0 +1,34 @@
+# 0.7.4 release check (Lijun: "Yes, release", 2026-11-16, with the cost
+# stated): the 19 `core` tasks once each on the 0.7.4 candidate, main at
+# lijunzh/koda e8615bb plus the cargo update (#1687, e7c87c4). Since 0.7.3:
+# `koda --oss` (#1683, #1686), which moved where config overrides are
+# applied on every run, so a core check; `koda --mode plan` opening the TUI
+# in Plan (#1684); the local-server probes sending the API key; README and
+# docs; clap 4.6.8 and nix 0.31.4. Nothing touched compaction or the MCP
+# client, so no trigger checks. Settings from runs/haiku-core.toml (window
+# capped at 117K). Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-074-check.toml
+#
+# Result, 20261117T003926Z: 18 of 19, no compactions, peak context 52% of
+# the window (bash-readonly-fail-closed, 61K). The miss is
+# bash-classifier-escapes, hidden tests 2 of 3: Haiku again left
+# `env PATH=/tmp ls /` read-only, the same miss as the 0.7.1 check; it fixes
+# an old Koda checkout, so nothing in 0.7.4 changes what it measures.
+# Slowest: bash-readonly-fail-closed 7m07s and provider-flag-base-url 2m47s;
+# the behaviour tasks 5-17 s. 3.31M prompt tokens, of which 3.01M read from
+# cache and 301K written to it, 78K out: about $0.11, as for 0.7.3.
+name = "haiku-074-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "e7c87c4"  # lijunzh/koda#1687 (main e8615bb + cargo update)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
