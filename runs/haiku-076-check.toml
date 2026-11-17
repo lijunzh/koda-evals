@@ -1,0 +1,31 @@
+# 0.7.6 release check (Lijun: "Yes, release", 2026-11-17, with the cost
+# stated, about $0.15): the 19 `core` tasks once each on the 0.7.6
+# candidate, lijunzh/koda main d5aeffb (#1713). Since 0.7.5: the shared
+# server's slow-client and message-size limits (#1707); `/side` (#1708) and
+# `/review` (#1709); MCP tools deferred behind Claude's tool search, which
+# changes every Claude request's tool list (#1710); the `koda --help`
+# rewrite (#1711); the tool search's exact name (#1712); `Bash` with `tty`
+# and the WriteStdin tool, a new tool in every request (#1713). Settings
+# from runs/haiku-core.toml (window capped at 117K). Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-076-check.toml
+#
+# Result, 20261117T192229Z: 19 of 19, no compactions, peak context 51% of
+# the window (60K), under 0.7.5's 67%. Slowest: bash-readonly-fail-closed
+# 3m28s, bash-classifier-escapes 2m30s, provider-flag-base-url 1m29s. 3.18M
+# prompt tokens, of which 2.87M read from cache and 312K written to it, 78K
+# out, 128 calls: about $0.11.
+name = "haiku-076-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "d5aeffb"  # lijunzh/koda#1713 (main after #1707-#1713)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
