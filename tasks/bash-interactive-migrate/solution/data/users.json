@@ -1,0 +1,281 @@
+{
+  "project": "shopfront",
+  "applied": [
+    "0001_initial",
+    "0002_lowercase_emails",
+    "0003_drop_legacy_flag",
+    "0004_backfill_status"
+  ],
+  "users": [
+    {
+      "id": 1,
+      "name": "Ada Lovelace",
+      "email": "ada.lovelace0@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 2,
+      "name": "Grace Hamilton",
+      "email": "grace.hamilton1@example.com",
+      "last_login": "2026-02-02",
+      "status": "active"
+    },
+    {
+      "id": 3,
+      "name": "Alan Wirth",
+      "email": "alan.wirth2@example.com",
+      "last_login": "2026-03-03",
+      "status": "active"
+    },
+    {
+      "id": 4,
+      "name": "Edsger Hopper",
+      "email": "edsger.hopper3@example.com",
+      "last_login": "2026-04-04",
+      "status": "active"
+    },
+    {
+      "id": 5,
+      "name": "Barbara Knuth",
+      "email": "barbara.knuth4@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 6,
+      "name": "Ken Goldwasser",
+      "email": "ken.goldwasser5@example.com",
+      "last_login": "2026-06-06",
+      "status": "active"
+    },
+    {
+      "id": 7,
+      "name": "Dennis Turing",
+      "email": "dennis.turing6@example.com",
+      "last_login": "2026-07-07",
+      "status": "active"
+    },
+    {
+      "id": 8,
+      "name": "Margaret Allen",
+      "email": "margaret.allen7@example.com",
+      "last_login": "2026-08-08",
+      "status": "active"
+    },
+    {
+      "id": 9,
+      "name": "Donald Lampson",
+      "email": "donald.lampson8@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 10,
+      "name": "Frances Dijkstra",
+      "email": "frances.dijkstra9@example.com",
+      "last_login": "2026-10-10",
+      "status": "active"
+    },
+    {
+      "id": 11,
+      "name": "John McCarthy",
+      "email": "john.mccarthy10@example.com",
+      "last_login": "2026-11-11",
+      "status": "active"
+    },
+    {
+      "id": 12,
+      "name": "Radia Micali",
+      "email": "radia.micali11@example.com",
+      "last_login": "2026-01-12",
+      "status": "active"
+    },
+    {
+      "id": 13,
+      "name": "Tim Liskov",
+      "email": "tim.liskov12@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 14,
+      "name": "Leslie Perlman",
+      "email": "leslie.perlman13@example.com",
+      "last_login": "2026-03-14",
+      "status": "active"
+    },
+    {
+      "id": 15,
+      "name": "Niklaus Diffie",
+      "email": "niklaus.diffie14@example.com",
+      "last_login": "2026-04-15",
+      "status": "active"
+    },
+    {
+      "id": 16,
+      "name": "Shafi Thompson",
+      "email": "shafi.thompson15@example.com",
+      "last_login": "2026-05-16",
+      "status": "active"
+    },
+    {
+      "id": 17,
+      "name": "Butler Berners-Lee",
+      "email": "butler.berners-lee16@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 18,
+      "name": "Silvio Hellman",
+      "email": "silvio.hellman17@example.com",
+      "last_login": "2026-07-18",
+      "status": "active"
+    },
+    {
+      "id": 19,
+      "name": "Whitfield Ritchie",
+      "email": "whitfield.ritchie18@example.com",
+      "last_login": "2026-08-19",
+      "status": "active"
+    },
+    {
+      "id": 20,
+      "name": "Martin Lamport",
+      "email": "martin.lamport19@example.com",
+      "last_login": "2026-09-20",
+      "status": "active"
+    },
+    {
+      "id": 21,
+      "name": "Ada Lovelace",
+      "email": "ada.lovelace20@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 22,
+      "name": "Grace Hamilton",
+      "email": "grace.hamilton21@example.com",
+      "last_login": "2026-11-22",
+      "status": "active"
+    },
+    {
+      "id": 23,
+      "name": "Alan Wirth",
+      "email": "alan.wirth22@example.com",
+      "last_login": "2026-01-23",
+      "status": "active"
+    },
+    {
+      "id": 24,
+      "name": "Edsger Hopper",
+      "email": "edsger.hopper23@example.com",
+      "last_login": "2026-02-24",
+      "status": "active"
+    },
+    {
+      "id": 25,
+      "name": "Barbara Knuth",
+      "email": "barbara.knuth24@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 26,
+      "name": "Ken Goldwasser",
+      "email": "ken.goldwasser25@example.com",
+      "last_login": "2026-04-26",
+      "status": "active"
+    },
+    {
+      "id": 27,
+      "name": "Dennis Turing",
+      "email": "dennis.turing26@example.com",
+      "last_login": "2026-05-27",
+      "status": "active"
+    },
+    {
+      "id": 28,
+      "name": "Margaret Allen",
+      "email": "margaret.allen27@example.com",
+      "last_login": "2026-06-01",
+      "status": "active"
+    },
+    {
+      "id": 29,
+      "name": "Donald Lampson",
+      "email": "donald.lampson28@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 30,
+      "name": "Frances Dijkstra",
+      "email": "frances.dijkstra29@example.com",
+      "last_login": "2026-08-03",
+      "status": "active"
+    },
+    {
+      "id": 31,
+      "name": "John McCarthy",
+      "email": "john.mccarthy30@example.com",
+      "last_login": "2026-09-04",
+      "status": "active"
+    },
+    {
+      "id": 32,
+      "name": "Radia Micali",
+      "email": "radia.micali31@example.com",
+      "last_login": "2026-10-05",
+      "status": "active"
+    },
+    {
+      "id": 33,
+      "name": "Tim Liskov",
+      "email": "tim.liskov32@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 34,
+      "name": "Leslie Perlman",
+      "email": "leslie.perlman33@example.com",
+      "last_login": "2026-01-07",
+      "status": "active"
+    },
+    {
+      "id": 35,
+      "name": "Niklaus Diffie",
+      "email": "niklaus.diffie34@example.com",
+      "last_login": "2026-02-08",
+      "status": "active"
+    },
+    {
+      "id": 36,
+      "name": "Shafi Thompson",
+      "email": "shafi.thompson35@example.com",
+      "last_login": "2026-03-09",
+      "status": "active"
+    },
+    {
+      "id": 37,
+      "name": "Butler Berners-Lee",
+      "email": "butler.berners-lee36@example.com",
+      "status": "invited"
+    },
+    {
+      "id": 38,
+      "name": "Silvio Hellman",
+      "email": "silvio.hellman37@example.com",
+      "last_login": "2026-05-11",
+      "status": "active"
+    },
+    {
+      "id": 39,
+      "name": "Whitfield Ritchie",
+      "email": "whitfield.ritchie38@example.com",
+      "last_login": "2026-06-12",
+      "status": "active"
+    },
+    {
+      "id": 40,
+      "name": "Martin Lamport",
+      "email": "martin.lamport39@example.com",
+      "last_login": "2026-07-13",
+      "status": "active"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+# A/B for Koda's interactive processes (branch feat/interactive-processes:
+# Bash with `tty`, and WriteStdin) on Flash-Next, the local model, on the
+# new task bash-interactive-migrate: a migration tool that runs only at a
+# terminal and asks two questions. `main` has no terminal for its commands,
+# so on macOS it should fail; the branch should pass. One at a time.
+#
+# First run, 20261117T180825Z: main 0 of 3, as expected. The branch's runs
+# were void: WriteStdin wasn't in the tool list sent to the model (fixed in
+# the branch), so the model started the tool with a terminal and then said
+# it couldn't type into it. The branch is rerun alone in
+# runs/flashnext-interactive-migrate-tty.toml.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-interactive-migrate.toml --jobs 1
+name = "flashnext-interactive-migrate"
+tasks = ["bash-interactive-migrate"]
+repeats = 3
+jobs = 1
+
+[[variants]]
+name = "main"
+ref = "main"
+
+[[variants]]
+name = "tty"
+ref = "feat/interactive-processes"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

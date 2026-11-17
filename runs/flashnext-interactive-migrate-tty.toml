@@ -1,0 +1,25 @@
+# The branch half of runs/flashnext-interactive-migrate.toml, rerun after
+# WriteStdin was added to the tool list the model gets (its first runs never
+# saw the tool). `main` isn't rerun: nothing changed for it.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-interactive-migrate-tty.toml --jobs 1
+#
+# Result, 20261117T182421Z: 3 of 3, 59-82 s a run, about 104K tokens. Every
+# run read manage.py, started `./manage.py migrate` with tty, typed "y\n" at
+# the backup prompt and "shopfront\n" at the confirmation with WriteStdin,
+# and reported 6894103c1d. With main's 0 of 3: the task needs the feature.
+name = "flashnext-interactive-migrate-tty"
+tasks = ["bash-interactive-migrate"]
+repeats = 3
+jobs = 1
+
+[[variants]]
+name = "tty"
+ref = "feat/interactive-processes"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
