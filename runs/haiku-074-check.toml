@@ -17,6 +17,9 @@
 # Slowest: bash-readonly-fail-closed 7m07s and provider-flag-base-url 2m47s;
 # the behaviour tasks 5-17 s. 3.31M prompt tokens, of which 3.01M read from
 # cache and 301K written to it, 78K out: about $0.11, as for 0.7.3.
+# Released as v0.7.4 on 2026-11-16 (lijunzh/koda 63863de, #1688: the version
+# bump and CHANGELOG only, on top of e7c87c4 squashed as #1687, so the code
+# checked is the code released).
 name = "haiku-074-check"
 repeats = 1
 tags = ["core"]
