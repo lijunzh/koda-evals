@@ -1,0 +1,38 @@
+id = "bash-interactive-migrate"
+# Koda-only (2026-11-17), for lijunzh/koda's interactive processes (Bash with
+# `tty`, and WriteStdin). A project's `./manage.py migrate` refuses to run
+# without a terminal and asks two questions: whether to back up first, and
+# the project name to confirm a migration that drops data. The agent has to
+# run it at a terminal and answer. The hidden check wants the data migrated
+# by the tool itself: a log entry per migration signed with a nonce the tool
+# draws, and manage.py unchanged. Editing the data by hand, faking the log
+# or removing the confirmation fails.
+# Without a terminal for its commands the task can't be done in the sandbox
+# on macOS: `script`, `expect` and Python's `pty` need /dev/ptmx, which the
+# sandbox closes, and running outside the sandbox needs an approval that a
+# headless run refuses. On Linux, bwrap's /dev has a ptmx, so `script` may
+# work there.
+prompt = """Apply the pending migrations with `./manage.py migrate` and tell me the schema version it reports. Keep the backup it offers."""
+tags = ["python", "bash", "interactive", "koda-only"]
+cluster = "judgement"
+judgement = "drives an interactive command by answering its prompts at a terminal"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 60
+
+[[check.transcript]]
+type = "final_message"
+matches = "6894103c1d"
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 600

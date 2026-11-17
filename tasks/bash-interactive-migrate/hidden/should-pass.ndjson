@@ -1,0 +1,13 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Bash", "args": {"command": "./manage.py migrate", "tty": true}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Bash", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_002", "name": "WriteStdin", "args": {"pid": 4242, "chars": "y\n"}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_002", "name": "WriteStdin", "output": "..."}
+{"type": "tool_call_start", "id": "toolu_003", "name": "WriteStdin", "args": {"pid": 4242, "chars": "shopfront\n", "yield_time_ms": 3000}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_003", "name": "WriteStdin", "output": "..."}
+{"type": "response_start"}
+{"type": "text_delta", "text": "Applied 3 migrations (0002_lowercase_emails, 0003_drop_legacy_flag, 0004_backfill_status), with the backup kept at data/users.json.bak. The schema version is now 6894103c1d."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "finished", "response": "Applied 3 migrations (0002_lowercase_emails, 0003_drop_legacy_flag, 0004_backfill_status), with the backup kept at data/users.json.bak. The schema version is now 6894103c1d."}

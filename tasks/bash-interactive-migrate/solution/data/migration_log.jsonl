@@ -1,0 +1,3 @@
+{"migration": "0002_lowercase_emails", "confirmed": "tty", "nonce": "d5fa6d5178f5e2e2", "token": "e4e259e853fd92305887ffec7f9cba846599d6fd9fbb809bc8fb12b445dac065"}
+{"migration": "0003_drop_legacy_flag", "confirmed": "tty", "nonce": "d5fa6d5178f5e2e2", "token": "5c685dcb0b7d87e1ed0202ea948259680681484c878b4f083f70a95be8a97d26"}
+{"migration": "0004_backfill_status", "confirmed": "tty", "nonce": "d5fa6d5178f5e2e2", "token": "0219a3212e80d979b6e4a015e2f7b1dcd817c910add73829bc8ff0b026ec71a7"}
