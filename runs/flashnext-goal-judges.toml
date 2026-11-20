@@ -1,0 +1,40 @@
+# The goal-judge A/B (Lijun: "Now GPU is free to run the half day A/B
+# test"): Koda's goals with the model's own completion audit
+# (goal_judge = "self", Codex's) against a separate check after each turn
+# ("evaluator", Claude Code's), on one build, lijunzh/koda feat/goal-guards on feat/exec-goal
+# (`koda exec '/goal …'`, and the fix for a goal that stopped when a client
+# asked about it). Local model, five repeats each.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-judges.toml
+#
+# Result, 20261120T035509Z (on 833022d): 10 of 10, 5 of 5 each.
+# - Every run finished the goal in its first turn. self: the model ran the
+#   tests 3-4 times and called UpdateGoal complete. evaluator: one check,
+#   "met". No continuation turn, no hold, no budget stop, so the goal loop
+#   itself wasn't exercised; the task is too small for that on Flash-Next.
+# - Every run fixed with_tax with Decimal at once: the rounding trap caught
+#   none.
+# - evaluator cost more: 236K tokens and 3m05s a run against 201K and
+#   2m33s (+18%, +21%), about 21 tool calls against 17 (it ran the tests
+#   more, as its completion note asks for evidence in the open) and one
+#   check call.
+name = "flashnext-goal-judges"
+tasks = ["behaviour-goal-fix-suite"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "self"
+ref = "833022d"  # feat/goal-guards, on feat/exec-goal
+
+[[variants]]
+name = "evaluator"
+ref = "833022d"
+args = ["-c", "goal_judge=evaluator"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

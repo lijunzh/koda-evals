@@ -1,0 +1,27 @@
+id = "behaviour-goal-fix-suite"
+# Koda-only (2026-11-19), for the goal-judge A/B: Koda's goals (`/goal`,
+# lijunzh/koda#1721 and #1722), run headless with `koda exec '/goal …'`. Six
+# bugs in a small shop library, each behind one failing test, across three
+# modules. One is subtle: with_tax must round half up, and round() on the
+# float 10.725 gives 10.72, so a quick fix still fails and the model has to
+# look again. The hidden check tries the same six behaviours on more cases
+# and that the visible tests are unchanged. What the A/B compares is how the
+# goal ends: the model's own completion audit (goal_judge = "self", Codex's)
+# against a separate check after each turn ("evaluator", Claude Code's),
+# whether either calls it done too early, and the turns and tokens spent.
+prompt = """/goal Every test in tests/ passes with `python3 -m unittest discover -s tests`, without changing any test file."""
+tags = ["python", "behaviour", "goal", "koda-only"]
+cluster = "judgement"
+judgement = "works toward a goal over several turns and stops when it's met"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 60
+
+[limits]
+wall_secs = 1800

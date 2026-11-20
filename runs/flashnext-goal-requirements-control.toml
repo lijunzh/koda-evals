@@ -1,0 +1,22 @@
+# The baseline for runs/flashnext-goal-requirements.toml: the same task as a
+# plain prompt, with no goal, on the same build. Five repeats.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-requirements-control.toml
+#
+# Result, 20261120T113406Z: 5 of 5 in one turn each (219K tokens, 3m29s a
+# run). The plain prompt met all five requirements every time.
+name = "flashnext-goal-requirements-control"
+tasks = ["behaviour-goal-requirements-control"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "plain"
+ref = "833022d"  # feat/goal-guards, on feat/exec-goal
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

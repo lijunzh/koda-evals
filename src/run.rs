@@ -91,6 +91,11 @@ pub struct Variant {
     /// A branch, tag or commit in the koda checkout.
     #[serde(rename = "ref")]
     pub git_ref: Option<String>,
+    /// Extra `koda exec` flags for this variant's runs, such as
+    /// `["-c", "goal_judge=evaluator"]`: two variants of one build that
+    /// differ in a setting.
+    #[serde(default)]
+    pub args: Vec<String>,
 }
 
 /// A variant with its binary in hand.
@@ -100,6 +105,7 @@ struct Built {
     version: String,
     git_ref: Option<String>,
     sha: Option<String>,
+    args: Vec<String>,
 }
 
 /// API keys never go in a run file: koda reads them from the environment
@@ -223,6 +229,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
             version,
             git_ref: variant.git_ref.clone(),
             sha,
+            args: variant.args.clone(),
         });
     }
 
@@ -261,7 +268,7 @@ pub fn run(run_path: &Path, opts: &Options) -> Result<PathBuf> {
         "tasks": tasks.iter().map(|t| t.id()).collect::<Vec<_>>(),
         "variants": variants.iter().map(|v| json!({
             "name": v.name, "bin": v.bin, "version": v.version,
-            "ref": v.git_ref, "sha": v.sha,
+            "ref": v.git_ref, "sha": v.sha, "args": v.args,
         })).collect::<Vec<_>>(),
         // Task projects have no toolchain pin of their own, so they build
         // with rustup's default.
@@ -430,6 +437,7 @@ impl Job<'_> {
             task: self.task,
             variant: &self.variant.name,
             bin: &self.variant.bin,
+            args: &self.variant.args,
             model: self.model,
             repeat: self.repeat,
             art: &self.art,
@@ -507,6 +515,8 @@ struct RunOne<'a> {
     task: &'a Task,
     variant: &'a str,
     bin: &'a Path,
+    /// The variant's extra flags.
+    args: &'a [String],
     model: &'a Model,
     repeat: u32,
     art: &'a Path,
@@ -572,6 +582,7 @@ impl RunOne<'_> {
         if let Some(model) = &self.model.model {
             cmd.args(["--model", model]);
         }
+        cmd.args(self.args);
         if let Some(url) = &self.model.base_url {
             cmd.args(["--base-url", url]);
         }

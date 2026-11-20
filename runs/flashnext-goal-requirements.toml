@@ -1,0 +1,37 @@
+# Does a goal help? (Lijun: "Set it up".) behaviour-goal-requirements, one
+# objective with five requirements, under each judge, on lijunzh/koda
+# 833022d (#1729 on #1728). runs/flashnext-goal-requirements-control.toml is the
+# same task as a plain prompt: the baseline. Five repeats each.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-requirements.toml
+#
+# Result, 20261120T115136Z: 10 of 10, and the plain baseline also passed
+# 5 of 5 (20261120T113406Z), so the goal changed nothing the checks can see.
+#   plain      5/5  219K tokens  3m29s  21 tool calls
+#   self       5/5  275K tokens  4m40s  23 tool calls
+#   evaluator  5/5  249K tokens  4m58s  22 tool calls
+# Every run finished in one turn; every goal ended complete, and the
+# evaluator accepted each on its first check. Flash-Next didn't leave out
+# the changelog, README or test requirements from a plain prompt, so this
+# task can't show what a goal adds. The goal cost about 14-25% more tokens
+# and 34-42% more time, with five runs an arm and wide spread.
+name = "flashnext-goal-requirements"
+tasks = ["behaviour-goal-requirements"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "self"
+ref = "833022d"  # feat/goal-guards, on feat/exec-goal
+
+[[variants]]
+name = "evaluator"
+ref = "833022d"
+args = ["-c", "goal_judge=evaluator"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
