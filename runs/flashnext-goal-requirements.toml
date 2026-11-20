@@ -4,6 +4,17 @@
 # same task as a plain prompt: the baseline. Five repeats each.
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-requirements.toml
+#
+# Result, 20261120T115136Z: 10 of 10, and the plain baseline also passed
+# 5 of 5 (20261120T113406Z), so the goal changed nothing the checks can see.
+#   plain      5/5  219K tokens  3m29s  21 tool calls
+#   self       5/5  275K tokens  4m40s  23 tool calls
+#   evaluator  5/5  249K tokens  4m58s  22 tool calls
+# Every run finished in one turn; every goal ended complete, and the
+# evaluator accepted each on its first check. Flash-Next didn't leave out
+# the changelog, README or test requirements from a plain prompt, so this
+# task can't show what a goal adds. The goal cost about 14-25% more tokens
+# and 34-42% more time, with five runs an arm and wide spread.
 name = "flashnext-goal-requirements"
 tasks = ["behaviour-goal-requirements"]
 repeats = 5

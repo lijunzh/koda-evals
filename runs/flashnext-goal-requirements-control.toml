@@ -2,6 +2,9 @@
 # plain prompt, with no goal, on the same build. Five repeats.
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-requirements-control.toml
+#
+# Result, 20261120T113406Z: 5 of 5 in one turn each (219K tokens, 3m29s a
+# run). The plain prompt met all five requirements every time.
 name = "flashnext-goal-requirements-control"
 tasks = ["behaviour-goal-requirements-control"]
 repeats = 5
