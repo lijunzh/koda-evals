@@ -1,0 +1,19 @@
+id = "behaviour-goal-pipeline-control"
+# behaviour-goal-pipeline as a plain prompt, with no goal: the baseline that
+# says what the goal adds when the turns are the model's own.
+prompt = """Make `python3 pipeline.py` pass (exit 0), without changing pipeline.py, tests/ or data/. The pipeline takes about a minute a stage, so run it in the background."""
+tags = ["python", "behaviour", "goal", "background", "koda-only"]
+cluster = "judgement"
+judgement = "fixes what a slow background pipeline reports until it passes"
+
+[repo]
+fixture = "../behaviour-goal-pipeline/fixture"
+solution = "../behaviour-goal-pipeline/solution"
+
+[check]
+hidden_files = [{ from = "../behaviour-goal-pipeline/hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[limits]
+wall_secs = 3600

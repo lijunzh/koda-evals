@@ -1,0 +1,35 @@
+id = "behaviour-goal-pipeline"
+# Koda-only (2026-11-20), for goals that span turns without an imposed limit
+# (Lijun: "we should consider design and test for multi-step tasks"). A
+# three-stage release pipeline, about a minute a stage, stopping at the
+# first stage that fails, so each failure shows only after the one before
+# is fixed: a rounding rule (unit tests), the report's order and the
+# export's shape (integer cents). The report and export checks ship as an
+# encoded blob (the "staging services"), so their demands show only in a
+# stage's output: the first version had them in plain Python with a
+# PIPELINE_STAGE_SECONDS switch, and every run read the checks, fixed all
+# three bugs with the waits off, and finished in one turn. The prompt asks for it in the
+# background; Flash-Next ends its turn while a background command runs, and
+# the command's exit starts the next turn (behaviour-wait-background), so
+# three fixes mean several turns. behaviour-goal-pipeline-control is the
+# same work as a plain prompt: koda exec waits for background commands
+# there too, so what separates the arms is whether the model carries on
+# after each wake. The hidden check runs the stages' checks without the
+# waits, checks that pipeline.py, the tests and the data are unchanged, and
+# tries each fix on more cases.
+prompt = """/goal `python3 pipeline.py` passes (exits 0), without changing pipeline.py, tests/ or data/. The pipeline takes about a minute a stage, so run it in the background."""
+tags = ["python", "behaviour", "goal", "background", "koda-only"]
+cluster = "judgement"
+judgement = "works toward a goal over turns that wait on a background command"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[limits]
+wall_secs = 3600
