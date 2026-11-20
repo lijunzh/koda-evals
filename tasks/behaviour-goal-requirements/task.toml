@@ -1,0 +1,27 @@
+id = "behaviour-goal-requirements"
+# Koda-only (2026-11-20). The third goal task, for whether a goal helps at all
+# (Lijun: "Set it up"): one objective with five requirements (the rate limit,
+# the config key with its default, tests, a CHANGELOG entry, a README row),
+# the kind where a model stops once the code works and leaves the paperwork.
+# A goal's completion audit (goal_judge = "self") or its check after each
+# turn ("evaluator") should catch what's missing and start another turn.
+# behaviour-goal-requirements-control is the same task as a plain prompt;
+# the difference between the two is what the goal adds. The hidden check
+# tests each requirement separately; a window of 60 seconds is measured
+# either sliding or fixed, and requests refused may count or not.
+prompt = """/goal Add a per-user rate limit to `App.handle` in app/api.py: once a user has made `rate_limit_per_minute` requests within 60 seconds (timed with `app.clock.now()`), their further requests get status 429 until the minute has passed. Read the limit from `config.toml` through `app.config.load`, as the key `rate_limit_per_minute`, defaulting to 60. Add tests for it in `tests/test_rate_limit.py`, an entry under `## Unreleased` in CHANGELOG.md, and a row for the key in the configuration table in README.md. All tests must pass with `python3 -m unittest discover -s tests`."""
+tags = ["python", "behaviour", "goal", "koda-only"]
+cluster = "judgement"
+judgement = "works toward a goal with several requirements and stops when all are met"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 60
+
+[limits]
+wall_secs = 3600

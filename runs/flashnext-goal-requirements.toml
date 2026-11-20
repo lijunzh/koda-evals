@@ -1,0 +1,26 @@
+# Does a goal help? (Lijun: "Set it up".) behaviour-goal-requirements, one
+# objective with five requirements, under each judge, on lijunzh/koda
+# 833022d (#1729 on #1728). runs/flashnext-goal-requirements-control.toml is the
+# same task as a plain prompt: the baseline. Three repeats each.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-requirements.toml
+name = "flashnext-goal-requirements"
+tasks = ["behaviour-goal-requirements"]
+repeats = 3
+jobs = 1
+
+[[variants]]
+name = "self"
+ref = "833022d"  # feat/goal-guards, on feat/exec-goal
+
+[[variants]]
+name = "evaluator"
+ref = "833022d"
+args = ["-c", "goal_judge=evaluator"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
