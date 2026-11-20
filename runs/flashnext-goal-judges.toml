@@ -1,0 +1,28 @@
+# The goal-judge A/B (Lijun: "Now GPU is free to run the half day A/B
+# test"): Koda's goals with the model's own completion audit
+# (goal_judge = "self", Codex's) against a separate check after each turn
+# ("evaluator", Claude Code's), on one build, lijunzh/koda feat/exec-goal
+# (`koda exec '/goal …'`, and the fix for a goal that stopped when a client
+# asked about it). Local model, five repeats each.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-judges.toml
+name = "flashnext-goal-judges"
+tasks = ["behaviour-goal-fix-suite"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "self"
+ref = "d50ff49"  # feat/exec-goal
+
+[[variants]]
+name = "evaluator"
+ref = "d50ff49"
+args = ["-c", "goal_judge=evaluator"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
