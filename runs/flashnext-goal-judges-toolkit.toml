@@ -6,6 +6,14 @@
 # call. Five repeats each.
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-judges-toolkit.toml
+#
+# Stopped after three runs, 20261120T110909Z (Lijun: "If the first three
+# runs of the current test all end up in one turn, we don't have to wait"):
+# self r1-r3 passed in 9m46s, 6m23s and 8m00s (522K, 403K, 504K tokens),
+# each finishing the 24 fixes and 61 lint problems in its first turn and
+# marking the goal complete. More work in a turn isn't what makes a goal
+# matter on Flash-Next; runs/flashnext-goal-requirements*.toml test where it
+# should: requirements a model leaves out.
 name = "flashnext-goal-judges-toolkit"
 tasks = ["behaviour-goal-toolkit"]
 repeats = 5
