@@ -1,0 +1,35 @@
+# NOT RUN: koda exec at 83f458f ends on the first budget-stopped turn, so
+# the goal never gets a second turn (runs/flashnext-goal-relay-smoke.toml).
+# Ready for when koda exec follows a goal past such a turn.
+# Goals on work a turn can't hold (Lijun, 2026-11-20: "we should consider
+# design and test for multi-step tasks"). The three goal A/Bs before this
+# finished every run in one turn, so the goal loop never ran. Here every
+# turn has a token budget, turn_token_budget = 20000 (Koda's smallest),
+# and a toolkit run charges 37K-46K in one turn (flashnext-goal-judges-toolkit),
+# so each turn stops partway and only the goal starts the next. Both
+# judges; runs/flashnext-goal-relay-control.toml is the same work as a plain
+# prompt under the same budget. max_goal_token_budget is a backstop.
+# lijunzh/koda 83f458f (main, #1729). Five repeats each.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-relay.toml
+name = "flashnext-goal-relay"
+tasks = ["behaviour-goal-toolkit"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "self"
+ref = "83f458f"
+args = ["-c", "turn_token_budget=20000", "-c", "max_goal_token_budget=200000"]
+
+[[variants]]
+name = "evaluator"
+ref = "83f458f"
+args = ["-c", "turn_token_budget=20000", "-c", "max_goal_token_budget=200000", "-c", "goal_judge=evaluator"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
