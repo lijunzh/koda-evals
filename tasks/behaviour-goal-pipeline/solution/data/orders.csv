@@ -1,0 +1,8 @@
+order_id,customer,quantity,unit_cents,discount_pct
+A1,ana,2,1250,0
+A1,ana,1,399,10
+B7,bo,5,105,10
+C3,cy,1,4999,15
+D2,bo,3,1999,0
+E9,dee,4,250,5
+F4,cy,2,1005,10

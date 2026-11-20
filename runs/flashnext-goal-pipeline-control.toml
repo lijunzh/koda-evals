@@ -1,0 +1,25 @@
+# The baseline for runs/flashnext-goal-pipeline.toml: the pipeline work as a
+# plain prompt. koda exec waits for background commands here too, so the
+# arms differ only in whether the model carries on after each wake.
+# Five repeats.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-pipeline-control.toml
+#
+# Result, 20261120T155227Z: 5 of 5, turns 2, 2, 1, 5 and 2 (each later turn
+# started by the pipeline's exit), 268K tokens and 6m40s a run. Fewer
+# tokens and less time than either goal arm, for the same result.
+name = "flashnext-goal-pipeline-control"
+tasks = ["behaviour-goal-pipeline-control"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "plain"
+ref = "83f458f"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

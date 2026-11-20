@@ -1,0 +1,20 @@
+id = "behaviour-goal-toolkit-control"
+# behaviour-goal-toolkit as a plain prompt, with no goal: the baseline for
+# runs/flashnext-goal-relay*.toml, where a turn token budget stops each turn
+# before the work is done. Without a goal, koda exec ends with that turn.
+prompt = """Make every test in tests/ pass (`python3 -m unittest discover -s tests`) and make `python3 scripts/lint.py` report no problems, without changing any test file or scripts/lint.py."""
+tags = ["python", "behaviour", "goal", "koda-only"]
+cluster = "judgement"
+judgement = "fixes every failing test and lint problem it's asked to"
+
+[repo]
+fixture = "../behaviour-goal-toolkit/fixture"
+solution = "../behaviour-goal-toolkit/solution"
+
+[check]
+hidden_files = [{ from = "../behaviour-goal-toolkit/hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 60
+
+[limits]
+wall_secs = 3600

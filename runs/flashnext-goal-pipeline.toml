@@ -1,0 +1,54 @@
+# Goals over turns the model ends itself (Lijun, 2026-11-20: "we should
+# consider design and test for multi-step tasks"): behaviour-goal-pipeline,
+# a background pipeline that shows one failure at a time, about a minute a
+# stage. Flash-Next ends its turn while a background command runs, and the
+# command's exit starts the next, so the goal loop should run with no
+# imposed limit. Both judges; runs/flashnext-goal-pipeline-control.toml is
+# the same work as a plain prompt. lijunzh/koda 83f458f (main, #1729).
+# Five repeats each.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-goal-pipeline.toml
+#
+# First version, 20261120T134320Z, stopped after three self runs: 3 of 3
+# passed, each in ONE turn (6m17s-6m29s, 288K-414K tokens). Every run read
+# pipeline.py, found the PIPELINE_STAGE_SECONDS switch, fixed all three bugs
+# with the waits off, then ran the real pipeline in the background and
+# waited for it with a sleep loop inside the turn, though Koda's reply said
+# "You'll be told when it exits ... don't poll". The task now ships the
+# report and export checks encoded, with no switch.
+#
+# Result, 20261120T142925Z (after three self runs of the encoded version,
+# 20261120T140319Z, took 1, 1 and 2 turns, so not every run ended in one):
+# 10 of 10, and the plain prompt also passed 5 of 5 (20261120T155227Z).
+#   plain      5/5  turns 2,2,1,5,2  268K tokens  6m40s
+#   self       5/5  turns 1,1,1,2,1  449K tokens  8m33s
+#   evaluator  5/5  turns 1,1,2,2,1  325K tokens  8m01s  5 checks, all "met"
+# No holds, no budget stops, no "not yet" verdict. Every second turn began
+# when the pipeline exited: the model had ended its turn to wait, as Koda
+# asks. The goal runs ended fewer turns that way than the plain ones did
+# (3 of 10 against 4 of 5); they waited with a foreground sleep or poll
+# loop instead. Koda's goal continuation started a turn once in the 13
+# goal runs of the encoded version (20261120T140319Z self r3), together
+# with the pipeline's exit notice. 8 of the 10 goal runs and all 5 plain
+# runs decoded the encoded checks with a command of their own. So the
+# goal loop barely ran, and the goal changed cost, not outcome.
+name = "flashnext-goal-pipeline"
+tasks = ["behaviour-goal-pipeline"]
+repeats = 5
+jobs = 1
+
+[[variants]]
+name = "self"
+ref = "83f458f"
+
+[[variants]]
+name = "evaluator"
+ref = "83f458f"
+args = ["-c", "goal_judge=evaluator"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
