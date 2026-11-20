@@ -1,12 +1,12 @@
 # Does a goal help? (Lijun: "Set it up".) behaviour-goal-requirements, one
 # objective with five requirements, under each judge, on lijunzh/koda
 # 833022d (#1729 on #1728). runs/flashnext-goal-requirements-control.toml is the
-# same task as a plain prompt: the baseline. Three repeats each.
+# same task as a plain prompt: the baseline. Five repeats each.
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-requirements.toml
 name = "flashnext-goal-requirements"
 tasks = ["behaviour-goal-requirements"]
-repeats = 3
+repeats = 5
 jobs = 1
 
 [[variants]]

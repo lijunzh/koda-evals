@@ -1,10 +1,10 @@
 # The baseline for runs/flashnext-goal-requirements.toml: the same task as a
-# plain prompt, with no goal, on the same build. Three repeats.
+# plain prompt, with no goal, on the same build. Five repeats.
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-requirements-control.toml
 name = "flashnext-goal-requirements-control"
 tasks = ["behaviour-goal-requirements-control"]
-repeats = 3
+repeats = 5
 jobs = 1
 
 [[variants]]
