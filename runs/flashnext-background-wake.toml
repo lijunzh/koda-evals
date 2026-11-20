@@ -1,0 +1,41 @@
+# A/B of lijunzh/koda#1723 (a background command's exit wakes the session)
+# with the koda exec wait that follows it (feat/exec-waits-for-background:
+# the run stays open for the turn that tells the model, and background
+# commands get claude -p's time limit). `before` is main just before #1723.
+# behaviour-wait-background is the case the wake is for; behaviour-poll-
+# background, a dev server that never exits by itself, checks that being
+# told "you'll be told when it exits" doesn't make the model wait for an exit
+# that never comes.
+#   bin/serve-gguf flashnext
+#   cargo run --release -- run runs/flashnext-background-wake.toml
+#
+# Result, 20261120T004757Z: 12 of 12, 6 of 6 each.
+# - behaviour-wait-background: every wake run ended its first turn right after
+#   starting the tests (one glanced at the log once) and answered in the turn
+#   Koda started when they exited, with no wait of its own. Every before run
+#   waited itself: `sleep 65`, `while kill -0 …; do sleep 3; done`, or
+#   `sleep 45` then `sleep 15`. No saving here: 73.4K tokens and 1m45s a run
+#   against 70.0K and 1m49s, since the script sets the time and one long
+#   sleep is a cheap poll; the second turn costs about as much as the sleeps.
+# - behaviour-poll-background: no regression. Every wake run stopped the
+#   server itself, in one turn; none waited for an exit or hit the time
+#   limit. 100.6K tokens and 1m00s against 98.4K and 1m04s.
+name = "flashnext-background-wake"
+tasks = ["behaviour-wait-background", "behaviour-poll-background"]
+repeats = 3
+jobs = 1
+
+[[variants]]
+name = "before"
+ref = "5ba36dd"  # main before #1723
+
+[[variants]]
+name = "wake"
+ref = "1c28342"  # feat/exec-waits-for-background, on top of #1723
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

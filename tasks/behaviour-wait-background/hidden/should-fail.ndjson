@@ -1,0 +1,9 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "context_usage", "used": 9000, "max": 131072}
+{"type": "tool_call_start", "id": "toolu_001", "name": "Bash", "args": {"command": "python3 integration_tests.py", "background": true}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "toolu_001", "name": "Bash", "output": "Background process started.\n  PID:     4242\n  Command: python3 integration_tests.py"}
+{"type": "response_start"}
+{"type": "text_delta", "text": "The tests are running in the background. They take about a minute; check the log for failures."}
+{"type": "text_done"}
+{"type": "turn_end", "turn_id": "t1", "reason": {"kind": "complete"}}
+{"type": "run_summary", "success": true, "error": null, "session_id": "s1", "provider": "mock", "model": "careful", "response": "The tests are running in the background. They take about a minute; check the log for failures."}
