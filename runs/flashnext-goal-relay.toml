@@ -8,11 +8,11 @@
 # prompt under the same budget. max_goal_token_budget is a backstop.
 # lijunzh/koda 92efcdc (#1730: koda exec follows a goal past a
 # budget-stopped turn). Five repeats each.
-# Result, 20261120T174752Z (on 92efcdc): 10 of 10, 5 of 5 each. Seven runs
-# (self 4, evaluator 3) had their first turn stopped on tokenBudgetSpent and
-# the goal's next turn finish the work; the other three finished the work
-# in turn one and spent a second turn closing the goal. Every run took two
-# turns (evaluator r1 three). Goal accounting 34K-49K of the 200K backstop.
+# Result, 20261120T174752Z (on 92efcdc): 10 of 10, 5 of 5 each. In every
+# run turn one only read and ran commands, no edits, and the goal's second
+# turn made every edit; evaluator r1 took a third. Seven first turns (self
+# 4, evaluator 3) stopped on tokenBudgetSpent, the other three ended on
+# their own. Goal accounting 34K-49K of the 200K backstop.
 # Mean 376K tokens, 5m51s (self); 466K, 6m53s (evaluator).
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-relay.toml
