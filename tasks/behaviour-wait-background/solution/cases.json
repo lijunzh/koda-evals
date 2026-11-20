@@ -1,0 +1,338 @@
+[
+ {
+  "name": "test_invoice_total",
+  "amount": 139.22,
+  "discount": 0,
+  "tax": 0.0625,
+  "expected": 147.92
+ },
+ {
+  "name": "test_refund_rounding",
+  "amount": 44.55,
+  "discount": 0.05,
+  "tax": 0,
+  "expected": 42.69
+ },
+ {
+  "name": "test_tax_exempt_member",
+  "amount": 116.88,
+  "discount": 0.2,
+  "tax": 0.0825,
+  "expected": 102.72
+ },
+ {
+  "name": "test_bulk_discount_cap",
+  "amount": 177.16,
+  "discount": 0.1,
+  "tax": 0.0625,
+  "expected": 169.78
+ },
+ {
+  "name": "test_coupon_stack",
+  "amount": 214.84,
+  "discount": 0,
+  "tax": 0.0725,
+  "expected": 230.42
+ },
+ {
+  "name": "test_gift_card_split",
+  "amount": 113.03,
+  "discount": 0.05,
+  "tax": 0.1025,
+  "expected": 118.38
+ },
+ {
+  "name": "test_partial_refund",
+  "amount": 63.76,
+  "discount": 0.15,
+  "tax": 0,
+  "expected": 54.2
+ },
+ {
+  "name": "test_currency_round_half_even",
+  "amount": 354.99,
+  "discount": 0.2,
+  "tax": 0.1025,
+  "expected": 313.1
+ },
+ {
+  "name": "test_zero_amount",
+  "amount": 26.01,
+  "discount": 0.2,
+  "tax": 0.0625,
+  "expected": 22.11
+ },
+ {
+  "name": "test_negative_adjustment",
+  "amount": 476.73,
+  "discount": 0.2,
+  "tax": 0,
+  "expected": 381.38
+ },
+ {
+  "name": "test_membership_renewal",
+  "amount": 316.74,
+  "discount": 0,
+  "tax": 0.0625,
+  "expected": 336.54
+ },
+ {
+  "name": "test_plus_member_discount",
+  "amount": 217.51,
+  "discount": 0.1,
+  "tax": 0.0825,
+  "expected": 211.91
+ },
+ {
+  "name": "test_fuel_rewards",
+  "amount": 121.57,
+  "discount": 0.05,
+  "tax": 0.1025,
+  "expected": 127.33
+ },
+ {
+  "name": "test_bakery_preorder",
+  "amount": 127.21,
+  "discount": 0.15,
+  "tax": 0.0825,
+  "expected": 117.05
+ },
+ {
+  "name": "test_pharmacy_copay",
+  "amount": 239.83,
+  "discount": 0,
+  "tax": 0.0725,
+  "expected": 257.22
+ },
+ {
+  "name": "test_tire_install_fee",
+  "amount": 360.58,
+  "discount": 0.1,
+  "tax": 0.0725,
+  "expected": 348.05
+ },
+ {
+  "name": "test_delivery_fee_waiver",
+  "amount": 283.25,
+  "discount": 0.05,
+  "tax": 0.0825,
+  "expected": 291.29
+ },
+ {
+  "name": "test_curbside_fee",
+  "amount": 468.04,
+  "discount": 0.1,
+  "tax": 0.1025,
+  "expected": 464.41
+ },
+ {
+  "name": "test_bottle_deposit",
+  "amount": 83.23,
+  "discount": 0.1,
+  "tax": 0.0825,
+  "expected": 81.09
+ },
+ {
+  "name": "test_alcohol_tax",
+  "amount": 154.8,
+  "discount": 0,
+  "tax": 0.0825,
+  "expected": 167.57
+ },
+ {
+  "name": "test_state_tax_tx",
+  "amount": 129.77,
+  "discount": 0.2,
+  "tax": 0,
+  "expected": 103.82
+ },
+ {
+  "name": "test_state_tax_ar",
+  "amount": 459.33,
+  "discount": 0,
+  "tax": 0.0725,
+  "expected": 492.63
+ },
+ {
+  "name": "test_state_tax_ca",
+  "amount": 58.56,
+  "discount": 0.1,
+  "tax": 0.1025,
+  "expected": 58.11
+ },
+ {
+  "name": "test_city_tax_chicago",
+  "amount": 316.14,
+  "discount": 0,
+  "tax": 0,
+  "expected": 316.14
+ },
+ {
+  "name": "test_county_tax_cook",
+  "amount": 75.64,
+  "discount": 0.2,
+  "tax": 0.0825,
+  "expected": 65.5
+ },
+ {
+  "name": "test_price_match",
+  "amount": 186.1,
+  "discount": 0.2,
+  "tax": 0.0725,
+  "expected": 159.67
+ },
+ {
+  "name": "test_instant_savings",
+  "amount": 433.38,
+  "discount": 0.05,
+  "tax": 0.0725,
+  "expected": 441.56
+ },
+ {
+  "name": "test_mail_in_rebate",
+  "amount": 1.09,
+  "discount": 0,
+  "tax": 0.0725,
+  "expected": 1.17
+ },
+ {
+  "name": "test_bundle_price",
+  "amount": 333.55,
+  "discount": 0,
+  "tax": 0.0825,
+  "expected": 361.07
+ },
+ {
+  "name": "test_case_price",
+  "amount": 208.74,
+  "discount": 0,
+  "tax": 0.1025,
+  "expected": 230.14
+ },
+ {
+  "name": "test_split_tender",
+  "amount": 455.71,
+  "discount": 0.05,
+  "tax": 0.1025,
+  "expected": 477.3
+ },
+ {
+  "name": "test_cash_back",
+  "amount": 487.76,
+  "discount": 0.15,
+  "tax": 0,
+  "expected": 414.6
+ },
+ {
+  "name": "test_check_payment",
+  "amount": 165.49,
+  "discount": 0.1,
+  "tax": 0.0725,
+  "expected": 159.74
+ },
+ {
+  "name": "test_ebt_eligible",
+  "amount": 463.98,
+  "discount": 0,
+  "tax": 0.0825,
+  "expected": 502.26
+ },
+ {
+  "name": "test_wic_eligible",
+  "amount": 377.83,
+  "discount": 0.1,
+  "tax": 0.0725,
+  "expected": 364.7
+ },
+ {
+  "name": "test_layaway_deposit",
+  "amount": 130.46,
+  "discount": 0,
+  "tax": 0.1025,
+  "expected": 143.83
+ },
+ {
+  "name": "test_layaway_final",
+  "amount": 384.36,
+  "discount": 0.15,
+  "tax": 0.0625,
+  "expected": 347.13
+ },
+ {
+  "name": "test_return_window",
+  "amount": 220.26,
+  "discount": 0,
+  "tax": 0.1025,
+  "expected": 242.84
+ },
+ {
+  "name": "test_open_box",
+  "amount": 170.48,
+  "discount": 0.1,
+  "tax": 0.1025,
+  "expected": 169.16
+ },
+ {
+  "name": "test_receipt_reprint",
+  "amount": 404.9,
+  "discount": 0.2,
+  "tax": 0.0625,
+  "expected": 344.17
+ },
+ {
+  "name": "test_employee_discount",
+  "amount": 26.03,
+  "discount": 0.15,
+  "tax": 0.0625,
+  "expected": 23.51
+ },
+ {
+  "name": "test_military_discount",
+  "amount": 405.1,
+  "discount": 0.15,
+  "tax": 0.0725,
+  "expected": 369.3
+ },
+ {
+  "name": "test_senior_hours",
+  "amount": 174.86,
+  "discount": 0.1,
+  "tax": 0.0725,
+  "expected": 168.78
+ },
+ {
+  "name": "test_business_member",
+  "amount": 349.43,
+  "discount": 0.15,
+  "tax": 0,
+  "expected": 297.02
+ },
+ {
+  "name": "test_tax_resale_cert",
+  "amount": 217.33,
+  "discount": 0.15,
+  "tax": 0.0725,
+  "expected": 198.12
+ },
+ {
+  "name": "test_pallet_freight",
+  "amount": 451.52,
+  "discount": 0,
+  "tax": 0,
+  "expected": 451.52
+ },
+ {
+  "name": "test_special_order",
+  "amount": 467.83,
+  "discount": 0.05,
+  "tax": 0.1025,
+  "expected": 489.99
+ },
+ {
+  "name": "test_catering_order",
+  "amount": 458.8,
+  "discount": 0.05,
+  "tax": 0.0825,
+  "expected": 471.82
+ }
+]

@@ -1,0 +1,43 @@
+id = "behaviour-wait-background"
+# Koda-only (2026-11-19), for lijunzh/koda#1723 and the koda exec wait that
+# follows it. A test run that takes about a minute; the prompt asks for it in
+# the background, and only its output names the three failing tests. Koda
+# before #1723 left the agent to poll (sleep, tail, kill -0) until it ended;
+# from #1723 Koda tells the model when a background command exits, and koda
+# exec stays open for the turn that tells it, as `claude -p` does. Graded on
+# the answer only: polling still passes. What the A/B compares is how it got
+# there (calls, tokens, wall time) and whether an agent that's told it will
+# hear of the exit stops before it does.
+prompt = """Run the integration tests in the background (`python3 integration_tests.py`, about a minute) and tell me which tests fail."""
+tags = ["python", "behaviour", "background", "koda-only"]
+cluster = "judgement"
+judgement = "waits for a background command to finish and reports its result"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+[[check.transcript]]
+type = "final_message"
+matches = "test_refund_rounding"
+
+[[check.transcript]]
+type = "final_message"
+matches = "test_tax_exempt_member"
+
+[[check.transcript]]
+type = "final_message"
+matches = "test_bulk_discount_cap"
+
+[[check.transcript]]
+type = "before"
+a = { name = "Bash", args_match = "integration_tests\\.py" }
+b = "final_message"
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 600
