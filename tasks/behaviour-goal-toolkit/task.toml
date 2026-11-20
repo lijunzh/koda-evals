@@ -1,0 +1,28 @@
+id = "behaviour-goal-toolkit"
+# Koda-only (2026-11-20), the second goal-judge task: behaviour-goal-fix-suite
+# was done in one turn by every Flash-Next run, so the goal loop was never
+# exercised (Lijun: "Hold a bigger task first"). Here 24 bugs across eight
+# small modules, one failing test each, plus a lint rule (scripts/lint.py:
+# a docstring and type hints on every public function and method) that the
+# whole package fails, 61 problems. More work than a turn usually holds on a
+# local model, so the goal has to carry it on. The hidden check tries all 24
+# behaviours on more cases, runs the linter, and checks that the tests and the
+# linter are unchanged. What the A/B compares is how the goal ends under the
+# model's own audit (goal_judge = "self") and under a check after each turn
+# ("evaluator"), how many turns each takes, and whether either stops early.
+prompt = """/goal Every test in tests/ passes (`python3 -m unittest discover -s tests`) and `python3 scripts/lint.py` reports no problems, without changing any test file or scripts/lint.py."""
+tags = ["python", "behaviour", "goal", "koda-only"]
+cluster = "judgement"
+judgement = "works toward a goal over several turns and stops when it's met"
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 60
+
+[limits]
+wall_secs = 3600
