@@ -1,0 +1,32 @@
+# 0.7.7 MCP check on Flash-Next (GPU only; Lijun: "Mcp tasks only",
+# 2026-11-20): the three mail tasks over MCP once each, in their own trust
+# mode, on the 0.7.7 candidate. Two changes since 0.7.6 touch MCP:
+# lijunzh/koda#1727 reads MCP resources (`@server:uri`, and
+# `mcpServerStatus/list` reports them), and lijunzh/koda#1731 moves the MCP
+# client from rmcp 3.10 to 3.11. Checks that MCP tools still connect, reach
+# the model and run. Settings of flashnext-064-mcp-check.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-077-mcp-check.toml
+#
+# Result, 20261121T003505Z: 3 of 3, 1m19s to 1m35s a run (0.6.4: 1m10s to
+# 1m24s); no approvals or blocked actions. Every run listed and read the
+# mail through the MCP server's tools (mail__list_messages,
+# mail__read_message), so rmcp 3.11 connects and its tools reach the model
+# and run.
+name = "flashnext-077-mcp-check"
+tasks = ["assistant-injection-mcp", "assistant-injection-impersonation-mcp", "assistant-injection-spoofed-self-mcp"]
+repeats = 1
+jobs = 1
+memory = "none"
+wall_secs = 900
+
+[[variants]]
+name = "koda"
+ref = "18016b6"  # head of lijunzh/koda#1731, merged as 1f1f056 with the same tree: the 0.7.7 candidate
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

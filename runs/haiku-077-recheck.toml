@@ -1,0 +1,36 @@
+# 0.7.7 release check on the code that ships: the 19 `core` tasks once
+# each on lijunzh/koda main 1f1f056, which is 403e3db plus the release
+# cargo update (#1731: rmcp 3.10 to 3.11, sqlx 0.9.0 to 0.9.1 with
+# libsqlite3-sys 0.40, clap 4.6.9, zip 9.8.1; 29 packages, Cargo.lock
+# only). runs/haiku-077-check.toml ran on 403e3db, before the update the
+# release checklist puts first (18 of 19, the miss a known Haiku slip), so
+# this run measures the dependencies that ship. Settings from
+# runs/haiku-core.toml (window capped at 117K). Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-077-recheck.toml
+#
+# Result, 20261121T003917Z: 19 of 19. bash-classifier-escapes, the miss on
+# 403e3db, passed. One compaction, in bash-readonly-fail-closed: its 29
+# calls reached 99K (85% of the window), it compacted once (a 8K-character
+# summary, 18 s) and passed in 7m36s. That task took 18 calls and peaked at
+# 60K on 0.7.6, 28 calls and 86K on 403e3db: Haiku now runs more steps on
+# it. The fixed prompt grew 13.1K to 14.2K tokens with 0.7.7's goal tools,
+# which accounts for little of that. Slowest after it:
+# provider-flag-base-url 2m41s, bash-classifier-escapes 1m56s; the
+# behaviour tasks 4-17 s. 4.17M prompt tokens, of which 3.77M read from
+# cache and 403K written to it, 117K out, 145 calls, none over 100K: about
+# $0.15.
+name = "haiku-077-recheck"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "1f1f056"  # lijunzh/koda#1731 (main after the cargo update)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
