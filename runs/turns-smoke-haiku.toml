@@ -1,0 +1,27 @@
+# Smoke for multi-turn tasks: turns-ledger-cli once on Koda and Claude Code
+# with Haiku, to see each agent resume its session for turns 2-4. Koda's
+# run is a paid API call (cents); Claude Code's runs on the subscription.
+#   koda-eval run runs/turns-smoke-haiku.toml
+#
+# Result, 20261121T121022Z: both pass, each in one session over all four
+# turns (one session id in each transcript, four turn_end). Koda 22 calls,
+# 115K tokens, 1m12s; Claude Code 19 calls, 107K tokens, 1m06s. Codex's
+# resume path is untested: the GPU is busy with the Flash-Next parity.
+name = "turns-smoke-haiku"
+tasks = ["turns-ledger-cli"]
+repeats = 1
+jobs = 2
+memory = "none"
+
+[[variants]]
+name = "koda"
+ref = "f2c3168"  # main after lijunzh/koda#1739
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals-turns/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"

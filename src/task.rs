@@ -43,6 +43,20 @@ pub struct TaskFile {
     pub limits: Limits,
     #[serde(default)]
     pub run: RunSettings,
+    /// Follow-up prompts, each sent in the same session after the one
+    /// before finishes: `prompt` is the first turn, these the rest. The
+    /// agent resumes its own session (`koda exec resume <id>`), so a
+    /// multi-turn task measures what a session keeps across turns. The
+    /// checks run once, after the last turn.
+    #[serde(default)]
+    pub turns: Vec<Turn>,
+}
+
+/// One follow-up turn of a multi-turn task.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Turn {
+    pub prompt: String,
 }
 
 #[derive(Debug, Deserialize)]

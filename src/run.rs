@@ -9,6 +9,7 @@
 //! and no run sees another's build. Their wall times are contended.
 
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -538,31 +539,38 @@ struct RunOne<'a> {
 }
 
 impl RunOne<'_> {
-    fn run(&self) -> Result<Value> {
+    /// One turn of the run: `koda exec …` (or a peer's wrapper) with
+    /// `head` as its leading arguments. A follow-up turn appends to the
+    /// first turn's transcript and stderr.
+    fn turn(
+        &self,
+        head: &[&OsStr],
+        project: &Path,
+        config: &Path,
+        target: &Path,
+        wall_secs: u64,
+        append: bool,
+    ) -> Result<proc::Finished> {
         let task = self.task;
-        let project = self.work.join("project");
-        let config = self.work.join("config");
-        std::fs::create_dir_all(&config)?;
-        ask_for_log_file(&config)?;
-        let shared = util::cache_dir().join("target").join(task.id());
-        let target = self.work.join("target");
-        project::seed_target(&shared, &target)?;
-        project::materialize_with(task, Stage::Start, self.koda_repo, &project, self.memory)?;
-
-        let transcript_path = self.art.join("transcript.ndjson");
-        let trust = self.trust;
+        let open = |path: &Path| -> Result<File> {
+            Ok(std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .append(append)
+                .truncate(!append)
+                .open(path)?)
+        };
         let mut cmd = Command::new(self.bin);
-        cmd.arg("exec")
-            .arg(&task.spec.prompt)
-            .args(["--json", "--mode", trust])
+        cmd.args(head)
+            .args(["--json", "--mode", self.trust])
             .args(["--provider", &self.model.provider])
             .arg("--project-root")
-            .arg(&project)
-            .current_dir(&project)
+            .arg(project)
+            .current_dir(project)
             // A fresh config dir: its own database (so no stored keys and
             // no session history), no global memory, no user skills.
-            .env("XDG_CONFIG_HOME", &config)
-            .env("CARGO_TARGET_DIR", &target)
+            .env("XDG_CONFIG_HOME", config)
+            .env("CARGO_TARGET_DIR", target)
             // The run file, not the shell, picks the model and mode.
             .env_remove("KODA_PROVIDER")
             .env_remove("KODA_MODEL")
@@ -577,8 +585,12 @@ impl RunOne<'_> {
             .envs(self.keys)
             .envs(&self.model.env)
             .stdin(Stdio::null())
-            .stdout(File::create(&transcript_path)?)
-            .stderr(File::create(self.art.join("stderr.log"))?);
+            .stdout(open(&self.art.join("transcript.ndjson"))?)
+            .stderr(open(&self.art.join("stderr.log"))?);
+        if !task.spec.turns.is_empty() {
+            // Tells a peer's wrapper to keep the session for `exec resume`.
+            cmd.env("KODA_EVAL_TURNS", (task.spec.turns.len() + 1).to_string());
+        }
         if let Some(model) = &self.model.model {
             cmd.args(["--model", model]);
         }
@@ -600,7 +612,53 @@ impl RunOne<'_> {
             std::fs::write(&path, serde_json::to_string_pretty(&mcp)?)?;
             cmd.arg("--mcp-config").arg(&path);
         }
-        let agent = proc::run_with_limit(&mut cmd, Duration::from_secs(self.wall_secs))?;
+        proc::run_with_limit(&mut cmd, Duration::from_secs(wall_secs))
+    }
+
+    fn run(&self) -> Result<Value> {
+        let task = self.task;
+        let project = self.work.join("project");
+        let config = self.work.join("config");
+        std::fs::create_dir_all(&config)?;
+        ask_for_log_file(&config)?;
+        let shared = util::cache_dir().join("target").join(task.id());
+        let target = self.work.join("target");
+        project::seed_target(&shared, &target)?;
+        project::materialize_with(task, Stage::Start, self.koda_repo, &project, self.memory)?;
+
+        let transcript_path = self.art.join("transcript.ndjson");
+        let first = [OsStr::new("exec"), OsStr::new(&task.spec.prompt)];
+        let mut agent = self.turn(&first, &project, &config, &target, self.wall_secs, false)?;
+        // A multi-turn task: each follow-up resumes the session the first
+        // turn opened, until a turn fails or the time is spent. The wall
+        // limit covers every turn together.
+        let mut elapsed = agent.elapsed;
+        for turn in &task.spec.turns {
+            if agent.timed_out || agent.exit != Some(0) {
+                break;
+            }
+            let so_far = Transcript::read(&transcript_path)?;
+            let Some(id) = so_far
+                .summary
+                .as_ref()
+                .and_then(|s| s["session_id"].as_str())
+            else {
+                break;
+            };
+            let left = self.wall_secs.saturating_sub(elapsed.as_secs());
+            if left == 0 {
+                break;
+            }
+            let args = [
+                OsStr::new("exec"),
+                OsStr::new("resume"),
+                OsStr::new(id),
+                OsStr::new(&turn.prompt),
+            ];
+            agent = self.turn(&args, &project, &config, &target, left, true)?;
+            elapsed += agent.elapsed;
+        }
+        agent.elapsed = elapsed;
         // koda's own log says why a turn failed ("LLM inference failed" on
         // stderr doesn't). Keep it with the run's other evidence.
         keep_koda_log(&config, self.art);
@@ -646,7 +704,7 @@ impl RunOne<'_> {
                 "engine": engine_of(self.model),
                 "window": task.spec.run.max_context_tokens.or(window_of(self.model)),
                 "wall_secs": self.wall_secs,
-                "trust": trust,
+                "trust": self.trust,
                 "jobs": self.jobs,
                 "memory": self.memory_label,
                 "cluster": task.spec.cluster,

@@ -380,12 +380,17 @@ class Translator:
 
 def parse_args(argv):
     opts = {"prompt": "", "model": "", "mode": "auto", "translate": None, "version": False,
-            "mcp-config": None}
+            "mcp-config": None, "resume": None}
     i = 0
     while i < len(argv):
         arg = argv[i]
         if arg == "--version":
             opts["version"] = True
+        elif arg == "exec" and i == 0 and len(argv) > 3 and argv[1] == "resume":
+            # `koda exec resume <id> <prompt>`: a multi-turn task's
+            # follow-up, in the session the first turn opened.
+            opts["resume"], opts["prompt"] = argv[2], argv[3]
+            i += 3
         elif arg == "exec" and i == 0 and len(argv) > 1:
             # `koda exec <prompt> --json …`, which the harness calls since
             # koda 0.7.0. The output stays koda's protocol 1, which capture
@@ -486,13 +491,20 @@ def main():
     args = [claude, "-p", opts["prompt"],
             "--output-format", "stream-json", "--verbose", "--forward-subagent-text",
             *isolation, "--disable-slash-commands",
-            "--strict-mcp-config", "--no-session-persistence",
+            "--strict-mcp-config",
             "--permission-mode", permission,
             "--tools", ",".join(TOOLS),
             "--allowedTools", " ".join(rules),
             "--settings", sandbox_settings(env, extra)]
     if opts["mcp-config"]:
         args += ["--mcp-config", opts["mcp-config"]]
+    if opts["resume"]:
+        args += ["--resume", opts["resume"]]
+    elif not os.environ.get("KODA_EVAL_TURNS"):
+        # A one-turn task leaves no session behind. A multi-turn task's
+        # first turn keeps its session (in ~/.claude/projects, under the
+        # run's work directory) for the follow-ups to resume.
+        args.append("--no-session-persistence")
     if opts["model"]:
         args += ["--model", opts["model"]]
 

@@ -1,0 +1,38 @@
+id = "turns-ledger-cli"
+# Multi-turn (lijunzh/koda-evals, 2026-11-21): one session, four turns on a
+# small Python ledger, as a user would work with an agent over an afternoon.
+# Turn 1 adds a monthly summary sorted by total; turn 2 moves storage to
+# whole cents and migrates old files; turn 3 adds a category filter; turn 4
+# changes turn 1's sort to alphabetical and adds a TOTAL line. The hidden
+# tests check the state after the last turn: turn 4's sort, and turns 2 and
+# 3 still in place. A run that loses an earlier turn's requirement, or
+# keeps turn 1's sort after turn 4 changed it, fails. Each agent resumes its
+# own session for turns 2-4, so what carries over is what the session kept.
+prompt = """Add a `summary` command to ledger.py: `python3 ledger.py summary --month 2026-11` prints the month's total spend per category, one line per category in the form `<category> <total>`, with the total in dollars to two decimals and one space between, for example `groceries 19.75`. Put the category with the biggest total first. Keep `add` and `list` working as they do now, and add a test for the new command."""
+tags = ["python", "multi-turn", "conventions"]
+cluster = "kata"
+
+[[turns]]
+prompt = """We hit a rounding problem: two coffees of 0.10 and 0.20 summed to 0.30000000000000004 in a script that reads ledger.json. Store amounts as whole cents instead: each entry gets an integer `cents` field in place of `amount`. People already have ledger.json files in the old form, so an old entry must still load, and the file should be rewritten in the new form the next time the ledger is saved. `list` and `summary` should print exactly what they print now."""
+
+[[turns]]
+prompt = """Let `summary` take `--category NAME` too, so `summary --month 2026-11 --category groceries` shows only that category."""
+
+[[turns]]
+prompt = """On reflection, sorting by total makes the summary hard to compare month to month. List the categories alphabetically instead, and end the summary with a line `TOTAL <total>` that adds up the lines above it (with `--category`, that's the one category's total). Everything else stays as it is."""
+
+[repo]
+fixture = "fixture"
+solution = "solution"
+
+[check]
+hidden_files = [{ from = "hidden/test_eval_hidden.py", to = "tests/test_eval_hidden.py" }]
+command = "python3 -m unittest -v -b tests.test_eval_hidden"
+timeout_secs = 120
+
+[[check.transcript]]
+type = "turn_end"
+kind = "complete"
+
+[limits]
+wall_secs = 1800

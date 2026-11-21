@@ -157,6 +157,46 @@ fn usage_v1(u: &Value) -> Value {
     })
 }
 
+/// A multi-turn run through a peer's wrapper writes one protocol 1
+/// `run_summary` a turn, each counting only its own turn. The run's is the
+/// last turn's, with the counts of every turn added up. (Koda's protocol 2
+/// `exec/summary` already covers the whole session, so it replaces.)
+fn add_turn_summary(earlier: Value, mut last: Value) -> Value {
+    fn add(into: &mut Value, from: &Value) {
+        let (Some(into), Some(from)) = (into.as_object_mut(), from.as_object()) else {
+            return;
+        };
+        for (key, value) in from {
+            let slot = into.entry(key.clone()).or_insert(Value::Null);
+            match (slot.as_u64(), value.as_u64()) {
+                (Some(a), Some(b)) => *slot = (a + b).into(),
+                (None, Some(b)) if slot.is_null() => *slot = b.into(),
+                _ if value.is_object() => {
+                    if slot.is_null() {
+                        *slot = json!({});
+                    }
+                    add(slot, value);
+                }
+                _ => {}
+            }
+        }
+    }
+    for key in [
+        "usage",
+        "usage_by_agent",
+        "tool_calls",
+        "sub_agent_tool_calls",
+    ] {
+        if !earlier[key].is_null() {
+            if last[key].is_null() {
+                last[key] = json!({});
+            }
+            add(&mut last[key], &earlier[key]);
+        }
+    }
+    last
+}
+
 /// `exec/summary` as protocol 1's `run_summary`, which the record keeps.
 fn summary_v1(s: &Value) -> Value {
     let by_agent: serde_json::Map<String, Value> = s["usageByAgent"]
@@ -223,7 +263,10 @@ impl Transcript {
             }
             let kind = value["type"].as_str().unwrap_or("untyped").to_string();
             if kind == "run_summary" {
-                t.summary = Some(value);
+                t.summary = Some(match t.summary.take() {
+                    Some(earlier) => add_turn_summary(earlier, value),
+                    None => value,
+                });
                 continue;
             }
             *t.counts.entry(kind.clone()).or_default() += 1;
@@ -693,6 +736,23 @@ impl Transcript {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_wrappers_turn_summaries_add_up() {
+        let text = r#"{"type":"turn_end","reason":{"kind":"complete"}}
+{"type":"run_summary","session_id":"s","response":"first","usage":{"prompt_tokens":100,"completion_tokens":10,"api_calls":2},"usage_by_agent":{"main":{"prompt_tokens":100,"completion_tokens":10}},"tool_calls":{"Read":3}}
+{"type":"turn_end","reason":{"kind":"complete"}}
+{"type":"run_summary","session_id":"s","response":"second","usage":{"prompt_tokens":40,"completion_tokens":5,"api_calls":1},"usage_by_agent":{"main":{"prompt_tokens":40,"completion_tokens":5}},"tool_calls":{"Read":1,"Edit":2}}
+"#;
+        let t = Transcript::parse(text);
+        let s = t.summary.unwrap();
+        assert_eq!(s["response"], "second");
+        assert_eq!(s["usage"]["prompt_tokens"], 140);
+        assert_eq!(s["usage"]["api_calls"], 3);
+        assert_eq!(s["usage_by_agent"]["main"]["completion_tokens"], 15);
+        assert_eq!(s["tool_calls"]["Read"], 4);
+        assert_eq!(s["tool_calls"]["Edit"], 2);
+    }
 
     const SAMPLE: &str = r#"{"type":"turn_start","turn_id":"1"}
 {"type":"tool_call_start","id":"a","name":"Read","args":{"file_path":"src/lib.rs"},"is_sub_agent":false}
