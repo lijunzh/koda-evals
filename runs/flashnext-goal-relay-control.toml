@@ -1,9 +1,10 @@
-# NOT RUN: koda exec at 83f458f ends on the first budget-stopped turn, so
-# the goal never gets a second turn (runs/flashnext-goal-relay-smoke.toml).
-# Ready for when koda exec follows a goal past such a turn.
 # The baseline for runs/flashnext-goal-relay.toml: the toolkit work as a
 # plain prompt, under the same turn_token_budget = 20000. With no goal,
-# koda exec ends when the budget stops the turn. Five repeats.
+# koda exec ends when the budget stops the turn. lijunzh/koda 92efcdc
+# (#1730), as the goal arms. Five repeats.
+# Result, 20261120T185143Z: 0 of 5. Four turns stopped on tokenBudgetSpent
+# and koda exec ended there; one ended its turn with no edits. Mean 80K
+# tokens, 2m08s.
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-relay-control.toml
 name = "flashnext-goal-relay-control"
@@ -13,7 +14,7 @@ jobs = 1
 
 [[variants]]
 name = "plain"
-ref = "83f458f"
+ref = "92efcdc"
 args = ["-c", "turn_token_budget=20000"]
 
 [[models]]

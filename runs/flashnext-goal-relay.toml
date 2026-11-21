@@ -1,6 +1,3 @@
-# NOT RUN: koda exec at 83f458f ends on the first budget-stopped turn, so
-# the goal never gets a second turn (runs/flashnext-goal-relay-smoke.toml).
-# Ready for when koda exec follows a goal past such a turn.
 # Goals on work a turn can't hold (Lijun, 2026-11-20: "we should consider
 # design and test for multi-step tasks"). The three goal A/Bs before this
 # finished every run in one turn, so the goal loop never ran. Here every
@@ -9,7 +6,14 @@
 # so each turn stops partway and only the goal starts the next. Both
 # judges; runs/flashnext-goal-relay-control.toml is the same work as a plain
 # prompt under the same budget. max_goal_token_budget is a backstop.
-# lijunzh/koda 83f458f (main, #1729). Five repeats each.
+# lijunzh/koda 92efcdc (#1730: koda exec follows a goal past a
+# budget-stopped turn). Five repeats each.
+# Result, 20261120T174752Z (on 92efcdc): 10 of 10, 5 of 5 each. In every
+# run turn one only read and ran commands, no edits, and the goal's second
+# turn made every edit; evaluator r1 took a third. Seven first turns (self
+# 4, evaluator 3) stopped on tokenBudgetSpent, the other three ended on
+# their own. Goal accounting 34K-49K of the 200K backstop.
+# Mean 376K tokens, 5m51s (self); 466K, 6m53s (evaluator).
 #   bin/serve-gguf flashnext
 #   cargo run --release -- run runs/flashnext-goal-relay.toml
 name = "flashnext-goal-relay"
@@ -19,12 +23,12 @@ jobs = 1
 
 [[variants]]
 name = "self"
-ref = "83f458f"
+ref = "92efcdc"
 args = ["-c", "turn_token_budget=20000", "-c", "max_goal_token_budget=200000"]
 
 [[variants]]
 name = "evaluator"
-ref = "83f458f"
+ref = "92efcdc"
 args = ["-c", "turn_token_budget=20000", "-c", "max_goal_token_budget=200000", "-c", "goal_judge=evaluator"]
 
 [[models]]
