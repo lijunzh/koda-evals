@@ -1,0 +1,45 @@
+# 0.7.7 release check (Lijun: "Yes, start 0.7.7 check", 2026-11-20, with
+# the cost stated, about $0.12): the 19 `core` tasks once each on the 0.7.7
+# candidate, lijunzh/koda main 403e3db (#1730). Since 0.7.6: resumable
+# crates.io publishing (#1715); a turn cut off before its first reply reads
+# as interrupted (#1716); the state database commits with synchronous
+# NORMAL and waits for the write lock (#1719, #1720); goals, with both
+# judges (#1721, #1722), which add the goal tools to every request; a
+# background command that exits wakes the session (#1723) and `koda exec`
+# waits for it (#1724); `$name` skills (#1725); a mentioned file brings its
+# folders' instruction files (#1726); `@server:uri` MCP resources (#1727);
+# `koda exec '/goal …'` (#1728), its guards (#1729) and the run going on
+# past a budget-stopped turn (#1730). Settings from runs/haiku-core.toml
+# (window capped at 117K). Paid API calls. #1727 changes MCP, so the three
+# MCP tasks run too: runs/flashnext-077-mcp-check.toml. Nothing touches
+# compaction.
+#   ./target/release/koda-eval run runs/haiku-077-check.toml
+#
+# Result, 20261121T002448Z: 18 of 19, no compactions, peak context 73% of
+# the window (bash-readonly-fail-closed, 86K; 0.7.6: 51%). The miss is
+# bash-classifier-escapes, hidden tests 2 of 3: Haiku again left
+# `env PATH=/tmp ls /` read-only, the same miss as the 0.7.1 and 0.7.4
+# checks; it fixes an old Koda checkout, so nothing in 0.7.7 changes what
+# it measures. Slowest: bash-readonly-fail-closed 5m32s,
+# bash-classifier-escapes 3m43s, provider-flag-base-url 2m32s; the
+# behaviour tasks 5-15 s. 4.66M prompt tokens, of which 4.32M read from
+# cache and 345K written to it, 96K out, 148 calls, none over 100K: about
+# $0.13.
+# This ran before the release's cargo update (lijunzh/koda#1731: rmcp
+# 3.11, sqlx 0.9.1), which the release checklist puts first, so it is the
+# baseline on main and not the check of the code that ships.
+name = "haiku-077-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "403e3db"  # lijunzh/koda#1730 (main after #1715-#1730)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
