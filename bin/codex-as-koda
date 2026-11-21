@@ -232,12 +232,19 @@ class Translator:
 
 def parse_args(argv):
     opts = {"prompt": "", "model": "", "mode": "auto", "base_url": "", "translate": None,
-            "version": False, "exit": "0", "cancelled": False, "max_context_tokens": ""}
+            "version": False, "exit": "0", "cancelled": False, "max_context_tokens": "",
+            "resume": None}
     i = 0
     while i < len(argv):
         arg = argv[i]
         if arg == "--version":
             opts["version"] = True
+        elif arg == "exec" and i == 0 and len(argv) > 3 and argv[1] == "resume":
+            # `koda exec resume <id> <prompt>`: a multi-turn task's
+            # follow-up, in the thread the first turn opened. CODEX_HOME is
+            # the run's own, so the thread is there.
+            opts["resume"], opts["prompt"] = argv[2], argv[3]
+            i += 3
         elif arg == "exec" and i == 0 and len(argv) > 1:
             # `koda exec <prompt> --json …`, which the harness calls since
             # koda 0.7.0. The output stays koda's protocol 1, which capture
@@ -325,6 +332,8 @@ def main():
                   file=sys.stderr)
             return 2
         args += ["-c", f"model_context_window={window}"]
+    if opts["resume"]:
+        args += ["resume", opts["resume"]]
     args.append(opts["prompt"])
 
     translator = Translator(opts["mode"], os.getcwd(), sys.stdout)

@@ -1,0 +1,12 @@
+{"type": "turn_start", "turn_id": "t1"}
+{"type": "tool_call_start", "id": "c1", "name": "Edit", "args": {"file_path": "ledger.py", "replacements": [{"old_str": "...", "new_str": "..."}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "c1", "name": "Edit", "output": "update applied"}
+{"type": "text_done"}
+{"type": "turn_end", "reason": {"kind": "complete"}}
+{"type": "run_summary", "session_id": "s", "success": true, "response": "Added summary.", "usage": {"prompt_tokens": 100, "completion_tokens": 10}, "tool_calls": {"Edit": 1}}
+{"type": "turn_start", "turn_id": "t2"}
+{"type": "tool_call_start", "id": "c2", "name": "Edit", "args": {"file_path": "ledger.py", "replacements": [{"old_str": "...", "new_str": "..."}]}, "is_sub_agent": false}
+{"type": "tool_call_result", "id": "c2", "name": "Edit", "output": "update applied"}
+{"type": "text_done"}
+{"type": "turn_end", "reason": {"kind": "complete"}}
+{"type": "run_summary", "session_id": "s", "success": true, "response": "Sorted alphabetically with a TOTAL line.", "usage": {"prompt_tokens": 120, "completion_tokens": 12}, "tool_calls": {"Edit": 1}}

@@ -104,6 +104,36 @@ command = "python3"
 args = ["-I", "{task}/hidden/mail_server.py", "{task}/hidden/mailbox"]
 ```
 
+### Multi-turn tasks
+
+A task with `[[turns]]` runs as one session over several prompts, as a user
+works with an agent over an afternoon: `prompt` is the first turn and each
+`[[turns]] prompt` the next, sent once the turn before has finished.
+
+```toml
+prompt = "Add a `summary` command ..."
+
+[[turns]]
+prompt = "Store amounts as whole cents instead ..."
+
+[[turns]]
+prompt = "On reflection, list the categories alphabetically ..."
+```
+
+Each follow-up resumes the agent's own session with
+`koda exec resume <id> <prompt>`, the id taken from the first turn's
+summary; the peers' wrappers map that to `codex exec resume` and
+`claude --resume`. So what carries over between turns is what the agent's
+session kept, compaction included. The turns append to one
+`transcript.ndjson`; predicates read it whole, and the record's usage is
+the whole session's (koda's `exec/summary` already counts every turn; a
+wrapper's per-turn summaries are added up). The checks run once, after the
+last turn, so hidden tests check the final state: what a later turn changed,
+and what earlier turns asked for that should still hold. The task's
+`wall_secs` covers all the turns together; a turn that fails or runs out of
+time ends the run there. Claude Code keeps a multi-turn task's session in
+`~/.claude/projects` (under the run's work directory) so it can resume it.
+
 ### Grading: hidden tests, transcript predicates, or both
 
 A task is graded by **hidden tests**, by **transcript predicates**, or by
