@@ -1,0 +1,45 @@
+# Step 8 of the 0.7.x parity plan (Lijun approved the plan and its tests,
+# 2026-11-20): Koda against Claude Code on Haiku, the `suite` tasks × 3, as
+# runs/parity-haiku.toml was for 0.6.0 (93 against 92 of 93). Settings as
+# there: each agent's own defaults at the default window, both reading
+# memory/rust-project.md. Since then bin/claude-as-koda keeps the owner's
+# ~/.claude/CLAUDE.md out (claudeMdExcludes, koda-evals#42), which the 0.6.0
+# run didn't. Koda's runs are paid API calls (estimated $6-10 at list
+# price); Claude Code 2.1.296 runs on the subscription. Koda at
+# lijunzh/koda main 281c68f: steps 1-5 of the plan; steps 6-7 don't touch
+# what these tasks exercise.
+#   ./target/release/koda-eval run runs/parity-haiku-07x.toml
+#
+# Result, 20261121T044229Z: a tie, 88 of 93 each; pass^3 29 of 31 tasks
+# for Koda, 28 for Claude Code. Six of the ten misses were one broken
+# task: provider-flags-beat-saved failed 3 of 3 on both sides because its
+# hidden test found the koda binary by walking up from the test exe, and
+# cargo 1.100's build-dir layout moved test exes (fixed in the same
+# change: it uses CARGO_BIN_EXE_koda; verify passes). On the other 30
+# tasks: 88 of 90 each. The disagreements: bash-classifier-escapes (Koda
+# 1/3, Claude Code 2/3; Koda's known Haiku slip) and kata-api-migration
+# (Koda 3/3, Claude Code 2/3). Mean time 1m40s against 1m36s. Koda's
+# prompt tokens: 59.8M, of which 57.3M read from cache and 2.6M written,
+# 776K out, 997 calls, 180 of them over 100K: about $3.20 at list price
+# (rates back-solved from the 0.7.7 check, over-100K calls at 5x). For
+# 0.6.0 the same comparison was 93 against 92 of 93.
+name = "parity-haiku-07x"
+repeats = 3
+tags = ["suite"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "281c68f"  # main after lijunzh/koda#1737
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+# Claude Code reads the project's CLAUDE.md only with this; koda ignores it.
+env = { CLAUDE_AS_KODA_MEMORY = "project" }

@@ -1,0 +1,22 @@
+# Smoke check before runs/parity-flashnext.toml: Codex through
+# bin/codex-as-koda can drive Flash-Next on llama-server (its Responses
+# route; the wrapper's lmstudio provider reads CODEX_OSS_BASE_URL). One easy
+# task once.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/parity-flashnext-smoke.toml
+name = "parity-flashnext-smoke"
+tasks = ["kata-largest"]
+repeats = 1
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

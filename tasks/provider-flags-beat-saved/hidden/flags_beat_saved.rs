@@ -53,7 +53,7 @@ async fn config_home_remembering(saved_url: &str) -> tempfile::TempDir {
 /// Start interactive koda and wait until it has contacted one of `endpoints`.
 fn open_tui(home: &std::path::Path, args: &[&str], endpoints: &[&Endpoint]) {
     let project = tempfile::tempdir().unwrap();
-    let mut child = Command::new(koda_bin())
+    let mut child = Command::new(env!("CARGO_BIN_EXE_koda"))
         .args(args)
         .arg("--project-root")
         .arg(project.path())
