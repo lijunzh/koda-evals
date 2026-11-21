@@ -71,14 +71,28 @@ use crate::klog;
 use crate::task::CLUSTERS;
 use crate::transcript::{DELEGATION_TOOLS, ToolUse, Transcript};
 
+/// Tokens a run spent that weren't read from cache: the prompt less its
+/// cache reads, plus the completion. Cache writes count; they're billed
+/// above the input rate.
+///
+/// Agents report `prompt_tokens` two ways. Koda's protocol 2 and Codex
+/// give the whole prompt, cached part included. Anthropic's API, and so
+/// `claude-as-koda`, gives only the part neither read from nor written to
+/// the cache. A whole prompt can't be smaller than its cached parts, so a
+/// smaller one is the uncached part alone. A run whose uncached part
+/// outweighs its cached parts reads as a whole prompt; that misreads at
+/// most the small cached share of a run that hardly used the cache.
 fn non_cached_tokens(usage: &Value) -> Option<u64> {
-    match (
-        usage["prompt_tokens"].as_u64(),
-        usage["completion_tokens"].as_u64(),
-    ) {
-        (Some(p), Some(c)) => Some(p + c),
-        _ => None,
-    }
+    let prompt = usage["prompt_tokens"].as_u64()?;
+    let completion = usage["completion_tokens"].as_u64()?;
+    let read = usage["cache_read_tokens"].as_u64().unwrap_or(0);
+    let written = usage["cache_creation_tokens"].as_u64().unwrap_or(0);
+    let whole = if prompt >= read + written {
+        prompt
+    } else {
+        prompt + read + written
+    };
+    Some(whole - read + completion)
 }
 
 /// The rows of a `results.jsonl`. With the results directory, a row written
@@ -586,7 +600,7 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
     }
     let _ = writeln!(
         out,
-        "\nTokens are prompt + completion, cache reads excluded. Main context is the part the top-level agent spent itself, the rest went to children. Delegated counts runs that called {} at least once. pass^{repeats} counts tasks that passed on every repeat.",
+        "\nTokens are prompt + completion, cache reads excluded and cache writes counted, whichever way the agent reports its prompt. Main context is the part the top-level agent spent itself, the rest went to children. Delegated counts runs that called {} at least once. pass^{repeats} counts tasks that passed on every repeat.",
         DELEGATION_TOOLS.join(" or ")
     );
 
@@ -742,7 +756,7 @@ fn render(rows: &[Row], meta: &Value, dir_name: &str) -> String {
     }
     let _ = writeln!(
         out,
-        "\nEach cell is the mean over that task's runs: tokens (prompt + completion, cache reads excluded) · wall time."
+        "\nEach cell is the mean over that task's runs: tokens (prompt + completion, cache reads excluded, cache writes counted) · wall time."
     );
 
     let lines: Vec<String> = cells
@@ -817,6 +831,7 @@ pub fn report(dir: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn row(task: &str, variant: &str, pass: Option<bool>, tokens: u64) -> Row {
         Row {
@@ -1090,6 +1105,21 @@ mod tests {
             md.contains("| v | m | 1/2 | 50% | 0/1 | 550 | 200 | 1/2 |"),
             "{md}"
         );
+    }
+
+    #[test]
+    fn tokens_leave_out_cache_reads_however_the_prompt_is_reported() {
+        // Koda and Codex: the whole prompt, cached part included.
+        let whole = json!({"prompt_tokens": 340_270, "completion_tokens": 11_435,
+            "cache_read_tokens": 295_780, "cache_creation_tokens": 44_468});
+        assert_eq!(non_cached_tokens(&whole), Some(340_270 - 295_780 + 11_435));
+        // Anthropic's API: only the part the cache didn't touch.
+        let uncached = json!({"prompt_tokens": 36, "completion_tokens": 18_427,
+            "cache_read_tokens": 766_489, "cache_creation_tokens": 62_510});
+        assert_eq!(non_cached_tokens(&uncached), Some(36 + 62_510 + 18_427));
+        // No cache fields: the prompt as given.
+        let plain = json!({"prompt_tokens": 10, "completion_tokens": 5});
+        assert_eq!(non_cached_tokens(&plain), Some(15));
     }
 
     #[test]
