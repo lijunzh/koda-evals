@@ -1,0 +1,46 @@
+# Step 8 of the 0.7.x parity plan (Lijun approved the plan and its tests,
+# 2026-11-20): Koda against Codex on the local default model, the `suite`
+# tasks × 3, as runs/parity-ornith.toml was for 0.6.0 (79 against 75 of 93
+# on Ornith, 2026-11-04). Flash-Next on llama-server at its 262K window and
+# `xhigh`, both agents reading memory/rust-project.md (Codex as AGENTS.md).
+# Codex 0.171.0 reaches llama-server's Responses route through
+# bin/codex-as-koda (CODEX_OSS_BASE_URL; checked by
+# runs/parity-flashnext-smoke.toml, 1 of 1). Koda at lijunzh/koda main
+# 281c68f: steps 1-5 of the plan; steps 6-7 (MCP resource tools, /rewind)
+# don't touch what these tasks exercise. One at a time; GPU only.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/parity-flashnext.toml
+name = "parity-flashnext"
+repeats = 3
+tags = ["suite"]
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "281c68f"  # main after lijunzh/koda#1737
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
+
+# Result, 2026-11-22, graded with runs/parity-flashnext-rest.toml and
+# -rest-codex.toml (the run was stopped twice): results/parity-flashnext/
+# 20261121T042151Z, parity-flashnext-rest/20261122T010148Z and
+# 20261122T041054Z, parity-flashnext-rest-codex/20261122T063215Z.
+# Koda 81/93, Codex 78/93; pass^3 26 and 24 of 31 tasks. Codex hit the time
+# limit in 25 runs (13 passed), Koda in 17 (7 passed).
+# - bash-readonly-fail-closed, edit-stale-after-own-edit and
+#   compact-reasoning-summary: 0/3 for both agents, every run at the limit;
+#   12 of the 18 had every hidden test passing with the turn still open. See
+#   runs/flashnext-long-limit.toml.
+# - The agents differed on vim-normal-mode-bugs (Koda 3, Codex 2),
+#   behaviour-act-on-given-info (2, 1) and behaviour-validation-fidelity
+#   (3, 2). think-tag-multibyte: 1/3 for both.

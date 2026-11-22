@@ -1,0 +1,20 @@
+# Codex's last two repeats of provider-flag-base-url from
+# runs/parity-flashnext.toml (Koda's three and Codex's first finished
+# before the stop on 2026-11-21), and of provider-flags-beat-saved (Codex r1
+# finished before the second stop). Four runs; grade them as r2 and r3.
+name = "parity-flashnext-rest-codex"
+tasks = ["provider-flag-base-url", "provider-flags-beat-saved"]
+repeats = 2
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
