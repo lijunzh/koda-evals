@@ -5,6 +5,10 @@ id = "edit-stale-after-own-edit"
 # them, and the row read as pass-pass-pass. A run that never finishes is
 # not a pass: the agent has to end its turn. Ornith's and Flint's repeat
 # sets graded the old definition; both get a redo of this task.
+# wall_secs raised from 1200 on 2026-11-22 (Lijun): on Flash-Next both agents
+# went 0 of 3 at 20 minutes, four of the six failures with every hidden test
+# passing and the turn still open. With an hour each passed (Koda 33 minutes, Codex 22).
+# Pass rates from before that date don't compare with later ones.
 prompt = """koda's Edit tool keeps rejecting its own follow-up edits. After a successful Edit, the next Edit on the same file fails with:
 
     modified on disk since you last read it (last written by Edit 14s ago)
@@ -29,4 +33,4 @@ type = "turn_end"
 kind = "complete"
 
 [limits]
-wall_secs = 1200
+wall_secs = 3600

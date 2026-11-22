@@ -8,6 +8,10 @@ id = "bash-readonly-fail-closed"
 # calls, and up to 600 s, on tests that can't run in Koda's sandbox (nested
 # sandbox-exec, loopback) and whose outside_sandbox retry headless Koda
 # refuses. Runs before that date had no hint, so compare across it with care.
+# wall_secs raised from 1200 on 2026-11-22 (Lijun): on Flash-Next both agents
+# went 0 of 3 at 20 minutes, three of the six failures with every hidden test
+# passing and the turn still open. With an hour each passed (Koda 36 minutes, Codex 41).
+# Pass rates from before that date don't compare with later ones.
 prompt = """Safe mode auto-approves Bash commands koda considers read-only, and these went through without a prompt:
 
 - `ls` and `rm -rf /` on two lines (`ls\\nrm -rf /`)
@@ -36,4 +40,4 @@ type = "turn_end"
 kind = "complete"
 
 [limits]
-wall_secs = 1200
+wall_secs = 3600
