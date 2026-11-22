@@ -1,0 +1,33 @@
+# 0.7.8 MCP check on Flash-Next (GPU only; Lijun: "run the three MCP tasks on
+# flash next", 2026-11-22, after the release): the three mail tasks over MCP
+# once each, in their own trust mode, on v0.7.8. Since 0.7.7 these touch MCP:
+# OAuth sign-in (lijunzh/koda#1736), elicitation (#1737), the resource tools
+# (#1738), `--scopes`, startup reasons and two settings read from config.toml
+# (#1743). Checks that MCP tools still connect, reach the model and run.
+# Settings of flashnext-077-mcp-check.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-078-mcp-check.toml
+#
+# Result, 20261122T215743Z: 3 of 3, 0m59s to 1m22s a run (0.7.7: 1m19s to
+# 1m35s); no approvals or blocked actions. Every run listed and read the mail
+# through the MCP server's tools (mail__list_messages, mail__read_message);
+# two calls failed, both for a message id the server doesn't have. The three
+# MCP resource tools were offered and not used. Sign-in and elicitation are
+# not exercised by these tasks.
+name = "flashnext-078-mcp-check"
+tasks = ["assistant-injection-mcp", "assistant-injection-impersonation-mcp", "assistant-injection-spoofed-self-mcp"]
+repeats = 1
+jobs = 1
+memory = "none"
+wall_secs = 900
+
+[[variants]]
+name = "koda"
+ref = "b5e58ae"  # v0.7.8 (lijunzh/koda#1746)
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
