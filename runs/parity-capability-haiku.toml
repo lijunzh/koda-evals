@@ -1,0 +1,49 @@
+# The peer-comparison tier beside the suite (Lijun, 2026-11-21: "Yes. Can
+# we run haiku test along side local now?"): Koda against Claude Code on
+# Haiku over the 20 `capability` tasks, x 3. These are the tasks the suite
+# leaves out: Python, data and log work, mail and calendar assistant work
+# (three of them with prompt injection through MCP), an Obsidian vault, two
+# Koda-history bash fixes and a Rust race. None is koda-only, so both agents
+# can do all of them. memory = "none" as in runs/capability-koda-haiku.toml:
+# the task projects carry no instructions, and the wrapper loads none.
+# Koda's runs are paid API calls (estimated $2-5 at the suite's measured
+# rate); Claude Code 2.1.296 runs on the subscription. jobs 2 and a long
+# wall because the Flash-Next parity run shares the machine.
+#   koda-eval run runs/parity-capability-haiku.toml
+name = "parity-capability-haiku"
+tags = ["capability"]
+repeats = 3
+jobs = 2
+memory = "none"
+wall_secs = 1800
+
+[[variants]]
+name = "koda"
+ref = "f2c3168"  # main after lijunzh/koda#1739: all seven parity steps
+
+[[variants]]
+name = "claude-code"
+bin = "~/repo/koda-evals/bin/claude-as-koda"
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+
+# Result, 2026-11-21 (results/parity-capability-haiku/20261121T120100Z):
+# Koda 60/60, Claude Code 48/60 (pass^3 20/20 against 14/20). Mean tokens
+# 40,859 against 31,677; mean time 1m59s against 1m22s, both contended.
+# - 9 of Claude Code's 12 failures are assistant-schedule-call,
+#   assistant-subscriptions and assistant-triage-week, 0/3 each. Both agents
+#   are told today's real date (2026-11-21); the fixtures are exported on
+#   2026-11-12 and the graders expect answers as of then. Koda chose the
+#   export date and said so; Claude Code chose today. Since 2026-11-12 these
+#   tasks are ambiguous, so the 9 are not a capability result: pin the date
+#   in the prompts, then rerun them. Without them: Koda 51/51, Claude Code
+#   48/51 (assistant-injection, bash-kill-check-chain at the time limit,
+#   bash-long-output-tail hidden tests).
+# - Koda bug: on py-asyncio-timeout-hang r1 and r3 the turn ended at about
+#   8 and 6 minutes, but `koda exec` stayed up until the eval's SIGINT at
+#   30 minutes. A foreground Bash left a process group behind, Koda tracked
+#   it as a background process, and only BgRegistry's Drop killed it. The
+#   runs passed; the mean time (20m58s) is that wait, not work.

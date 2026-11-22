@@ -1,0 +1,36 @@
+# Is the time limit or the task the problem? In runs/parity-flashnext.toml
+# (2026-11-20/21) both agents failed every repeat of these three tasks, and
+# every one of those runs hit the task's wall limit (20, 20 and 30 minutes)
+# without ending its turn. Lijun queued this rerun on 2026-11-21: the same
+# setup with an hour per run, one repeat each. If both agents pass with the
+# hour, raise these tasks' wall_secs; if not, the limit wasn't the cause.
+# Same koda ref as the parity run, so only the limit changes.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/flashnext-long-limit.toml
+name = "flashnext-long-limit"
+tasks = ["bash-readonly-fail-closed", "edit-stale-after-own-edit", "compact-reasoning-summary"]
+repeats = 1
+jobs = 1
+wall_secs = 3600
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "281c68f"  # as in runs/parity-flashnext.toml
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
+
+# Result, 2026-11-22 (results/flashnext-long-limit/20261122T075153Z), one run
+# each: both agents passed bash-readonly-fail-closed (Koda 35m51s, Codex
+# 40m49s) and edit-stale-after-own-edit (33m23s, 21m34s), and both failed
+# compact-reasoning-summary at 60m00s with its hidden tests passing and the
+# turn still open. The first two got wall_secs = 3600 in #85.

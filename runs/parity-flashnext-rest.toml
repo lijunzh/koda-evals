@@ -1,0 +1,27 @@
+# The rest of runs/parity-flashnext.toml, stopped at run 161 of 186 on
+# 2026-11-21 (Lijun needed the GPU), and again on the second try after
+# provider-flags-beat-saved's Koda repeats and Codex r1. Same setup; grade
+# all of them together.
+#   bin/serve-gguf flashnext
+#   ./target/release/koda-eval run runs/parity-flashnext-rest.toml
+#   ./target/release/koda-eval run runs/parity-flashnext-rest-codex.toml
+name = "parity-flashnext-rest"
+tasks = ["strip-quotes-lone-quote", "think-tag-multibyte", "vim-normal-mode-bugs"]
+repeats = 3
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "281c68f"  # main after lijunzh/koda#1737
+
+[[variants]]
+name = "codex"
+bin = "~/repo/koda-evals/bin/codex-as-koda"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
