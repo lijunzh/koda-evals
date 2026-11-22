@@ -1,0 +1,35 @@
+# 0.7.8 baseline on main (Lijun: "go ahead with the haiku test", 2026-11-22,
+# with the cost stated, about $0.11): the 19 `core` tasks once each on
+# lijunzh/koda main 96de17d (#1741). Since 0.7.7: Tab queues a message
+# (#1733); Bash in parallel batches, tests only (#1734); `koda exec
+# --output-schema` (#1735); MCP OAuth sign-in (#1736); MCP elicitation
+# (#1737); MCP resource tools (#1738); /rewind (#1739); `koda exec` not
+# waiting for left-over processes (#1742). Settings of haiku-077-check
+# (window capped at 117K), except that bash-readonly-fail-closed has an hour
+# since #85 (5m32s there). Paid API calls. Before the release's cargo
+# update, so it is the baseline and not the check of the code that ships.
+#   ./target/release/koda-eval run runs/haiku-078-check.toml
+#
+# Result, 20261122T170432Z: 18 of 19, no compactions, peak context 54% of the
+# window (bash-readonly-fail-closed, 63K; 0.7.7: 73%). The miss is
+# bash-classifier-escapes, hidden tests 2 of 3: Haiku left
+# `env PATH=/tmp ls /` read-only, the same miss as the 0.7.1, 0.7.4 and 0.7.7
+# checks, on an old Koda checkout. Slowest: provider-flag-base-url 4m43s,
+# bash-readonly-fail-closed 3m54s, bash-classifier-escapes 3m26s. 3.91M prompt
+# tokens, of which 3.59M read from cache and 318K written to it, 84K out, 145
+# calls, none over 100K: about $0.12.
+name = "haiku-078-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "96de17d"  # lijunzh/koda#1741 (main after #1733-#1742)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
