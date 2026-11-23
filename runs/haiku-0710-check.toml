@@ -1,0 +1,34 @@
+# 0.7.10 release check (Lijun: "Yes, all of it", 2026-11-23, with the cost
+# stated, about $0.15, at most $0.30): the 19 `core` tasks once each on the
+# release candidate, 5225d29: the release's cargo update (#1755) on main
+# 9e6bac4. Since 0.7.9: WebSearch on Brave (BRAVE_API_KEY) or DuckDuckGo with
+# Claude Code's arguments (#1751), Anthropic's search on Claude models
+# (#1752), its usage counted and a per-session cap (#1753), the Brave key in
+# /key (#1754), the DuckDuckGo fix (#1750), a faster sandbox path check
+# (#1749), and four patch updates to the lock file. Same settings as
+# haiku-078-recheck. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-0710-check.toml
+#
+# Result, 20261123T142452Z: 18 of 19, one compaction (bash-readonly-fail-closed,
+# peak context 85% of the window, 99K). The miss is bash-classifier-escapes,
+# hidden tests 2 of 3: Haiku left `env PATH=/tmp ls /` read-only, the same miss
+# as the 0.7.1, 0.7.4, 0.7.7 and 0.7.8-baseline checks. Slowest:
+# bash-readonly-fail-closed 7m20s, provider-flag-base-url 2m24s,
+# bash-classifier-escapes 2m05s. 5.22M prompt tokens, of which 4.84M read from
+# cache and 387K written to it, 100K out, 155 calls: about $0.15.
+
+name = "haiku-0710-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "5225d29"  # lijunzh/koda#1755: cargo update on main 9e6bac4 (#1754)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
