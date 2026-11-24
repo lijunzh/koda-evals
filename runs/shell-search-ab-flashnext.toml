@@ -1,0 +1,45 @@
+# Shell-search A/B on Flash-Next (Lijun: "Start the shell-search A/B",
+# 2026-11-24): today's tools against search through the shell, as Claude Code
+# does it, on the 19 `core` tasks. Both arms are one build, lijunzh/koda
+# exp/shell-search b873028 (v0.7.11 plus the `shell_search` setting): `tools`
+# as shipped, `shell` with `-c shell_search=true`, which drops Grep, Glob and
+# List and gives Bash Claude Code 2.1.296's grep (ugrep) and find (bfs)
+# functions (Homebrew ugrep 7.8.5, bfs 4.1.7). The tool review's rule: switch
+# only if Flash-Next is no worse on passes, tokens, approvals and tool errors.
+# Local, no API cost; after bin/gpu-check. A first start on 1d46df3 was
+# stopped after 2 of 38 runs: that build showed the shell functions in front
+# of the command in timeout and background messages (fixed in b873028).
+#
+# Result, 20261124T130335Z (3h54m): tools 19 of 19, shell 18 of 19. The miss
+# is behaviour-act-on-given-info: the fix was right (hidden tests pass) but
+# the run hit the task's 5-minute limit after the eval refused a destructive
+# `rm` of the agent's own scratch test; search played no part (one grep).
+# Shell used 1% fewer tokens (604,638 against 611,077 over the 19 tasks) and
+# 13% less time (1h47m against 2h03m). Search errors 2 against 4, all an `ls`
+# of a missing folder. Edit and Write refused 12 against 4, mostly "modified
+# on disk since you last read it" after a Bash command: the same direction as
+# Haiku. Approval requests 19 against 14, of them destructive 1 (the rm
+# above) against 2. Searches: tools 41 Grep, 3 Glob, 3 List and 19 grep or find
+# through Bash; shell 52 grep, 9 find, 17 ls, Read 73 against 68.
+#   ./target/release/koda-eval run runs/shell-search-ab-flashnext.toml
+name = "shell-search-ab-flashnext"
+repeats = 1
+tags = ["core"]
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "tools"
+ref = "b873028"  # lijunzh/koda exp/shell-search: v0.7.11 + shell_search, off
+
+[[variants]]
+name = "shell"
+ref = "b873028"
+args = ["-c", "shell_search=true"]
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
