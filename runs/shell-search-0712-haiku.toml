@@ -1,0 +1,34 @@
+# Search through the shell on by default, the check before 0.7.12 (Lijun:
+# "Yes, run both", 2026-11-24, after the cost was stated, about $0.40): the 19
+# `core` tasks three times each on lijunzh/koda main 9b533e5, which has ugrep
+# and bfs built into koda (#1765) and search through the shell on by default
+# (#1766): no Grep, Glob or List, Claude Code's grep and find functions and
+# Bash description. Same settings as shell-search-ab-haiku, whose tools arm
+# passed 55 of 57 and shell arm 55 of 57 with 41 Edit or Write refusals. The
+# bar: at least 55 of 57, refusals below 41. Paid API calls.
+#   ./target/release/koda-eval run runs/shell-search-0712-haiku.toml
+#
+# Result, 20261125T030609Z: 56 of 57, pass^3 18 of 19; the miss is the known
+# bash-classifier-escapes (1 of 3). Prompt tokens 12.07M against the A/B's
+# tools arm 13.21M (-9%) and shell arm 12.60M; 289K out. Approval requests 31
+# (A/B: tools 35, shell 36). Edit and Write refused 55, above the bar (A/B:
+# tools 33, shell 41), nearly all "hasn't been read yet": the model edits
+# after seeing lines through `grep -n`, `cat` or `sed` in Bash (15 to files
+# it never showed), then reads and retries. Claude Code's Bash line didn't
+# move it: shell reads 35 of 164 Bash calls (A/B shell 30 of 175). About
+# $0.39: 0.99M cache writes, 11.08M cache reads, 290K out.
+name = "shell-search-0712-haiku"
+repeats = 3
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "shell"
+ref = "9b533e5"  # lijunzh/koda main: #1766, search through the shell by default
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000

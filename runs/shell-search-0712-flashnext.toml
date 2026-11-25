@@ -1,0 +1,24 @@
+# Search through the shell on by default, the check before 0.7.12 on the
+# local model (Lijun: "Yes, run both", 2026-11-24): the 19 `core` tasks once
+# on lijunzh/koda main 9b533e5 (#1765 ugrep and bfs built in, #1766 search
+# through the shell by default), macOS. Same settings as
+# shell-search-ab-flashnext, whose tools arm passed 19 of 19 and shell arm
+# 18 of 19 with 12 Edit or Write refusals. The bar: 19 of 19 or a miss that
+# isn't search, refusals below 12. Local, no API cost; after bin/gpu-check.
+#   ./target/release/koda-eval run runs/shell-search-0712-flashnext.toml
+name = "shell-search-0712-flashnext"
+repeats = 1
+tags = ["core"]
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "shell"
+ref = "9b533e5"  # lijunzh/koda main: #1766, search through the shell by default
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
