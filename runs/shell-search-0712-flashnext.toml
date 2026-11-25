@@ -1,0 +1,31 @@
+# Search through the shell on by default, the check of 0.7.12 on the
+# local model (Lijun: "Yes, run both", 2026-11-24): the 19 `core` tasks once
+# on lijunzh/koda v0.7.12, fb0a8f6 (#1765 ugrep and bfs built in, #1766
+# search through the shell by default), run after the release (Lijun: "Yes"), macOS. Same settings as
+# shell-search-ab-flashnext, whose tools arm passed 19 of 19 and shell arm
+# 18 of 19 with 12 Edit or Write refusals. The bar: 19 of 19 or a miss that
+# isn't search, refusals below 12. Local, no API cost; after bin/gpu-check.
+#   ./target/release/koda-eval run runs/shell-search-0712-flashnext.toml
+# Result, 20261125T044954Z: 17 of 19. Both misses are logic the hidden tests
+# caught, not search: bash-readonly-fail-closed (an escaped quote hiding a
+# substitution) and provider-flag-base-url (a custom URL for the same
+# provider dropped; hit the time limit). Both passed in both A/B arms. No
+# grep or find call failed. Edit and Write refused 3, below the bar (A/B:
+# tools 4, shell 12). Mean tokens 30,249 (A/B: tools 32,161, shell 31,823),
+# mean time 6m24s. Shell search 34 of 160 Bash calls, shell read 11.
+name = "shell-search-0712-flashnext"
+repeats = 1
+tags = ["core"]
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "shell"
+ref = "fb0a8f6"  # lijunzh/koda v0.7.12 (#1768)
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }

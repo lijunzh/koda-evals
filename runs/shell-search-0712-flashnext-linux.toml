@@ -1,0 +1,32 @@
+# Search through the shell on by default, the check of 0.7.12 on the
+# local model (Lijun: "Yes, run both", 2026-11-24): the 19 `core` tasks once
+# on lijunzh/koda v0.7.12, fb0a8f6 (#1765 ugrep and bfs built in, #1766
+# search through the shell by default), run after the release (Lijun: "Yes"), on Linux: Ubuntu 26.04 arm64 in the
+# OrbStack VM on the Studio, where `sh` is dash and Bash runs in bwrap,
+# against the Studio's llama-server. Run after the macOS one, not beside it. Same settings as
+# shell-search-ab-flashnext, whose tools arm passed 19 of 19 and shell arm
+# 18 of 19 with 12 Edit or Write refusals. The bar: 19 of 19 or a miss that
+# isn't search, within one pass of the macOS run. Local, no API cost; after bin/gpu-check.
+#   (in the VM, which has no koda checkout of its own)
+#   KODA_REPO=/Users/lijun/repo/koda ./target/release/koda-eval run runs/shell-search-0712-flashnext-linux.toml
+# Result, 20261125T065834Z: 19 of 19, two ahead of macOS (17); both macOS
+# misses passed here, so they read as the model's variance, not a platform
+# difference. No grep or find call failed under dash and bwrap. Edit and
+# Write refused 6 (macOS 3, A/B shell 12). Mean tokens 30,413 (macOS
+# 30,249), mean time 5m01s. Shell search 53 of 174 Bash calls, shell read 26.
+name = "shell-search-0712-flashnext-linux"
+repeats = 1
+tags = ["core"]
+jobs = 1
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "shell"
+ref = "fb0a8f6"  # lijunzh/koda v0.7.12 (#1768)
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://host.orb.internal:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
