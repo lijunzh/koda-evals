@@ -18,6 +18,10 @@
 # refused 6. Slowest: bash-readonly-fail-closed 7m01s, provider-flag-base-url
 # 4m41s. 4.86M prompt tokens, of which 4.51M read from cache and 350K written
 # to it, 111K out: about $0.13.
+# Rerun at Lijun's "Rerun the check first", 20261125T035032Z: 19 of 19,
+# both misses above passing, bash-classifier-escapes too; no compactions,
+# peak context 60%. Edit and Write refused 17. 4.82M prompt tokens, of which
+# 4.49M read from cache and 329K written to it, 100K out: about $0.12.
 name = "haiku-0712-check"
 repeats = 1
 tags = ["core"]
