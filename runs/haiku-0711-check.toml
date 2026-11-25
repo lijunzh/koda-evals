@@ -1,0 +1,33 @@
+# 0.7.11 release check (Lijun: "Release 0.7.11", 2026-11-23, after the cost
+# was stated, about $0.15): the 19 `core` tasks once each on the release
+# candidate, b28604c: the release's cargo update (#1762) on main 10f85a8.
+# Since 0.7.10: Monitor and TaskStop (#1757), background sub-agents with
+# SendMessage (#1758), sub-agents asking in the main session with the main
+# agent's rules (#1759), background agents' usage and waiting marker (#1760),
+# WebFetch as Claude Code's (#1761), and two lock-file updates. Same settings
+# as haiku-0710-check. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-0711-check.toml
+#
+# Result, 20261124T040331Z: 18 of 19, no compactions, peak context 59% of the
+# window (69K). The miss is bash-classifier-escapes, hidden tests 2 of 3: Haiku
+# left `env PATH=/tmp ls /` read-only, the same miss as the 0.7.1, 0.7.4, 0.7.7,
+# 0.7.8-baseline and 0.7.10 checks. No run delegated. Slowest:
+# bash-readonly-fail-closed 4m01s, bash-classifier-escapes 3m41s,
+# kata-api-migration-tests 2m26s. 4.01M prompt tokens, of which 3.69M read from
+# cache and 323K written to it, 84K out, 144 calls: about $0.12.
+
+name = "haiku-0711-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "b28604c"  # lijunzh/koda#1762: cargo update on main 10f85a8 (#1761)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
