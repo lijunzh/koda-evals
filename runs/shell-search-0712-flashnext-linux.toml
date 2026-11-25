@@ -1,7 +1,7 @@
-# Search through the shell on by default, the check before 0.7.12 on the
+# Search through the shell on by default, the check of 0.7.12 on the
 # local model (Lijun: "Yes, run both", 2026-11-24): the 19 `core` tasks once
-# on lijunzh/koda main 9b533e5 (#1765 ugrep and bfs built in, #1766 search
-# through the shell by default), on Linux: Ubuntu 26.04 arm64 in the
+# on lijunzh/koda v0.7.12, fb0a8f6 (#1765 ugrep and bfs built in, #1766
+# search through the shell by default), run after the release (Lijun: "Yes"), on Linux: Ubuntu 26.04 arm64 in the
 # OrbStack VM on the Studio, where `sh` is dash and Bash runs in bwrap,
 # against the Studio's llama-server. Run after the macOS one, not beside it. Same settings as
 # shell-search-ab-flashnext, whose tools arm passed 19 of 19 and shell arm
@@ -16,7 +16,7 @@ memory = "memory/rust-project.md"
 
 [[variants]]
 name = "shell"
-ref = "9b533e5"  # lijunzh/koda main: #1766, search through the shell by default
+ref = "fb0a8f6"  # lijunzh/koda v0.7.12 (#1768)
 
 [[models]]
 name = "flashnext"
