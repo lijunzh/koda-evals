@@ -1,0 +1,40 @@
+# Shell-search A/B on Haiku (Lijun: "Start the shell-search A/B",
+# 2026-11-24): the same two arms as shell-search-ab-flashnext, 3 repeats on
+# the 19 `core` tasks, release-check settings. Paid API calls: 114 runs, about
+# $0.70-0.90 at the release checks' ~$0.12-0.15 per 19 runs. Asked first.
+# (Lijun: "Yes run haiku".)
+#
+# Result, 20261124T122140Z, on 1d46df3: no difference in passes. Each arm 55 of
+# 57, pass^3 18 of 19; the misses are the known bash-classifier-escapes, 2 of
+# 3 in each. Shell used 8% fewer tokens (21,663 mean against 23,481) in the
+# same time (0m51s against 0m52s). No search errors in either arm (exit 2 or
+# worse: 0; the 3 "errors" in shell are a cargo timeout and pipelines whose
+# last grep found nothing). Tool errors 72 against 53, mostly Edit refused
+# because the file wasn't read with Read (41 against 33; shell arm read more
+# through cat/sed/head) and failing cargo runs. Searches: tools 63 Grep, 1
+# Glob and 37 grep through Bash; shell 113 grep, 15 find, 19 ls through Bash,
+# Read 114 against 153. One shell run (bash-readonly-fail-closed r2, passed)
+# saw the shell functions in a timeout message; fixed in b873028, which the
+# Flash-Next half runs. About $0.78: 25.8M prompt tokens, 23.8M from
+# cache and 2.0M written, 580K out.
+#   ./target/release/koda-eval run runs/shell-search-ab-haiku.toml
+name = "shell-search-ab-haiku"
+repeats = 3
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "tools"
+ref = "1d46df3"  # lijunzh/koda exp/shell-search: v0.7.11 + shell_search, off
+
+[[variants]]
+name = "shell"
+ref = "1d46df3"
+args = ["-c", "shell_search=true"]
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
