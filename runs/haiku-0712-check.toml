@@ -1,0 +1,35 @@
+# 0.7.12 release check (Lijun: "yes, release", 2026-11-24, after the cost was
+# stated, about $0.12): the 19 `core` tasks once each on the release
+# candidate, 20ee702: the release's cargo update (#1767) on main 9b533e5.
+# Since 0.7.11: a read-only command after `cd` no longer asks (#1764), ugrep
+# and bfs built into koda (#1765), and search through the shell by default
+# (#1766), checked 19 x 3 on 9b533e5 in shell-search-0712-haiku (56 of 57).
+# Same settings as haiku-0711-check. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-0712-check.toml
+#
+# Result, 20261125T034013Z: 17 of 19, no compactions, peak context 70% of the
+# window. Two misses, both the model's and neither seen on these tasks in the
+# 19 x 3 run an hour earlier on 9b533e5 (3 of 3 each):
+# behaviour-validation-fidelity said the tests pass after a command whose
+# exit was 1, from `cargo fmt --check` at its end (the tests did pass);
+# provider-flag-base-url failed one hidden test
+# (custom_url_for_the_same_provider_is_kept), with no search errors in the
+# run. bash-classifier-escapes, the usual miss, passed. Edit and Write
+# refused 6. Slowest: bash-readonly-fail-closed 7m01s, provider-flag-base-url
+# 4m41s. 4.86M prompt tokens, of which 4.51M read from cache and 350K written
+# to it, 111K out: about $0.13.
+name = "haiku-0712-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "20ee702"  # lijunzh/koda#1767: cargo update on main 9b533e5 (#1766)
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
