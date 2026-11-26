@@ -782,18 +782,22 @@ KODA_EVAL_TEST_BIN=~/repo/koda/target/debug/koda cargo test --test mock_e2e
 Before koda dropped its `test-support` feature (lijunzh/koda, November 2026),
 this test drove koda's mock provider, which only a test build had.
 
-`tests/fixtures/koda-wire-v3.ndjson` is what a real koda (0.7.13) wrote with
+`tests/fixtures/koda-wire-v4.ndjson` is what a real koda (0.7.14) wrote with
 `koda exec --json` against a local stub of an OpenAI-compatible server, and
 `cargo test` always reads it, through the reader and through the runner.
-`koda-wire-v2.ndjson` is the same scripted run from koda 0.7.0 to 0.7.12
-(protocol 2, before koda took Codex's names), and `koda-wire-v1.ndjson` from
-koda 0.6's `stream-json`, which the peer wrappers still write; a test checks
-that all three grade the same. Nothing compares them with today's koda, so
-record the newest one again whenever the protocol or koda's behaviour on the
-scripted run changes. It takes a plain koda build, no model and no key:
+`koda-wire-v3.ndjson` is the same scripted run from koda 0.7.13 (protocol 3,
+Codex's names; protocol 4 changed only what reading a stored session returns,
+so the two streams differ only in the version), `koda-wire-v2.ndjson` from
+koda 0.7.0 to 0.7.12 (protocol 2, before koda took Codex's names), and
+`koda-wire-v1.ndjson` from koda 0.6's `stream-json`, which the peer wrappers
+still write; a test checks that all four grade the same. Nothing compares them
+with today's koda, so record the newest one again whenever the protocol or
+koda's behaviour on the scripted run changes. It takes a plain koda build, no
+model and no key:
 
 ```bash
-bin/capture-koda-wire ~/repo/koda/target/debug/koda          # protocol 3
+bin/capture-koda-wire ~/repo/koda/target/debug/koda          # protocol 4
+bin/capture-koda-wire <a koda 0.7.13 build> 3                # protocol 3
 bin/capture-koda-wire <a koda 0.7.0 to 0.7.12 build> 2       # protocol 2
 bin/capture-koda-wire <a koda 0.6 build> 1                   # protocol 1
 ```

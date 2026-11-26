@@ -1027,10 +1027,12 @@ not json
     const CAPTURED_V2: &str = include_str!("../tests/fixtures/koda-wire-v2.ndjson");
     /// And as koda 0.7.13 writes it, protocol 3, with Codex's names.
     const CAPTURED_V3: &str = include_str!("../tests/fixtures/koda-wire-v3.ndjson");
+    /// And as koda 0.7.14 writes it, protocol 4, a stored turn's items flat.
+    const CAPTURED_V4: &str = include_str!("../tests/fixtures/koda-wire-v4.ndjson");
 
     #[test]
     fn reads_what_koda_exec_wrote() {
-        for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3)] {
+        for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3), (CAPTURED_V4, 4)] {
             reads_koda_exec(captured, version);
         }
     }
@@ -1096,9 +1098,11 @@ not json
         let v1 = Transcript::parse(CAPTURED);
         let v2 = Transcript::parse(CAPTURED_V2);
         let v3 = Transcript::parse(CAPTURED_V3);
+        let v4 = Transcript::parse(CAPTURED_V4);
         assert_eq!(v1.protocol_version(), Some(1));
         assert_eq!(graded(&v2), graded(&v1));
         assert_eq!(graded(&v3), graded(&v1));
+        assert_eq!(graded(&v4), graded(&v1));
         for t in [&v1, &v2, &v3] {
             let last_call = t.tool_calls().map(|c| c.index).max().unwrap();
             assert!(t.final_message_index().unwrap() > last_call);

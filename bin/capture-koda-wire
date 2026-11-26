@@ -6,7 +6,8 @@ actual output. This runs the given `koda` against a local stub of an
 OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-v<N>.ndjson.
 Nothing leaves the machine: no model, no API key.
 
-    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # protocol 3, koda 0.7.13+
+    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # protocol 4, koda 0.7.14+
+    bin/capture-koda-wire <koda 0.7.13> 3                    # protocol 3
     bin/capture-koda-wire <koda 0.7.0 to 0.7.12> 2           # protocol 2
     bin/capture-koda-wire <koda 0.6> 1                       # protocol 1
 
@@ -166,10 +167,10 @@ def serve(stub):
 
 
 def main():
-    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], ["1"], ["2"], ["3"]):
+    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], ["1"], ["2"], ["3"], ["4"]):
         sys.exit(__doc__)
     koda = sys.argv[1]
-    protocol = sys.argv[2] if len(sys.argv) == 3 else "3"
+    protocol = sys.argv[2] if len(sys.argv) == 3 else "4"
     fixture = FIXTURES / f"koda-wire-v{protocol}.ndjson"
     command = (
         ["-p", "Fix the parser", "--output-format", "stream-json"]
