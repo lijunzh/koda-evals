@@ -39,9 +39,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 /// The `koda exec --json` protocols this reader reads: 2 (koda 0.7.0 to
-/// 0.7.12) and 3 (0.7.13 on, which took Codex's names: `modelProvider`,
-/// `cacheWriteInputTokens`, `reasoningOutputTokens`).
-const PROTOCOL_VERSIONS: [u64; 2] = [2, 3];
+/// 0.7.12), 3 (0.7.13, which took Codex's names: `modelProvider`,
+/// `cacheWriteInputTokens`, `reasoningOutputTokens`) and 4 (0.7.14, whose
+/// change, flat stored turn items, isn't in what `koda exec` writes).
+const PROTOCOL_VERSIONS: [u64; 3] = [2, 3, 4];
 
 /// The record's own format version. Bump it when a field changes meaning,
 /// and convert saved records in the same change.
