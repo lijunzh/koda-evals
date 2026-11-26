@@ -176,7 +176,7 @@ fn graded_from_protocol(captured: &str, version: u64) {
 
 #[test]
 fn a_newer_koda_protocol_fails_too() {
-    let started = r#"{"jsonrpc":"2.0","method":"session/started","params":{"protocolVersion":4}}"#;
+    let started = r#"{"jsonrpc":"2.0","method":"session/started","params":{"protocolVersion":5}}"#;
     let turn =
         r#"{"jsonrpc":"2.0","method":"turn/completed","params":{"turn":{"status":"completed"}}}"#;
     let tmp = tempfile::tempdir().unwrap();
@@ -190,7 +190,7 @@ fn a_newer_koda_protocol_fails_too() {
     );
     assert_eq!(run.row["pass"], false, "{:#}", run.row);
     assert_eq!(
-        run.row["failure"], "unsupported protocol 4",
+        run.row["failure"], "unsupported protocol 5",
         "{:#}",
         run.row
     );
