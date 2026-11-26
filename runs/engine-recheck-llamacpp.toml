@@ -1,0 +1,35 @@
+# Engine recheck, 2026-11-26 (Lijun: "Yes, GPU is free, run the probe"): is
+# LM Studio still slower than llama-server for Koda, as on 2026-11-06? Five
+# tasks once each on Qwen3.8-Flash-Next, the same file on both engines, here
+# on Homebrew llama-server 1.1.0 (bin/serve-gguf flashnext).
+# Koda at 89c5ff4 (the 0.7.14 release tree). Compared per model call from
+# koda.log (first_chunk_ms against the context added). Local, no paid calls.
+#   ./target/release/koda-eval run runs/engine-recheck-llamacpp.toml
+#
+# Result, 20261126T210415Z: 5 of 5 in 40m54s, 146 model calls. Waits per
+# call: 2.2 s per 1K added context tokens; median 0.7 s under 1K, 3.7 s at
+# 1-4K, 19.2 s at 4-20K; output 39.5 tok/s; cached tokens on 141 calls. More
+# calls than on LM Studio: the model took different paths, one run each.
+name = "engine-recheck-llamacpp"
+repeats = 1
+tasks = [
+  "behaviour-frugal-reads",
+  "behaviour-pre-existing-failure",
+  "kata-utf8-sweep",
+  "loop-guard-char-boundary",
+  "provider-flag-base-url",
+]
+jobs = 1
+memory = "memory/rust-project.md"
+wall_secs = 3600
+
+[[variants]]
+name = "koda"
+ref = "89c5ff4"
+
+[[models]]
+name = "flashnext"
+provider = "llama-cpp"
+base_url = "http://localhost:8080/v1"
+model = "flashnext"
+env = { KODA_MAX_CONTEXT_TOKENS = "262144", KODA_REASONING_EFFORT = "xhigh" }
