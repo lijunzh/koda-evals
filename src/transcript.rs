@@ -38,8 +38,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-/// The newest koda protocol capture understands.
-const PROTOCOL_VERSION: u64 = 2;
+/// The `koda exec --json` protocols this reader reads: 2 (koda 0.7.0 to
+/// 0.7.12) and 3 (0.7.13 on, which took Codex's names: `modelProvider`,
+/// `cacheWriteInputTokens`, `reasoningOutputTokens`).
+const PROTOCOL_VERSIONS: [u64; 2] = [2, 3];
 
 /// The record's own format version. Bump it when a field changes meaning,
 /// and convert saved records in the same change.
@@ -145,16 +147,24 @@ fn effect_v1(effect: &str) -> String {
     }
 }
 
-/// Protocol 2's usage in protocol 1's names.
+/// Protocol 2's or 3's usage in protocol 1's names.
 fn usage_v1(u: &Value) -> Value {
     json!({
         "prompt_tokens": u["inputTokens"],
         "completion_tokens": u["outputTokens"],
         "cache_read_tokens": u["cachedInputTokens"],
-        "cache_creation_tokens": u["cacheCreationTokens"],
-        "thinking_tokens": u["reasoningTokens"],
+        "cache_creation_tokens": either(u, "cacheWriteInputTokens", "cacheCreationTokens"),
+        "thinking_tokens": either(u, "reasoningOutputTokens", "reasoningTokens"),
         "api_calls": u["modelCalls"],
     })
+}
+
+/// `v[new]`, protocol 3's name, or `v[old]`, protocol 2's.
+fn either(v: &Value, new: &str, old: &str) -> Value {
+    match &v[new] {
+        Value::Null => v[old].clone(),
+        found => found.clone(),
+    }
 }
 
 /// A multi-turn run through a peer's wrapper writes one protocol 1
@@ -214,7 +224,7 @@ fn summary_v1(s: &Value) -> Value {
         "session_id": s["sessionId"],
         "success": s["success"],
         "error": s["error"],
-        "provider": s["provider"],
+        "provider": either(s, "modelProvider", "provider"),
         "model": s["model"],
         "response": s["response"],
         "turn_end": turn_end,
@@ -297,7 +307,7 @@ impl Transcript {
                     let version = &p["protocolVersion"];
                     self.protocol_version = version.as_u64();
                     self.unsupported_protocol = match version.as_u64() {
-                        Some(v) if v == PROTOCOL_VERSION => None,
+                        Some(v) if PROTOCOL_VERSIONS.contains(&v) => None,
                         _ => Some(format!("unsupported protocol {version}")),
                     };
                 }
@@ -1014,12 +1024,32 @@ not json
 
     /// The same scripted run, as koda 0.7 wrote it with `koda exec --json`.
     const CAPTURED_V2: &str = include_str!("../tests/fixtures/koda-wire-v2.ndjson");
+    /// And as koda 0.7.13 writes it, protocol 3, with Codex's names.
+    const CAPTURED_V3: &str = include_str!("../tests/fixtures/koda-wire-v3.ndjson");
 
     #[test]
     fn reads_what_koda_exec_wrote() {
-        let t = Transcript::parse(CAPTURED_V2);
+        for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3)] {
+            reads_koda_exec(captured, version);
+        }
+    }
+
+    /// Protocol 3 renamed `provider` and two token counts; the record keeps
+    /// protocol 1's names for them, read from either.
+    #[test]
+    fn protocol_3_names_land_in_the_same_record() {
+        let t = Transcript::parse(CAPTURED_V3);
+        let summary = t.summary.as_ref().unwrap();
+        assert_eq!(summary["provider"], "lm-studio");
+        for key in ["cache_creation_tokens", "thinking_tokens"] {
+            assert!(summary["usage"][key].is_u64(), "{key}: {summary:#}");
+        }
+    }
+
+    fn reads_koda_exec(captured: &str, version: u64) {
+        let t = Transcript::parse(captured);
         assert_eq!(t.count("unparsed_line"), 0);
-        assert_eq!(t.protocol_version(), Some(2));
+        assert_eq!(t.protocol_version(), Some(version));
         assert_eq!(t.unsupported_protocol(), None);
         assert_eq!(t.turn_end_kind(), Some("complete"));
         assert_eq!(t.final_message(), Some("Done."));
@@ -1064,9 +1094,11 @@ not json
     fn the_same_run_records_alike_through_both_protocols() {
         let v1 = Transcript::parse(CAPTURED);
         let v2 = Transcript::parse(CAPTURED_V2);
+        let v3 = Transcript::parse(CAPTURED_V3);
         assert_eq!(v1.protocol_version(), Some(1));
         assert_eq!(graded(&v2), graded(&v1));
-        for t in [&v1, &v2] {
+        assert_eq!(graded(&v3), graded(&v1));
+        for t in [&v1, &v2, &v3] {
             let last_call = t.tool_calls().map(|c| c.index).max().unwrap();
             assert!(t.final_message_index().unwrap() > last_call);
         }
