@@ -472,6 +472,45 @@ What keeps the peers' setup like Koda's:
   reads through the shell and has no sub-agents, so leave those two out of the
   Codex comparison.
 
+### What reaches the model: Koda's requests against Claude Code's
+
+A parity run compares outcomes; `bin/compare-claude-requests` compares the
+requests themselves. Claude Code and koda each run the same scripted task
+(thinking, Read, thinking, Bash, an answer, then a resumed second turn)
+against a local stub of the Messages API, which records every request and
+plays the model. The replies are fixed, so a difference is the client's.
+
+```bash
+bin/compare-claude-requests ~/repo/koda/target/release/koda
+bin/compare-claude-requests <koda> --model claude-haiku-5-5 --keep /tmp/reqs
+```
+
+It prints each client's headers, parameters, system blocks, tools and message
+shapes, never prompt text, and three checks: every thinking block comes back
+unchanged, each request extends the one before (an edit to history breaks the
+prompt cache and, on the current models, the thinking blocks after it), and
+cache breakpoints stay within four with one on the last block. Nothing leaves
+the machine: both run under `sandbox-exec` with network to localhost only, a
+placeholder key and an empty home. No model is called, so it costs nothing;
+run it before a release, after the parity check.
+
+The first run (Claude Code 2.1.296, koda 0.7.13, November 26, 2026) found
+`koda exec resume --model` running the resumed turn on the wrong provider,
+and koda's leftover `prompt-caching-2024-07-31` beta header (both fixed in
+0.7.14). Both pass all three checks on Sonnet 5.5, Opus 5.5 and Haiku 5.5. The
+differences left are by design or have no effect:
+
+- Claude Code sends `thinking: {type: adaptive, display: omitted}`; koda
+  sends no `thinking`, which is the same on these models.
+- Claude Code's `context_management` (`clear_thinking`, keep all) clears
+  nothing; `metadata.user_id` is optional.
+- Claude Code splits its system prompt into three blocks with two
+  breakpoints and none on the tools; koda sends one block, with a breakpoint
+  on the last tool too. Three breakpoints each.
+- Claude Code puts its context in `<system-reminder>` blocks of the first
+  user message and adds mid-conversation `system` messages after tool
+  results; koda's project memory is in the system prompt. Both only append.
+
 ### A model's own harness: Qwen Code
 
 `bin/qwen-as-koda` runs Qwen Code (the Homebrew `qwen`, the release users get)
