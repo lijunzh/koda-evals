@@ -1,0 +1,35 @@
+# 0.7.13 release check (Lijun: "Yes, merge them and run the release check",
+# 2026-11-26; Haiku runs approved for the work before 0.8.0, about $0.13 as
+# for 0.7.12): the 19 `core` tasks once each on the release candidate,
+# 9b2b0c5: main with the release's cargo update (#1799), protocol 3 (#1800)
+# and the sub-agent refusal fix (#1801). Since 0.7.12: the client protocol
+# work (#1774 to #1782), the foundation review's fixes (#1783 to #1794), one
+# version for every client with the update restart (#1795), Codex's names,
+# prompts as lists, approval answers and session/resume (#1796 to #1798).
+# Same settings as haiku-0712-check. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-0713-check.toml
+#
+# Result, 20261126T152307Z: 18 of 19, no compactions, peak context 79% of
+# the window (bash-readonly-fail-closed). The miss is
+# bash-classifier-escapes, hidden tests 2 of 3: Haiku left `env PATH=/tmp
+# ls /` read-only (env_running_a_command_is_not_read_only), the same miss
+# as the 0.7.1, 0.7.10 and 0.7.11 checks. Read through protocol 3 (#94):
+# cache writes and the provider come through. Edit and Write refused 17.
+# Slowest: bash-readonly-fail-closed 8m56s, provider-flag-base-url 3m31s.
+# 5.27M prompt tokens, of which 4.94M read from cache and 330K written to
+# it, 98K out: about $0.13.
+name = "haiku-0713-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "9b2b0c5"  # lijunzh/koda main: #1799, #1800, #1801 on #1798
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
