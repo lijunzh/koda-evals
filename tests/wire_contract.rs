@@ -154,10 +154,14 @@ const CAPTURED_V3: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/koda-wire-v3.ndjson"
 );
+const CAPTURED_V4: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/koda-wire-v4.ndjson"
+);
 
 #[test]
 fn a_koda_exec_run_is_graded_from_its_protocol() {
-    for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3)] {
+    for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3), (CAPTURED_V4, 4)] {
         graded_from_protocol(captured, version);
     }
 }
