@@ -1,0 +1,382 @@
+#!/usr/bin/env python3
+"""Compare what Claude Code and koda send to the Anthropic Messages API.
+
+Both run the same scripted task against a local stub of the Messages API,
+which records every request and plays the model's side. The model's replies
+are fixed, so any difference in the requests is the client's:
+
+    bin/compare-claude-requests ~/repo/koda/target/release/koda
+    bin/compare-claude-requests <koda> --model claude-haiku-5-5 --keep /tmp/reqs
+
+The task is one turn (thinking, Read, thinking, Bash, answer) and a resumed
+second turn. The report covers headers, parameters, the system prompt's
+blocks, the tools, each request's message shapes and three checks:
+
+- thinking: every thinking block the stub sent comes back unchanged. On the
+  current models a thinking block is bound to its conversation, and an edited
+  or dropped one loses that reasoning.
+- append-only: each request starts with the one before it (tools, system and
+  messages, ignoring where cache_control sits). An edit to history breaks the
+  prompt cache from that point on, and the thinking check with it.
+- cache: breakpoints number at most four and the last block carries one.
+
+Prompt text is never printed, only shapes and lengths; --keep saves the raw
+requests. Nothing leaves the machine: both clients run under sandbox-exec
+with network only to localhost, a placeholder API key and an empty home.
+Claude Code gets its usual first-party settings (CLAUDE_CODE_DISABLE_
+NONESSENTIAL_TRAFFIC, no user settings). macOS only.
+"""
+
+import argparse
+import http.server
+import json
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+
+SANDBOX = """(version 1)
+(allow default)
+(deny network-outbound)
+(allow network-outbound (remote ip "localhost:*"))
+(allow network-outbound (remote unix-socket))
+"""
+
+PROMPTS = ["Read README.md, then list the files here.", "Thanks. Now say it in one line."]
+
+
+def script():
+    """The model's replies to the main loop, in order."""
+    return [
+        [("thinking", "sig-read"), ("text", "Reading it."), ("tool_use", "Read", {"file_path": "README.md"})],
+        [("thinking", "sig-bash"), ("tool_use", "Bash", {"command": "ls", "description": "List files"})],
+        [("text", "Done: one README.")],
+        [("thinking", "sig-turn2"), ("text", "A README, nothing else.")],
+    ]
+
+
+def sse(blocks, n, model):
+    """A streamed reply; it names the model asked for, as the API does."""
+    events = [{"type": "message_start", "message": {
+        "id": f"msg_{n}", "type": "message", "role": "assistant", "model": model,
+        "content": [], "stop_reason": None, "stop_sequence": None,
+        "usage": {"input_tokens": 100, "output_tokens": 0}}}]
+    stop = "end_turn"
+    for i, block in enumerate(blocks):
+        kind = block[0]
+        if kind == "thinking":
+            events += [
+                {"type": "content_block_start", "index": i,
+                 "content_block": {"type": "thinking", "thinking": "", "signature": ""}},
+                {"type": "content_block_delta", "index": i,
+                 "delta": {"type": "signature_delta", "signature": block[1]}},
+            ]
+        elif kind == "text":
+            events += [
+                {"type": "content_block_start", "index": i, "content_block": {"type": "text", "text": ""}},
+                {"type": "content_block_delta", "index": i, "delta": {"type": "text_delta", "text": block[1]}},
+            ]
+        else:
+            stop = "tool_use"
+            events += [
+                {"type": "content_block_start", "index": i, "content_block": {
+                    "type": "tool_use", "id": f"toolu_{n}_{i}", "name": block[1], "input": {}}},
+                {"type": "content_block_delta", "index": i,
+                 "delta": {"type": "input_json_delta", "partial_json": json.dumps(block[2])}},
+            ]
+        events.append({"type": "content_block_stop", "index": i})
+    events += [
+        {"type": "message_delta", "delta": {"stop_reason": stop, "stop_sequence": None},
+         "usage": {"output_tokens": 10}},
+        {"type": "message_stop"},
+    ]
+    return "".join(f"event: {e['type']}\ndata: {json.dumps(e)}\n\n" for e in events)
+
+
+class Stub:
+    def __init__(self):
+        self.replies = script()
+        self.served = 0
+        self.requests = []
+        self.lock = threading.Lock()
+
+    def serve(self):
+        stub = self
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                raw = self.rfile.read(int(self.headers.get("content-length", 0)))
+                body = json.loads(raw or b"null")
+                with stub.lock:
+                    stub.requests.append({"method": "POST", "path": self.path,
+                                          "headers": dict(self.headers), "body": body})
+                    main = (self.path.split("?")[0] == "/v1/messages"
+                            and isinstance(body, dict) and body.get("stream") and body.get("tools"))
+                    if main:
+                        n = stub.served
+                        stub.served += 1
+                if not self.path.startswith("/v1/messages") or "count_tokens" in self.path:
+                    return self.send(404, "application/json", json.dumps(
+                        {"type": "error", "error": {"type": "not_found_error", "message": "stub"}}))
+                if not main:
+                    reply = {"id": "msg_side", "type": "message", "role": "assistant", "model": body.get("model"),
+                             "content": [{"type": "text", "text": "ok"}], "stop_reason": "end_turn",
+                             "usage": {"input_tokens": 1, "output_tokens": 1}}
+                    if body.get("stream"):
+                        return self.send(200, "text/event-stream", sse([("text", "ok")], "side", body.get("model")))
+                    return self.send(200, "application/json", json.dumps(reply))
+                blocks = stub.replies[min(n, len(stub.replies) - 1)]
+                self.send(200, "text/event-stream", sse(blocks, n, body["model"]))
+
+            def do_GET(self):
+                with stub.lock:
+                    stub.requests.append({"method": "GET", "path": self.path,
+                                          "headers": dict(self.headers), "body": None})
+                # A model lookup, answered as the Models API does for the
+                # current models, so a client sizes its requests as it would.
+                path = self.path.split("?")[0]
+                if path.startswith("/v1/models/"):
+                    model = path.rsplit("/", 1)[1]
+                    return self.send(200, "application/json", json.dumps({
+                        "type": "model", "id": model, "display_name": model,
+                        "created_at": "2026-09-21T00:00:00Z",
+                        "max_input_tokens": 1000000, "max_tokens": 128000}))
+                self.send(404, "application/json", json.dumps(
+                    {"type": "error", "error": {"type": "not_found_error", "message": "stub"}}))
+
+            def send(self, status, kind, body):
+                data = body.encode()
+                self.send_response(status)
+                self.send_header("content-type", kind)
+                self.send_header("content-length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *_):
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        return server
+
+
+def project(root):
+    p = root / "project"
+    p.mkdir()
+    (p / "README.md").write_text("# demo\n\nA project with one file.\n")
+    subprocess.run(["git", "init", "-q"], cwd=p, check=True)
+    return p
+
+
+def run(argv, cwd, env, profile):
+    out = subprocess.run(["sandbox-exec", "-f", str(profile), *argv], cwd=cwd, env=env,
+                         stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300)
+    if out.returncode:
+        sys.stderr.write(f"{argv[0]} exited {out.returncode}\n{out.stderr[-2000:]}\n")
+    return out.stdout
+
+
+def run_claude(claude, model, root, profile, url):
+    home = root / "home"
+    home.mkdir()
+    cwd = project(root)
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(home), "CLAUDE_CONFIG_DIR": str(home / ".claude"),
+           "ANTHROPIC_API_KEY": "sk-ant-stub", "ANTHROPIC_BASE_URL": url,
+           "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"}
+    common = ["--model", model, "--output-format", "json", "--permission-mode", "dontAsk",
+              "--allowedTools", "Read", "Bash(ls)", "--setting-sources", ""]
+    first = run([claude, "-p", PROMPTS[0], *common], cwd, env, profile)
+    session = json.loads(first)["session_id"]
+    run([claude, "-p", PROMPTS[1], "--resume", session, *common], cwd, env, profile)
+
+
+def run_koda(koda, model, root, profile, url):
+    home = root / "home"
+    home.mkdir()
+    cwd = project(root)
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(home), "XDG_CONFIG_HOME": str(home / ".config"),
+           "XDG_DATA_HOME": str(home / ".local/share"), "XDG_STATE_HOME": str(home / ".local/state"),
+           "ANTHROPIC_API_KEY": "sk-ant-stub"}
+    common = ["--json", "--mode", "auto", "--provider", "anthropic", "--model", model,
+              "--base-url", url, "--project-root", str(cwd)]
+    first = run([koda, "exec", PROMPTS[0], *common], cwd, env, profile)
+    session = next(json.loads(l)["params"]["sessionId"] for l in first.splitlines()
+                   if '"exec/summary"' in l)
+    run([koda, "exec", "resume", session, PROMPTS[1], *common], cwd, env, profile)
+
+
+# --- the report ---------------------------------------------------------
+
+HEADERS = ("anthropic-version", "anthropic-beta", "user-agent", "x-app")
+
+
+def strip_cache(value):
+    """`value` without cache_control, and with a string message content as
+    the one text block the API reads it as."""
+    if isinstance(value, dict):
+        if isinstance(value.get("content"), str) and "role" in value:
+            value = dict(value, content=[{"type": "text", "text": value["content"]}])
+        return {k: strip_cache(v) for k, v in value.items() if k != "cache_control"}
+    if isinstance(value, list):
+        return [strip_cache(v) for v in value]
+    return value
+
+
+def blocks(content):
+    return [{"type": "text", "text": content}] if isinstance(content, str) else content
+
+
+def shape(message):
+    parts = []
+    for b in blocks(message["content"]):
+        mark = "*" if b.get("cache_control") else ""
+        parts.append(b["type"] + mark)
+    text = "str" if isinstance(message["content"], str) else ",".join(parts)
+    return f"{message['role']}[{text}]"
+
+
+def breakpoints(body):
+    n = sum(1 for t in body.get("tools", []) if t.get("cache_control"))
+    system = body.get("system")
+    if isinstance(system, list):
+        n += sum(1 for s in system if s.get("cache_control"))
+    for m in body["messages"]:
+        n += sum(1 for b in blocks(m["content"]) if isinstance(b, dict) and b.get("cache_control"))
+    return n
+
+
+def first_change(prev, cur):
+    """Where `cur` stops extending `prev`, or None if it extends it."""
+    for key in ("tools", "system"):
+        if strip_cache(prev.get(key)) != strip_cache(cur.get(key)):
+            return key
+    pm, cm = strip_cache(prev["messages"]), strip_cache(cur["messages"])
+    for i, m in enumerate(pm):
+        if i >= len(cm):
+            return f"messages[{i}] dropped"
+        if m != cm[i]:
+            if m["role"] != cm[i]["role"]:
+                return f"messages[{i}] role {m['role']} -> {cm[i]['role']}"
+            pb, cb = blocks(m["content"]), blocks(cm[i]["content"])
+            for j, b in enumerate(pb):
+                if j >= len(cb):
+                    return f"messages[{i}].content[{j}] ({b['type']}) dropped"
+                if b != cb[j]:
+                    return f"messages[{i}].content[{j}] ({b['type']}) changed"
+            return f"messages[{i}] grew ({len(pb)} -> {len(cb)} blocks)"
+    return None
+
+
+def report(name, requests):
+    print(f"\n== {name}")
+    main = [r for r in requests if r["method"] == "POST" and r["path"].split("?")[0] == "/v1/messages"
+            and isinstance(r["body"], dict) and r["body"].get("tools")]
+    side = [r for r in requests if r not in main]
+    print(f"requests: {len(main)} main loop; other: "
+          + (", ".join(f"{r['method']} {r['path']}" for r in side) or "none"))
+    if not main:
+        return
+    h = {k.lower(): v for k, v in main[0]["headers"].items()}
+    for k in HEADERS:
+        if k in h:
+            v = h[k]
+            print(f"header {k}: " + (", ".join(sorted(v.split(","))) if k == "anthropic-beta" else v))
+    others = sorted(k for k in h if k not in HEADERS and not k.startswith("x-stainless")
+                    and k not in ("host", "content-length", "content-type", "accept",
+                                  "accept-encoding", "connection", "x-api-key"))
+    if others:
+        print("header (others): " + ", ".join(others))
+    body = main[0]["body"]
+    params = {k: v for k, v in body.items() if k not in ("messages", "system", "tools")}
+    if "metadata" in params:
+        params["metadata"] = sorted(params["metadata"])
+    print("params: " + json.dumps(params, sort_keys=True))
+    system = body.get("system")
+    if isinstance(system, list):
+        print("system: " + " + ".join(f"{len(s.get('text', ''))}{'*' if s.get('cache_control') else ''}"
+                                      for s in system) + " chars  (* = cache_control)")
+    else:
+        print(f"system: one string, {len(system or '')} chars")
+    tools = body.get("tools", [])
+    extra = sorted({k for t in tools for k in t} - {"name", "description", "input_schema"})
+    print(f"tools: {len(tools)}, {sum(len(json.dumps(t)) for t in tools)} chars; "
+          f"fields beyond name/description/input_schema: {extra or 'none'}")
+    print("  " + " ".join(t["name"] + ("*" if t.get("cache_control") else "") for t in tools))
+    for i, r in enumerate(main):
+        print(f"request {i + 1}: " + " ".join(shape(m) for m in r["body"]["messages"])
+              + f"  ({breakpoints(r['body'])} breakpoints)")
+
+    # Checks.
+    sent = {}
+    for n, reply in enumerate(script()[:len(main)]):
+        for b in reply:
+            if b[0] == "thinking":
+                sent[b[1]] = n
+    problems = []
+    for sig, n in sent.items():
+        want = {"type": "thinking", "thinking": "", "signature": sig}
+        for later in main[n + 1:]:
+            got = [strip_cache(b) for m in later["body"]["messages"] if m["role"] == "assistant"
+                   for b in blocks(m["content"]) if b.get("type") == "thinking"
+                   and b.get("signature") == sig]
+            if not got:
+                problems.append(f"thinking {sig}: missing from request {main.index(later) + 1}")
+                break
+            if got[0] != want:
+                problems.append(f"thinking {sig}: changed in request {main.index(later) + 1}: {got[0]}")
+                break
+    for i in range(1, len(main)):
+        change = first_change(main[i - 1]["body"], main[i]["body"])
+        if change:
+            problems.append(f"append-only: request {i + 1} doesn't extend request {i}: {change}")
+    for i, r in enumerate(main):
+        b = r["body"]
+        n = breakpoints(b)
+        last = blocks(b["messages"][-1]["content"])[-1]
+        if n > 4:
+            problems.append(f"cache: request {i + 1} has {n} breakpoints (max 4)")
+        if not last.get("cache_control"):
+            problems.append(f"cache: request {i + 1}'s last block has no breakpoint")
+    print("checks: " + ("all pass" if not problems else ""))
+    for p in problems:
+        print("  - " + p)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("koda")
+    parser.add_argument("--claude", default=shutil.which("claude"))
+    parser.add_argument("--model", default="claude-sonnet-5-5")
+    parser.add_argument("--keep", type=pathlib.Path, help="save the raw requests here")
+    args = parser.parse_args()
+    if not args.claude:
+        sys.exit("no claude on PATH; pass --claude")
+    version = subprocess.run([args.claude, "--version"], capture_output=True, text=True).stdout.strip()
+    kversion = subprocess.run([args.koda, "--version"], capture_output=True, text=True).stdout.strip()
+    print(f"model {args.model}; Claude Code {version}; {kversion}")
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = pathlib.Path(tmp).resolve()
+        profile = tmp / "nonet.sb"
+        profile.write_text(SANDBOX)
+        for name, runner, binary in (("Claude Code", run_claude, args.claude), ("koda", run_koda, args.koda)):
+            stub = Stub()
+            server = stub.serve()
+            root = tmp / name.replace(" ", "-").lower()
+            root.mkdir()
+            try:
+                runner(binary, args.model, root, profile, f"http://127.0.0.1:{server.server_address[1]}")
+            finally:
+                server.shutdown()
+            if args.keep:
+                out = args.keep / root.name
+                out.mkdir(parents=True, exist_ok=True)
+                for i, r in enumerate(stub.requests):
+                    r = dict(r, headers={k: v for k, v in r["headers"].items() if k.lower() != "x-api-key"})
+                    (out / f"{i:02d}.json").write_text(json.dumps(r, indent=1))
+            report(name, stub.requests)
+
+
+if __name__ == "__main__":
+    main()
