@@ -1,0 +1,36 @@
+# 0.7.14 release check (Lijun: "Yes, add it" to adding the open-file limit,
+# then preparing 0.7.14, 2026-11-26; Haiku runs approved for the work before
+# 0.8.0, about $0.13 as for 0.7.13): the 19 `core` tasks once each on the
+# release candidate, 89c5ff4: main with the release's cargo update (#1810).
+# Since 0.7.13: the Codex parity check (#1804) and flat stored turn items,
+# protocol 4 (#1808); resume keeping its provider and no caching beta header
+# (#1806); the publish check (#1807); the lock-retry test (#1803); koda
+# serve's open-file limit (#1809). Same settings as haiku-0713-check. Paid
+# API calls.
+#   ./target/release/koda-eval run runs/haiku-0714-check.toml
+#
+# Result, 20261126T174535Z: 18 of 19, no compactions, peak context 74% of the
+# window (bash-readonly-fail-closed). The miss is bash-classifier-escapes,
+# hidden tests 2 of 3: Haiku left `env PATH=/tmp ls /` read-only
+# (env_running_a_command_is_not_read_only), the same miss as the 0.7.1,
+# 0.7.10, 0.7.11 and 0.7.13 checks. Slowest: bash-readonly-fail-closed 6m44s
+# (8m56s on 0.7.13), provider-flag-base-url 1m31s. 4.15M prompt tokens, of
+# which 3.83M read from cache and 317K written to it, 92K out: about $0.12.
+# A first attempt at 20261126T173723Z made no model calls: the stored
+# Anthropic key had expired (401 on every run, nothing billed).
+
+name = "haiku-0714-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "89c5ff4"  # lijunzh/koda chore/cargo-update-0714 (#1810) on main 90fb3a3
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
