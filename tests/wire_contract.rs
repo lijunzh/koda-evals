@@ -150,14 +150,24 @@ const CAPTURED_V2: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/koda-wire-v2.ndjson"
 );
+const CAPTURED_V3: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/koda-wire-v3.ndjson"
+);
 
 #[test]
 fn a_koda_exec_run_is_graded_from_its_protocol() {
-    let run = score(Path::new(CAPTURED_V2));
+    for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3)] {
+        graded_from_protocol(captured, version);
+    }
+}
+
+fn graded_from_protocol(captured: &str, version: u64) {
+    let run = score(Path::new(captured));
     let row = &run.row;
     assert_eq!(row["pass"], true, "{row:#}");
     assert_eq!(row["failure"], Value::Null, "{row:#}");
-    assert_eq!(row["behaviour"]["protocol_version"], 2, "{row:#}");
+    assert_eq!(row["behaviour"]["protocol_version"], version, "{row:#}");
     assert_eq!(row["behaviour"]["turn_end_kind"], "complete", "{row:#}");
     assert_eq!(row["behaviour"]["blocked_actions"], 1, "{row:#}");
     assert_eq!(row["behaviour"]["compactions"]["attempts"], 3, "{row:#}");
@@ -166,7 +176,7 @@ fn a_koda_exec_run_is_graded_from_its_protocol() {
 
 #[test]
 fn a_newer_koda_protocol_fails_too() {
-    let started = r#"{"jsonrpc":"2.0","method":"session/started","params":{"protocolVersion":3}}"#;
+    let started = r#"{"jsonrpc":"2.0","method":"session/started","params":{"protocolVersion":4}}"#;
     let turn =
         r#"{"jsonrpc":"2.0","method":"turn/completed","params":{"turn":{"status":"completed"}}}"#;
     let tmp = tempfile::tempdir().unwrap();
@@ -180,7 +190,7 @@ fn a_newer_koda_protocol_fails_too() {
     );
     assert_eq!(run.row["pass"], false, "{:#}", run.row);
     assert_eq!(
-        run.row["failure"], "unsupported protocol 3",
+        run.row["failure"], "unsupported protocol 4",
         "{:#}",
         run.row
     );

@@ -6,11 +6,13 @@ actual output. This runs the given `koda` against a local stub of an
 OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-v<N>.ndjson.
 Nothing leaves the machine: no model, no API key.
 
-    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # protocol 2, koda 0.7+
+    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # protocol 3, koda 0.7.13+
+    bin/capture-koda-wire <koda 0.7.0 to 0.7.12> 2           # protocol 2
     bin/capture-koda-wire <koda 0.6> 1                       # protocol 1
 
-Protocol 2 is `koda exec --json`; protocol 1 was `koda -p --output-format
-stream-json`. The same run captured in both must grade the same.
+Protocols 2 and 3 are `koda exec --json` (3 took Codex's names, 0.7.13);
+protocol 1 was `koda -p --output-format stream-json`. The same run captured
+in each must grade the same.
 
 The capture is one scripted turn with a retry, tool results of both
 outcomes, a question, a rejected destructive command, a sub-agent that has one
@@ -164,10 +166,10 @@ def serve(stub):
 
 
 def main():
-    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], ["1"], ["2"]):
+    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], ["1"], ["2"], ["3"]):
         sys.exit(__doc__)
     koda = sys.argv[1]
-    protocol = sys.argv[2] if len(sys.argv) == 3 else "2"
+    protocol = sys.argv[2] if len(sys.argv) == 3 else "3"
     fixture = FIXTURES / f"koda-wire-v{protocol}.ndjson"
     command = (
         ["-p", "Fix the parser", "--output-format", "stream-json"]
