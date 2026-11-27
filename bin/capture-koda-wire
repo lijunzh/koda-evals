@@ -3,15 +3,18 @@
 
 koda is a black box here, so the only proof that this reader matches it is its
 actual output. This runs the given `koda` against a local stub of an
-OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-v<N>.ndjson.
+OpenAI-compatible server and saves stdout as tests/fixtures/koda-wire-<name>.ndjson.
 Nothing leaves the machine: no model, no API key.
 
-    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # protocol 4, koda 0.7.14+
-    bin/capture-koda-wire <koda 0.7.13> 3                    # protocol 3
-    bin/capture-koda-wire <koda 0.7.0 to 0.7.12> 2           # protocol 2
-    bin/capture-koda-wire <koda 0.6> 1                       # protocol 1
+    bin/capture-koda-wire ~/repo/koda/target/debug/koda      # koda 0.8, no protocolVersion
+    bin/capture-koda-wire <koda 0.7.14> v4                   # protocol 4
+    bin/capture-koda-wire <koda 0.7.13> v3                   # protocol 3
+    bin/capture-koda-wire <koda 0.7.0 to 0.7.12> v2          # protocol 2
+    bin/capture-koda-wire <koda 0.6> v1                      # protocol 1
 
-Protocols 2 and 3 are `koda exec --json` (3 took Codex's names, 0.7.13);
+Koda 0.8 dropped `protocolVersion`: its stream is named by the koda release
+line (`koda-wire-0.8.ndjson`), the older ones by their protocol. Everything
+from protocol 2 on is `koda exec --json` (3 took Codex's names, 0.7.13);
 protocol 1 was `koda -p --output-format stream-json`. The same run captured
 in each must grade the same.
 
@@ -30,6 +33,9 @@ import tempfile
 import threading
 
 FIXTURES = pathlib.Path(__file__).parent.parent / "tests/fixtures"
+# The fixture name for today's koda; a release line, not a protocol number.
+CURRENT = "0.8"
+OLD_PROTOCOLS = ["v1", "v2", "v3", "v4"]
 WINDOW = "12000"
 LOOP_REPEATS = 5
 FILES = 40
@@ -167,14 +173,14 @@ def serve(stub):
 
 
 def main():
-    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], ["1"], ["2"], ["3"], ["4"]):
+    if len(sys.argv) not in (2, 3) or sys.argv[2:] not in ([], *([p] for p in OLD_PROTOCOLS)):
         sys.exit(__doc__)
     koda = sys.argv[1]
-    protocol = sys.argv[2] if len(sys.argv) == 3 else "4"
-    fixture = FIXTURES / f"koda-wire-v{protocol}.ndjson"
+    name = sys.argv[2] if len(sys.argv) == 3 else CURRENT
+    fixture = FIXTURES / f"koda-wire-{name}.ndjson"
     command = (
         ["-p", "Fix the parser", "--output-format", "stream-json"]
-        if protocol == "1"
+        if name == "v1"
         else ["exec", "Fix the parser", "--json"]
     )
     server = serve(Stub())

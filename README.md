@@ -631,9 +631,13 @@ What differs from a koda run (the wrapper's header has the detail):
   from more (see `jobs` above).
 
 A run passes only if koda speaks a protocol this harness reads. When its
-`hello` names a newer protocol, or a version the harness can't read, the row
-fails with `unsupported protocol N`, whatever the checks say. A koda from
-before protocol 1 sends no `hello` and is graded as usual.
+`hello` or `session/started` names a newer protocol, or a version the harness
+can't read, the row fails with `unsupported protocol N`, whatever the checks
+say. A koda from before protocol 1 sends no `hello` and is graded as usual.
+Koda 0.8 dropped the protocol number, as Codex's app-server has none: its
+clients and server ship as one version, so `kodaVersion` says what a stream
+speaks, and a `session/started` without `protocolVersion` is read as the
+newest protocol.
 
 Results go to `results/<run>/<timestamp>/` (gitignored):
 - `results.jsonl`: one row per run with pass/fail, the failure kind, the
@@ -650,7 +654,9 @@ Results go to `results/<run>/<timestamp>/` (gitignored):
     `loop_guard_warnings`, `edit_rejections` (Edit results koda refused:
     `outcome` `error`, or `Validation error:` or `Error:` from a koda older
     than protocol 1), `time_limit_hit`, `turn_end_kind` (`null` when the
-    turn never ended), `protocol_version` (`null` before protocol 1),
+    turn never ended), `protocol_version` (`null` before protocol 1 and
+    from koda 0.8, which names none), `koda_version` (the release that wrote
+    the stream, when it said),
     `delegations`, `approval_requests`
     (`total`, `destructive`), `blocked_actions` and `tool_use` (Grep calls,
     empty and regex counts, and Bash calls doing a search or read). Also
@@ -684,16 +690,20 @@ When a run ends, the harness parses its `transcript.ndjson` once and saves
 what checks use as `record.json`, in the harness's own format with its own
 schema version: tool calls with their arguments, outcomes and position in
 the stream, approvals, blocked actions, questions, compactions, loop-guard
-stops, turn ends, the run summary, the protocol named in `hello`, and a count
-of every event type. Regrading and reports read the record alone, so a run
+stops, turn ends, the run summary, the protocol and koda release the stream
+opened with, and a count of every event type. Regrading and reports read the record alone, so a run
 saved under an older koda protocol grades the same as a new one, and a new
 protocol changes only the capture code in `src/transcript.rs`. Codex's
 `rollout-trace` crate does the same. The record keeps each event's position,
 so a check's "at event N" points at line N of `transcript.ndjson`.
 
-Capture reads koda's protocol 1 and the shape before it. The peer wrappers
-write protocol 1, so that reader stays when koda moves on, and an archived
-run from any of those protocols can be recorded after it's unpacked.
+Capture reads `koda exec --json` from protocol 2 to 4 and from koda 0.8 on,
+which names no protocol, and koda's protocol 1 and the shape before it. A
+stream that names a protocol is read by it; one that doesn't is read by the
+newest reader, and should a later koda change the shape, its `kodaVersion`
+picks the reader. The peer wrappers write protocol 1, so that reader stays
+when koda moves on, and an archived run from any of those protocols can be
+recorded after it's unpacked.
 - `meta.json`: the run file, each koda binary's `--version`, ref and commit,
   and `rustc --version`.
 - `report.md`: the report below.
@@ -784,24 +794,29 @@ KODA_EVAL_TEST_BIN=~/repo/koda/target/debug/koda cargo test --test mock_e2e
 Before koda dropped its `test-support` feature (lijunzh/koda, November 2026),
 this test drove koda's mock provider, which only a test build had.
 
-`tests/fixtures/koda-wire-v4.ndjson` is what a real koda (0.7.14) wrote with
-`koda exec --json` against a local stub of an OpenAI-compatible server, and
-`cargo test` always reads it, through the reader and through the runner.
-`koda-wire-v3.ndjson` is the same scripted run from koda 0.7.13 (protocol 3,
-Codex's names; protocol 4 changed only what reading a stored session returns,
-so the two streams differ only in the version), `koda-wire-v2.ndjson` from
-koda 0.7.0 to 0.7.12 (protocol 2, before koda took Codex's names), and
-`koda-wire-v1.ndjson` from koda 0.6's `stream-json`, which the peer wrappers
-still write; a test checks that all four grade the same. Nothing compares them
+`tests/fixtures/koda-wire-0.8.ndjson` is what a real koda (0.8, with no
+`protocolVersion`) wrote with `koda exec --json` against a local stub of an
+OpenAI-compatible server, and `cargo test` always reads it, through the reader
+and through the runner. `koda-wire-v4.ndjson` is the same scripted run from
+koda 0.7.14 (protocol 4; 0.8 only dropped the number), `koda-wire-v3.ndjson`
+from koda 0.7.13 (protocol 3, Codex's names; protocol 4 changed only what
+reading a stored session returns, so the two streams differ only in the
+version), `koda-wire-v2.ndjson` from koda 0.7.0 to 0.7.12 (protocol 2, before
+koda took Codex's names), and `koda-wire-v1.ndjson` from koda 0.6's
+`stream-json`, which the peer wrappers still write; a test checks that all
+five grade the same. Each build was captured before its release's version
+bump, so its `kodaVersion` names the release before. Nothing compares them
 with today's koda, so record the newest one again whenever the protocol or
-koda's behaviour on the scripted run changes. It takes a plain koda build, no
-model and no key:
+koda's behaviour on the scripted run changes; a new koda release line that
+changes the shape gets its own `koda-wire-<release>.ndjson`. It takes a plain
+koda build, no model and no key:
 
 ```bash
-bin/capture-koda-wire ~/repo/koda/target/debug/koda          # protocol 4
-bin/capture-koda-wire <a koda 0.7.13 build> 3                # protocol 3
-bin/capture-koda-wire <a koda 0.7.0 to 0.7.12 build> 2       # protocol 2
-bin/capture-koda-wire <a koda 0.6 build> 1                   # protocol 1
+bin/capture-koda-wire ~/repo/koda/target/debug/koda          # koda 0.8
+bin/capture-koda-wire <a koda 0.7.14 build> v4               # protocol 4
+bin/capture-koda-wire <a koda 0.7.13 build> v3               # protocol 3
+bin/capture-koda-wire <a koda 0.7.0 to 0.7.12 build> v2      # protocol 2
+bin/capture-koda-wire <a koda 0.6 build> v1                  # protocol 1
 ```
 
 ## Status

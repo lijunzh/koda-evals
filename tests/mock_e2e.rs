@@ -271,7 +271,8 @@ engine = "stub"
         serde_json::from_str(&std::fs::read_to_string(artifacts.join("record.json")).unwrap())
             .unwrap();
     assert_eq!(record["schema"], 1, "{record:#}");
-    assert_eq!(record["protocol_version"], 2, "{record:#}");
+    // Koda 0.8 names no protocol; its release says what it speaks.
+    assert!(record["koda_version"].is_string(), "{record:#}");
     assert!(
         record["events"]
             .as_array()

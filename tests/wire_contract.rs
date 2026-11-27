@@ -6,7 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 const CAPTURED: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -158,20 +158,37 @@ const CAPTURED_V4: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/koda-wire-v4.ndjson"
 );
+/// Koda 0.8, which names no protocol; `kodaVersion` does.
+const CAPTURED_08: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/koda-wire-0.8.ndjson"
+);
 
 #[test]
 fn a_koda_exec_run_is_graded_from_its_protocol() {
-    for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3), (CAPTURED_V4, 4)] {
-        graded_from_protocol(captured, version);
+    for (captured, version, koda) in [
+        // Each build was captured before its version bump, so it names the
+        // release before.
+        (CAPTURED_V2, Some(2), "0.6.4"),
+        (CAPTURED_V3, Some(3), "0.7.12"),
+        (CAPTURED_V4, Some(4), "0.7.13"),
+        (CAPTURED_08, None, "0.7.14"),
+    ] {
+        graded_from_protocol(captured, version, koda);
     }
 }
 
-fn graded_from_protocol(captured: &str, version: u64) {
+fn graded_from_protocol(captured: &str, version: Option<u64>, koda: &str) {
     let run = score(Path::new(captured));
     let row = &run.row;
     assert_eq!(row["pass"], true, "{row:#}");
     assert_eq!(row["failure"], Value::Null, "{row:#}");
-    assert_eq!(row["behaviour"]["protocol_version"], version, "{row:#}");
+    assert_eq!(
+        row["behaviour"]["protocol_version"],
+        json!(version),
+        "{row:#}"
+    );
+    assert_eq!(row["behaviour"]["koda_version"], koda, "{row:#}");
     assert_eq!(row["behaviour"]["turn_end_kind"], "complete", "{row:#}");
     assert_eq!(row["behaviour"]["blocked_actions"], 1, "{row:#}");
     assert_eq!(row["behaviour"]["compactions"]["attempts"], 3, "{row:#}");
