@@ -15,13 +15,15 @@
 //! `text_done`, `approval_request` {tool_name, effect, detail},
 //! `action_blocked` {tool_name, detail}, `ask_user_request`, `compaction`
 //! {status, summary_tokens?}, `loop_guard`, `turn_end` {reason: {kind}};
-//! plus the run summary, the protocol `hello` named, and a count of every
-//! event type the agent sent. The names come from koda's protocol 1 and are
+//! plus the run summary, the protocol and koda version the stream opened
+//! with, and a count of every event type the agent sent. The names come from koda's protocol 1 and are
 //! now the harness's own, changed only by bumping [`RECORD_SCHEMA`].
 //!
 //! Capture reads three shapes. Protocol 2 is koda 0.7's client protocol, from
 //! `koda exec --json`: JSON-RPC notifications where a tool call is an item
-//! that starts and completes. Protocol 1 is koda 0.6's `stream-json`, which
+//! that starts and completes. Protocols 3 and 4 and koda 0.8 on, which names
+//! no protocol (its clients and server ship as one version, as Codex's do),
+//! write the same shape. Protocol 1 is koda 0.6's `stream-json`, which
 //! the peer wrappers (`bin/*-as-koda`) still write. The shape before protocol 1
 //! sent `is_sub_agent`, no `outcome`, and compaction and the loop guard as
 //! `info` and `warn` text. Each becomes the same record: protocol 2's
@@ -38,10 +40,12 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-/// The `koda exec --json` protocols this reader reads: 2 (koda 0.7.0 to
-/// 0.7.12), 3 (0.7.13, which took Codex's names: `modelProvider`,
-/// `cacheWriteInputTokens`, `reasoningOutputTokens`) and 4 (0.7.14, whose
-/// change, flat stored turn items, isn't in what `koda exec` writes).
+/// The `koda exec --json` protocols this reader reads when a stream names
+/// one: 2 (koda 0.7.0 to 0.7.12), 3 (0.7.13, which took Codex's names:
+/// `modelProvider`, `cacheWriteInputTokens`, `reasoningOutputTokens`) and 4
+/// (0.7.14, whose change, flat stored turn items, isn't in what `koda exec`
+/// writes). Koda 0.8 dropped `protocolVersion`; its `kodaVersion` says what
+/// a stream speaks, and today every release reads as 4 does.
 const PROTOCOL_VERSIONS: [u64; 3] = [2, 3, 4];
 
 /// The record's own format version. Bump it when a field changes meaning,
@@ -118,8 +122,15 @@ fn is_shell_read(command: &str) -> bool {
 pub struct Transcript {
     /// [`RECORD_SCHEMA`] when written.
     pub schema: u64,
-    /// `protocol_version` from the agent's `hello`. `None` before protocol 1.
+    /// The protocol the stream named: `protocol_version` from a `hello`, or
+    /// `protocolVersion` from `session/started`. `None` before protocol 1,
+    /// and from koda 0.8, which names none.
     pub protocol_version: Option<u64>,
+    /// The koda release that wrote the stream (`kodaVersion`, or a `hello`'s
+    /// `koda_version`), when it said. From koda 0.8 the only name for the
+    /// protocol. Absent from records saved before it was kept.
+    #[serde(default)]
+    pub koda_version: Option<String>,
     /// Set when `hello` named a protocol capture can't read; the checks
     /// then mean nothing.
     pub unsupported_protocol: Option<String>,
@@ -304,11 +315,19 @@ impl Transcript {
         let item = &p["item"];
         let event = match (method, item["type"].as_str()) {
             ("session/started", _) => {
+                if self.koda_version.is_none() {
+                    self.koda_version = p["kodaVersion"].as_str().map(String::from);
+                }
                 if self.protocol_version.is_none() && self.unsupported_protocol.is_none() {
                     let version = &p["protocolVersion"];
                     self.protocol_version = version.as_u64();
-                    self.unsupported_protocol = match version.as_u64() {
-                        Some(v) if PROTOCOL_VERSIONS.contains(&v) => None,
+                    self.unsupported_protocol = match version {
+                        // Koda 0.8 on: no protocol number; the release is
+                        // the version, and today all of them read as 4.
+                        // Should a release change the shape, tell it apart
+                        // here by `kodaVersion`.
+                        Value::Null => None,
+                        v if v.as_u64().is_some_and(|v| PROTOCOL_VERSIONS.contains(&v)) => None,
                         _ => Some(format!("unsupported protocol {version}")),
                     };
                 }
@@ -401,6 +420,9 @@ impl Transcript {
         let text = |key: &str| e[key].as_str().unwrap_or("").to_string();
         Some(match kind {
             "hello" => {
+                if self.koda_version.is_none() {
+                    self.koda_version = e["koda_version"].as_str().map(String::from);
+                }
                 if self.protocol_version.is_none() && self.unsupported_protocol.is_none() {
                     self.protocol_version = e["protocol_version"].as_u64();
                     self.unsupported_protocol = match &e["protocol_version"] {
@@ -587,9 +609,15 @@ impl Transcript {
             .map(|(_, e)| e)
     }
 
-    /// `protocol_version` from `hello`. `None` before protocol 1.
+    /// The protocol the stream named. `None` before protocol 1 and from
+    /// koda 0.8, where [`Self::koda_version`] names it.
     pub fn protocol_version(&self) -> Option<u64> {
         self.protocol_version
+    }
+
+    /// The koda release that wrote the stream, when it said.
+    pub fn koda_version(&self) -> Option<&str> {
+        self.koda_version.as_deref()
     }
 
     /// The output of the `tool_call_result` for the call with this `id`.
@@ -618,9 +646,10 @@ impl Transcript {
         self.of_type("text_done").last().map(|(i, _)| i)
     }
 
-    /// The failure to report when koda's `hello` names a protocol this reader
-    /// doesn't know: a newer one, or a version it can't read. `None` with no
-    /// `hello`, since koda before protocol 1 sent none.
+    /// The failure to report when koda's `hello` or `session/started` names a
+    /// protocol this reader doesn't know: a newer one, or a version it can't
+    /// read. `None` with no `hello`, since koda before protocol 1 sent none,
+    /// and for a `session/started` with no protocol, koda 0.8 on.
     pub fn unsupported_protocol(&self) -> Option<String> {
         self.unsupported_protocol.clone()
     }
@@ -736,6 +765,7 @@ impl Transcript {
             "time_limit_hit": time_limit_hit,
             "turn_end_kind": self.turn_end_kind(),
             "protocol_version": self.protocol_version(),
+            "koda_version": self.koda_version(),
             "delegations": delegations,
             "approval_requests": { "total": approvals, "destructive": destructive },
             "blocked_actions": self.count("action_blocked"),
@@ -902,7 +932,7 @@ not json
     #[test]
     fn a_saved_record_answers_like_the_stream_it_came_from() {
         let dir = tempfile::tempdir().unwrap();
-        for stream in [SAMPLE, SAMPLE_V1, CAPTURED] {
+        for stream in [SAMPLE, SAMPLE_V1, CAPTURED, CAPTURED_08] {
             let parsed = Transcript::parse(stream);
             let path = dir.path().join(RECORD_FILE);
             parsed.save(&path).unwrap();
@@ -1029,12 +1059,51 @@ not json
     const CAPTURED_V3: &str = include_str!("../tests/fixtures/koda-wire-v3.ndjson");
     /// And as koda 0.7.14 writes it, protocol 4, a stored turn's items flat.
     const CAPTURED_V4: &str = include_str!("../tests/fixtures/koda-wire-v4.ndjson");
+    /// And as koda 0.8 writes it, with no `protocolVersion`.
+    const CAPTURED_08: &str = include_str!("../tests/fixtures/koda-wire-0.8.ndjson");
 
     #[test]
     fn reads_what_koda_exec_wrote() {
-        for (captured, version) in [(CAPTURED_V2, 2), (CAPTURED_V3, 3), (CAPTURED_V4, 4)] {
+        for (captured, version) in [
+            (CAPTURED_V2, Some(2)),
+            (CAPTURED_V3, Some(3)),
+            (CAPTURED_V4, Some(4)),
+            (CAPTURED_08, None),
+        ] {
             reads_koda_exec(captured, version);
         }
+    }
+
+    /// Koda 0.8 names no protocol: its stream is read as the newest one, and
+    /// the record keeps the release that wrote it.
+    #[test]
+    fn a_stream_naming_no_protocol_is_read_by_its_koda_version() {
+        let t = Transcript::parse(CAPTURED_08);
+        assert_eq!(t.protocol_version(), None);
+        assert_eq!(t.unsupported_protocol(), None);
+        // The capture predates the 0.8 version bump.
+        assert_eq!(t.koda_version(), Some("0.7.14"));
+        let b = t.behaviour(false);
+        assert_eq!(b["protocol_version"], Value::Null);
+        assert_eq!(b["koda_version"], "0.7.14");
+        // Streams that name a protocol keep their version too.
+        assert_eq!(
+            Transcript::parse(CAPTURED_V4).koda_version(),
+            Some("0.7.13")
+        );
+        assert_eq!(Transcript::parse(CAPTURED).protocol_version(), Some(1));
+    }
+
+    #[test]
+    fn a_record_saved_before_koda_version_was_kept_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(RECORD_FILE);
+        let mut saved = serde_json::to_value(Transcript::parse(CAPTURED_V4)).unwrap();
+        saved.as_object_mut().unwrap().remove("koda_version");
+        std::fs::write(&path, saved.to_string()).unwrap();
+        let t = Transcript::load(&path).unwrap();
+        assert_eq!(t.protocol_version(), Some(4));
+        assert_eq!(t.koda_version(), None);
     }
 
     /// Protocol 3 renamed `provider` and two token counts; the record keeps
@@ -1049,10 +1118,10 @@ not json
         }
     }
 
-    fn reads_koda_exec(captured: &str, version: u64) {
+    fn reads_koda_exec(captured: &str, version: Option<u64>) {
         let t = Transcript::parse(captured);
         assert_eq!(t.count("unparsed_line"), 0);
-        assert_eq!(t.protocol_version(), Some(version));
+        assert_eq!(t.protocol_version(), version);
         assert_eq!(t.unsupported_protocol(), None);
         assert_eq!(t.turn_end_kind(), Some("complete"));
         assert_eq!(t.final_message(), Some("Done."));
@@ -1073,7 +1142,7 @@ not json
     }
 
     /// What grading reads, less what depends on the protocol: positions,
-    /// stream length, line counts and the version.
+    /// stream length, line counts and the versions.
     fn graded(t: &Transcript) -> Value {
         let mut a = answers(t);
         for call in a["calls"].as_array_mut().unwrap() {
@@ -1083,6 +1152,7 @@ not json
             a[key] = Value::Null;
         }
         a["behaviour"]["protocol_version"] = Value::Null;
+        a["behaviour"]["koda_version"] = Value::Null;
         for key in ["elapsed_ms", "session_id"] {
             a["summary"][key] = Value::Null;
         }
@@ -1090,20 +1160,22 @@ not json
     }
 
     /// The PR 4 check: one scripted run, captured from koda 0.6's
-    /// `stream-json` and koda 0.7's `koda exec --json`
+    /// `stream-json` and every `koda exec --json` since koda 0.7
     /// (`bin/capture-koda-wire`), grades the same, and the order of what
-    /// grading compares (calls before the final message) holds in both.
+    /// grading compares (calls before the final message) holds in each.
     #[test]
-    fn the_same_run_records_alike_through_both_protocols() {
+    fn the_same_run_records_alike_through_every_protocol() {
         let v1 = Transcript::parse(CAPTURED);
         let v2 = Transcript::parse(CAPTURED_V2);
         let v3 = Transcript::parse(CAPTURED_V3);
         let v4 = Transcript::parse(CAPTURED_V4);
+        let v08 = Transcript::parse(CAPTURED_08);
         assert_eq!(v1.protocol_version(), Some(1));
         assert_eq!(graded(&v2), graded(&v1));
         assert_eq!(graded(&v3), graded(&v1));
         assert_eq!(graded(&v4), graded(&v1));
-        for t in [&v1, &v2, &v3] {
+        assert_eq!(graded(&v08), graded(&v1));
+        for t in [&v1, &v2, &v3, &v4, &v08] {
             let last_call = t.tool_calls().map(|c| c.index).max().unwrap();
             assert!(t.final_message_index().unwrap() > last_call);
         }
