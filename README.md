@@ -95,7 +95,7 @@ timeout_secs = 300
 wall_secs = 300
 
 [run]                       # optional
-trust = "auto"              # or "safe", "plan"
+trust = "auto"              # or "plan"
 agents_dir = "agents"       # worker agent configs, relative to the task
 max_context_tokens = 32768  # pin koda's window for this task
 
@@ -241,12 +241,14 @@ task with hidden tests and predicates gets both checks.
 
 ### `[run]`: per-task run settings
 
-- `trust`: koda's trust mode for the run, `auto` (default), `safe` or
-  `plan`. Passed as `--mode`. In `auto` and `safe`, headless koda
-  auto-rejects destructive commands; `safe` also asks (and headless
-  approves) before every mutation, which is what a shell-safety task needs
-  to observe. `plan` is a read-only run (lijunzh/koda#1573): reads,
-  read-only commands and MCP tools marked `readOnlyHint` run, and every
+- `trust`: koda's trust mode for the run, `auto` (default) or `plan`.
+  Passed as `--mode`. In `auto`, headless koda auto-rejects destructive
+  commands and commands that ask to leave the sandbox, which is what a
+  shell-safety task observes. Koda 0.8.0 removed `safe`; runs from before
+  it may name it, and `bin/claude-as-koda` and `bin/codex-as-koda` still
+  accept it to translate them. `plan` is a read-only run (lijunzh/koda#1573): reads,
+  commands (in a read-only sandbox from 0.8.0) and MCP tools marked
+  `readOnlyHint` run, and every
   other call comes back refused. A run file's `trust` overrides it.
 - `agents_dir`: a directory of agent JSON configs, relative to the task,
   copied to `<project>/agents/` and committed with the project's start
