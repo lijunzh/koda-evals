@@ -1,0 +1,33 @@
+# 0.8.0 release check (Haiku runs approved for the work before 0.8.0, about
+# $0.13 as for 0.7.14): the 19 `core` tasks once each on the release
+# candidate, 5695de4: main 2272108 with the release's cargo update (#1843).
+# Since 0.7.14: Safe mode removed, approvals from the sandbox as in Codex
+# (#1837); an unlisted host asks (#1838); the pre-release review fixes:
+# .git read-only for the main session, Plan offline, sub-agents through the
+# proxy, MCP approvals and writable roots as in Codex (#1841); protocolVersion
+# dropped and sandbox guidance by who can approve (#1842). Same settings as
+# haiku-0714-check. Paid API calls.
+#   ./target/release/koda-eval run runs/haiku-080-check.toml
+#
+# Result, 20261127T150622Z: 19 of 19, the first clean release check:
+# bash-classifier-escapes passed all its hidden tests (0.7.1 to 0.7.14 each
+# left `env PATH=/tmp ls /` read-only). Slowest: bash-readonly-fail-closed
+# 8m19s, provider-flag-base-url 5m37s. 5.20M prompt tokens, of which 4.79M
+# read from cache and 417K written to it, 128K out: about $0.16 (0.7.14's
+# mix scaled).
+
+name = "haiku-080-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "5695de4"  # lijunzh/koda chore/cargo-update-0.8.0 (#1843) on main 2272108
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
