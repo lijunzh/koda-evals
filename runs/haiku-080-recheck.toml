@@ -1,0 +1,31 @@
+# 0.8.0 release check, again: four PRs merged after haiku-080-check
+# (lijunzh/koda#1843 cargo update, #1844 ordering races, #1845 TUI waits keep
+# the host's messages, #1846 no settings-report wait), so the release
+# candidate is now main e50e6ec. Same settings as haiku-080-check. Paid API
+# calls (Haiku runs approved for the work before 0.8.0, about $0.16).
+#   ./target/release/koda-eval run runs/haiku-080-recheck.toml
+#
+# Result, 20261127T164055Z: 18 of 19. The miss is bash-classifier-escapes,
+# hidden tests 2 of 3: Haiku left `env PATH=/tmp ls /` read-only
+# (env_running_a_command_is_not_read_only), the miss of every check from
+# 0.7.1 to 0.7.14 (haiku-080-check happened to pass it). Slowest:
+# bash-readonly-fail-closed 5m40s, provider-flag-base-url 3m09s. 5.11M
+# prompt tokens, of which 4.74M read from cache and 369K written to it, 118K
+# out: about $0.15. lijunzh/koda#1847 merged after this candidate; it
+# changes only koda-tui, which koda exec doesn't use.
+
+name = "haiku-080-recheck"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "e50e6ec"  # lijunzh/koda main after #1843-#1846
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
