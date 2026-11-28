@@ -172,7 +172,7 @@ fn a_koda_exec_run_is_graded_from_its_protocol() {
         (CAPTURED_V2, Some(2), "0.6.4"),
         (CAPTURED_V3, Some(3), "0.7.12"),
         (CAPTURED_V4, Some(4), "0.7.13"),
-        (CAPTURED_08, None, "0.8.0"),
+        (CAPTURED_08, None, "0.8.1"),
     ] {
         graded_from_protocol(captured, version, koda);
     }
