@@ -1,0 +1,28 @@
+# 0.8.1 release check: the release candidate is lijunzh/koda main 94c7cc6
+# (the desktop app's PRs #1850-#1864, the cargo update #1865 and the test
+# fixes #1866). Same settings as haiku-080-recheck. Paid API calls (Lijun
+# approved the 0.8.1 release steps, Haiku check included, about $0.12-0.15).
+#   ./target/release/koda-eval run runs/haiku-081-check.toml
+#
+# Result, 20261128T011426Z: 19 of 19, bash-classifier-escapes included
+# (`env PATH=/tmp ls /`, the miss of most checks since 0.7.1). Slowest:
+# bash-readonly-fail-closed 6m58s, provider-flag-base-url 5m14s. 165 calls,
+# 4.62M prompt tokens, of which 4.30M read from cache and 327K written to
+# it, 89K out: about $0.13. koda-wire-0.8 recaptured from the same commit:
+# identical apart from ids, times and the koda version it records (0.8.0).
+
+name = "haiku-081-check"
+repeats = 1
+tags = ["core"]
+jobs = 3
+memory = "memory/rust-project.md"
+
+[[variants]]
+name = "koda"
+ref = "94c7cc6"  # lijunzh/koda main after #1865 and #1866
+
+[[models]]
+name = "haiku"
+provider = "anthropic"
+model = "claude-haiku-5-5"
+max_context_tokens = 117000
