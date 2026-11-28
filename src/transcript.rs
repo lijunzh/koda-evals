@@ -1082,10 +1082,10 @@ not json
         assert_eq!(t.protocol_version(), None);
         assert_eq!(t.unsupported_protocol(), None);
         // The capture predates the 0.8.1 version bump.
-        assert_eq!(t.koda_version(), Some("0.8.0"));
+        assert_eq!(t.koda_version(), Some("0.8.1"));
         let b = t.behaviour(false);
         assert_eq!(b["protocol_version"], Value::Null);
-        assert_eq!(b["koda_version"], "0.8.0");
+        assert_eq!(b["koda_version"], "0.8.1");
         // Streams that name a protocol keep their version too.
         assert_eq!(
             Transcript::parse(CAPTURED_V4).koda_version(),
